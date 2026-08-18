@@ -1,12 +1,31 @@
 """API 请求/响应 Pydantic 模型。"""
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+
+def _to_utc(value: datetime | None) -> datetime | None:
+    """数据库列无时区（timestamp without time zone，实际存 UTC），统一补 UTC 时区，
+    保证序列化带时区，前端按本地时间显示。"""
+    if value is None:
+        return value
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
+
+
+class TimestampedModel(BaseModel):
+    @field_validator("created_at", "generatedAt", mode="before", check_fields=False)
+    @classmethod
+    def _normalize_datetime(cls, value):
+        if isinstance(value, datetime):
+            return _to_utc(value)
+        return value
 
 
 # ===== 模板 =====
-class TemplateOut(BaseModel):
+class TemplateOut(TimestampedModel):
     model_config = {"from_attributes": True, "populate_by_name": True}
 
     id: int
@@ -57,7 +76,7 @@ class FactCheckItem(BaseModel):
     suggestion: str = ""
 
 
-class GenerateResponse(BaseModel):
+class GenerateResponse(TimestampedModel):
     draft: str
     revisionSuggestions: list[str] = Field(default_factory=list)
     factCheckReport: list[FactCheckItem] = Field(default_factory=list)
@@ -79,7 +98,7 @@ class RevertRequest(BaseModel):
     targetId: str
 
 
-class ReviseResponse(BaseModel):
+class ReviseResponse(TimestampedModel):
     draft: str
     versionId: str
     version: int
@@ -100,7 +119,7 @@ class PolishChange(BaseModel):
     reason: str
 
 
-class PolishResponse(BaseModel):
+class PolishResponse(TimestampedModel):
     polished: str
     changes: list[PolishChange] = Field(default_factory=list)
     versionId: str | None = None  # 基于 draftId 润色时产生新版本
@@ -119,7 +138,7 @@ class ElementOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class DraftDetail(BaseModel):
+class DraftDetail(TimestampedModel):
     id: str
     title: str
     template_name: str
@@ -137,7 +156,7 @@ class DraftDetail(BaseModel):
     fact_checks: list[FactCheckItem] = Field(default_factory=list)
 
 
-class VersionNode(BaseModel):
+class VersionNode(TimestampedModel):
     id: str
     version: int
     parent_id: str | None
@@ -161,7 +180,7 @@ class ExportResponse(BaseModel):
 
 
 # ===== 素材 =====
-class MaterialOut(BaseModel):
+class MaterialOut(TimestampedModel):
     id: int
     filename: str
     content_type: str

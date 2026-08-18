@@ -38,6 +38,30 @@ export function fetchVersions(id) {
   return request(`/api/drafts/${encodeURIComponent(id)}/versions`);
 }
 
+export function exportDraft(draftId, format) {
+  return request('/api/drafts/export', {
+    method: 'POST',
+    headers: jsonHeaders,
+    body: JSON.stringify({ draftId, format }),
+  });
+}
+
+export function reviseDraft(draftId, instruction) {
+  return request('/api/drafts/revise', {
+    method: 'POST',
+    headers: jsonHeaders,
+    body: JSON.stringify({ draftId, instruction }),
+  });
+}
+
+export function revertDraft(draftId, targetId) {
+  return request(`/api/drafts/${encodeURIComponent(draftId)}/revert`, {
+    method: 'POST',
+    headers: jsonHeaders,
+    body: JSON.stringify({ targetId }),
+  });
+}
+
 export function uploadMaterial(file) {
   const form = new FormData();
   form.append('file', file);

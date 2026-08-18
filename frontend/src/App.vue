@@ -126,6 +126,27 @@
           </div>
         </div>
 
+        <div class="revision-box">
+          <div class="revision-input-row">
+            <textarea v-model="revisionInstruction" rows="2" placeholder="修改指令（改哪里、怎么改）：例如 将发布日期改为2026年9月1日，语气更正式，补充反馈渠道"></textarea>
+            <button class="primary-button revision-submit" type="button" :disabled="revising || !currentDraft.id" @click="submitRevision">
+              {{ revising ? '生成中...' : '重新生成' }}
+            </button>
+          </div>
+        </div>
+
+        <div class="export-box">
+          <div class="export-input-row">
+            <select v-model="exportFormat">
+              <option value="md">Markdown (.md)</option>
+              <option value="docx">Word (.docx)</option>
+            </select>
+            <button class="primary-button export-submit" type="button" :disabled="exporting || !currentDraft.id" @click="submitExport">
+              {{ exporting ? '导出中...' : '导出' }}
+            </button>
+          </div>
+        </div>
+
         <div class="tabs">
           <button v-for="tab in tabs" :key="tab.key" :class="{ active: activeTab === tab.key }" type="button" @click="activeTab = tab.key">
             {{ tab.label }}
@@ -155,7 +176,7 @@
         </div>
 
         <div v-else class="version-tree">
-          <VersionNodeView :node="versionTree" />
+          <VersionNodeView :node="versionTree" :current-id="currentDraft.id" :on-revert="revertToVersion" />
         </div>
       </section>
     </main>
@@ -163,8 +184,8 @@
 </template>
 
 <script setup>
-import { computed, defineComponent, h, onMounted, reactive, ref } from 'vue';
-import { createDraft, fetchDraft, fetchMaterials, fetchStyles, fetchTemplates, fetchVersions, uploadMaterial } from './api';
+import { computed, defineComponent, h, onMounted, reactive, ref, watch } from 'vue';
+import { createDraft, exportDraft, fetchDraft, fetchMaterials, fetchStyles, fetchTemplates, fetchVersions, revertDraft, reviseDraft, uploadMaterial } from './api';
 import { demoDraft, demoMaterials, demoStyles, demoSuggestions, demoTemplates, demoVersions } from './demoData';
 
 const tabs = [
@@ -176,8 +197,12 @@ const tabs = [
 
 const apiReady = ref(false);
 const submitting = ref(false);
+const revising = ref(false);
+const exporting = ref(false);
 const errorMessage = ref('');
 const activeTab = ref('content');
+const revisionInstruction = ref('');
+const exportFormat = ref('md');
 const templates = ref(demoTemplates);
 const styles = ref(demoStyles);
 const materials = ref(demoMaterials);
@@ -199,6 +224,61 @@ const form = reactive({
   referenceMaterials: [101],
 });
 
+const FORM_STORAGE_KEY = 'eaos-compose-form';
+const DRAFT_STORAGE_KEY = 'eaos-compose-draft';
+
+function restoreForm() {
+  try {
+    const raw = localStorage.getItem(FORM_STORAGE_KEY);
+    if (raw) Object.assign(form, JSON.parse(raw));
+  } catch {
+    // 忽略损坏的缓存
+  }
+}
+
+function restoreDraftState() {
+  try {
+    const raw = localStorage.getItem(DRAFT_STORAGE_KEY);
+    if (!raw) return;
+    const saved = JSON.parse(raw);
+    if (saved.currentDraft) currentDraft.value = saved.currentDraft;
+    if (saved.revisionSuggestions) revisionSuggestions.value = saved.revisionSuggestions;
+    if (saved.versionTree) versionTree.value = saved.versionTree;
+    if (saved.revisionInstruction !== undefined) revisionInstruction.value = saved.revisionInstruction;
+    if (saved.activeTab) activeTab.value = saved.activeTab;
+  } catch {
+    // 忽略损坏的缓存
+  }
+}
+
+restoreForm();
+restoreDraftState();
+
+watch(
+  form,
+  () => {
+    localStorage.setItem(FORM_STORAGE_KEY, JSON.stringify(form));
+  },
+  { deep: true }
+);
+
+watch(
+  [currentDraft, revisionSuggestions, versionTree, revisionInstruction, activeTab],
+  () => {
+    localStorage.setItem(
+      DRAFT_STORAGE_KEY,
+      JSON.stringify({
+        currentDraft: currentDraft.value,
+        revisionSuggestions: revisionSuggestions.value,
+        versionTree: versionTree.value,
+        revisionInstruction: revisionInstruction.value,
+        activeTab: activeTab.value,
+      })
+    );
+  },
+  { deep: true }
+);
+
 const draftParagraphs = computed(() => {
   return (currentDraft.value.content || '').split(/\n+/).filter(Boolean);
 });
@@ -209,17 +289,28 @@ const factChecks = computed(() => {
 
 const VersionNodeView = defineComponent({
   name: 'VersionNodeView',
-  props: { node: { type: Object, required: true } },
+  props: {
+    node: { type: Object, required: true },
+    currentId: { type: String, default: '' },
+    onRevert: { type: Function, default: null },
+  },
   setup(props) {
     return () =>
       h('div', { class: 'version-node' }, [
         h('div', { class: 'version-card' }, [
-          h('strong', `v${props.node.version} · ${props.node.title || '草稿版本'}`),
-          h('span', props.node.revision_instruction || props.node.status || '版本记录'),
+          h('div', { class: 'version-card-top' }, [
+            h('div', { class: 'version-info' }, [
+              h('strong', `v${props.node.version} · ${props.node.title || '草稿版本'}`),
+              h('span', props.node.revision_instruction || props.node.status || '版本记录'),
+            ]),
+            props.onRevert && props.node.id !== props.currentId
+              ? h('button', { class: 'revert-button', onClick: () => props.onRevert(props.node) }, `回退到此版本`)
+              : null,
+          ]),
           h('small', formatDate(props.node.created_at)),
         ]),
         props.node.children?.length
-          ? h('div', { class: 'version-children' }, props.node.children.map((child) => h(VersionNodeView, { node: child, key: child.id })))
+          ? h('div', { class: 'version-children' }, props.node.children.map((child) => h(VersionNodeView, { node: child, key: child.id, currentId: props.currentId, onRevert: props.onRevert })))
           : null,
       ]);
   },
@@ -227,12 +318,14 @@ const VersionNodeView = defineComponent({
 
 function formatDate(value) {
   if (!value) return '';
+  let text = String(value);
+  if (!/(Z|[+-]\d{2}:?\d{2})$/.test(text)) text += 'Z';
   return new Intl.DateTimeFormat('zh-CN', {
     month: '2-digit',
     day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
-  }).format(new Date(value));
+  }).format(new Date(text));
 }
 
 function badgeClass(status) {
@@ -266,6 +359,7 @@ function resetForm() {
   form.keyFacts = [{ name: '', value: '' }];
   form.people = [];
   form.referenceMaterials = [];
+  localStorage.removeItem(FORM_STORAGE_KEY);
   errorMessage.value = '';
 }
 
@@ -275,8 +369,8 @@ async function loadBootstrapData() {
     templates.value = templateRows.length ? templateRows : demoTemplates;
     styles.value = stylePayload.styles?.length ? stylePayload.styles : demoStyles;
     materials.value = materialRows.length ? materialRows : demoMaterials;
-    form.template = templates.value[0]?.name || form.template;
-    form.style = styles.value[0]?.name || form.style;
+    if (!templates.value.some((t) => t.name === form.template)) form.template = templates.value[0]?.name || form.template;
+    if (!styles.value.some((s) => s.name === form.style)) form.style = styles.value[0]?.name || form.style;
     apiReady.value = true;
   } catch {
     apiReady.value = false;
@@ -331,6 +425,84 @@ async function submitDraft() {
   } finally {
     submitting.value = false;
   }
+}
+
+async function submitRevision() {
+  errorMessage.value = '';
+  if (!currentDraft.value.id) {
+    errorMessage.value = '请先生成草稿。';
+    return;
+  }
+  const instruction = revisionInstruction.value.trim();
+  if (!instruction) {
+    errorMessage.value = '请输入修改指令。';
+    return;
+  }
+  revising.value = true;
+  try {
+    const result = await reviseDraft(currentDraft.value.id, instruction);
+    revisionInstruction.value = '';
+    await loadDraft(result.versionId);
+    if (result.diffSummary?.length) revisionSuggestions.value = result.diffSummary;
+  } catch (error) {
+    errorMessage.value = `修改失败：${error.message}`;
+  } finally {
+    revising.value = false;
+  }
+}
+
+async function revertToVersion(target) {
+  if (!currentDraft.value.id || target.id === currentDraft.value.id) return;
+  if (!window.confirm(`确定回退到 v${target.version}？将基于当前草稿生成一个新版本。`)) return;
+  errorMessage.value = '';
+  revising.value = true;
+  try {
+    const result = await revertDraft(currentDraft.value.id, target.id);
+    revisionSuggestions.value = result.diffSummary || ['已回退至目标版本'];
+    await loadDraft(result.versionId);
+  } catch (error) {
+    errorMessage.value = `回退失败：${error.message}`;
+  } finally {
+    revising.value = false;
+  }
+}
+
+async function loadDraft(versionId) {
+  try {
+    currentDraft.value = await fetchDraft(versionId);
+    versionTree.value = await fetchVersions(versionId);
+  } catch {
+    versionTree.value = { ...demoVersions, id: versionId };
+  }
+  activeTab.value = 'content';
+  apiReady.value = true;
+}
+
+async function submitExport() {
+  errorMessage.value = '';
+  if (!currentDraft.value.id) {
+    errorMessage.value = '请先生成草稿。';
+    return;
+  }
+  exporting.value = true;
+  try {
+    const result = await exportDraft(currentDraft.value.id, exportFormat.value);
+    triggerDownload(result.download_url);
+  } catch (error) {
+    errorMessage.value = `导出失败：${error.message}`;
+  } finally {
+    exporting.value = false;
+  }
+}
+
+function triggerDownload(url) {
+  const filename = decodeURIComponent(url.split('/').filter(Boolean).pop() || 'draft');
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
 }
 
 async function handleUpload(event) {
