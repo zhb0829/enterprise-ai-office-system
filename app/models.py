@@ -1,6 +1,6 @@
 """数据模型（SQLAlchemy 2.0）。
 
-表：template / draft / draft_element / fact_check / export_log / reference_material
+表：template / draft / draft_element / fact_check / export_log / reference_material / style_config
 """
 from datetime import datetime
 
@@ -94,3 +94,15 @@ class ReferenceMaterial(Base):
     text_content: Mapped[str] = mapped_column(Text, default="")
     status: Mapped[str] = mapped_column(String(32), default="已入库")  # 已入库/解析失败
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class StyleConfig(Base):
+    __tablename__ = "style_config"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    # 单行配置：key="styles"，value 为完整文风配置 JSON（styles 数组 + channel_style_map）
+    config_key: Mapped[str] = mapped_column(String(32), unique=True, index=True, default="styles")
+    value: Mapped[dict] = mapped_column(JSON, default=dict)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now()
+    )

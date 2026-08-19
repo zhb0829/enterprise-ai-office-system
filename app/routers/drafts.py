@@ -1,8 +1,12 @@
 """草稿生成/修改/润色/导出接口。"""
+import json
+import logging
 import urllib.parse
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from ..config import settings
@@ -10,6 +14,7 @@ from ..db import get_db
 from ..models import Draft, Template
 from ..schemas import (
     DraftDetail,
+    EditRequest,
     ElementOut,
     ExportRequest,
     ExportResponse,
@@ -27,6 +32,8 @@ from ..schemas import (
 from ..services import generation
 from ..services.generation import MissingElements, TemplateNotFound
 from ..services.llm import LLMClient, LLMError
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -93,6 +100,116 @@ def generate_news(payload: GenerateRequest, db: Session = Depends(get_db)):
         riskFlags=risk_flags,
         variants=state.get("drafts") or [],
     )
+
+
+@router.post("/news/stream")
+def generate_news_stream(payload: GenerateRequest, db: Session = Depends(get_db)):
+    """初稿生成（SSE 流式）：要素抽取 → 主文风正文逐块输出 → 其他文风并行 → 核查/建议 → 完整结果。
+
+    事件类型：status / delta / done / error。
+    """
+    from ..services import extraction, factcheck
+    from ..services.generation import (
+        _resolve_styles,
+        check_risks,
+        generate_content_stream,
+        persist_draft,
+        suggest_content,
+    )
+
+    request = payload.model_dump()
+    template = _get_template(db, request["template"])
+    llm = LLMClient()
+    materials = generation.load_materials_text(db, request.get("referenceMaterials") or [])
+
+    def _sse(obj: dict) -> str:
+        return f"data: {json.dumps(obj, ensure_ascii=False)}\n\n"
+
+    def event_stream():
+        try:
+            missing = extraction.validate_required(request, template.schema_)
+            if missing:
+                yield _sse(
+                    {
+                        "type": "error",
+                        "detail": {"message": "缺少必填要素，请补充后重新提交", "missing": missing},
+                    }
+                )
+                return
+
+            yield _sse({"type": "status", "stage": "extract"})
+            elements = extraction.extract_elements(request, template.schema_, llm)
+
+            styles = _resolve_styles(request)
+            main_style = styles[0]
+            yield _sse({"type": "status", "stage": "generate", "style": main_style})
+
+            main_parts: list[str] = []
+            for chunk in generate_content_stream(request, template.schema_, elements, main_style, materials, llm):
+                main_parts.append(chunk)
+                yield _sse({"type": "delta", "text": chunk})
+            main_content = "".join(main_parts)
+
+            other_drafts: list[dict] = []
+            if len(styles) > 1:
+
+                def _gen(style: str) -> dict:
+                    try:
+                        content = generation.generate_content(request, template.schema_, elements, style, materials, llm)
+                        return {"style": style, "content": content}
+                    except Exception as exc:  # noqa: BLE001
+                        logger.error("其他文风生成失败 [%s]: %s", style, exc)
+                        return {"style": style, "content": "", "error": str(exc)}
+
+                with ThreadPoolExecutor(max_workers=min(len(styles) - 1, 4)) as ex:
+                    other_drafts = list(ex.map(_gen, styles[1:]))
+
+            drafts = [{"style": main_style, "content": main_content}] + other_drafts
+
+            yield _sse({"type": "status", "stage": "factcheck"})
+            fact_report = factcheck.run_factcheck(main_content, elements, materials, llm)
+
+            yield _sse({"type": "status", "stage": "suggest"})
+            suggestions = suggest_content(
+                request, template.schema_, {"style": main_style, "content": main_content}, llm
+            )
+            risk_flags = list(check_risks(request))
+            unverifiable = [r for r in fact_report if r.get("status") == "无法核实"]
+            if unverifiable:
+                risk_flags.append(f"存在 {len(unverifiable)} 项无法核实的事实，发布前需人工确认")
+
+            state = {
+                "drafts": drafts,
+                "elements": elements,
+                "fact_check_report": fact_report,
+                "suggestions": suggestions,
+                "risk_flags": risk_flags,
+            }
+            try:
+                draft = persist_draft(db, request, template, state)
+            except LLMError as exc:
+                yield _sse({"type": "error", "detail": {"message": "LLM 调用失败", "error": str(exc)}})
+                return
+
+            yield _sse(
+                {
+                    "type": "done",
+                    "draft": draft.content,
+                    "revisionSuggestions": suggestions,
+                    "factCheckReport": fact_report,
+                    "versionId": draft.id,
+                    "sources": [],
+                    "generatedAt": draft.created_at.isoformat(),
+                    "model": draft.model,
+                    "riskFlags": risk_flags,
+                    "variants": [{"style": d.get("style"), "content": d.get("content", "")} for d in drafts],
+                }
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.exception("流式生成失败")
+            yield _sse({"type": "error", "detail": {"message": "生成失败", "error": str(exc)}})
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream")
 
 
 @router.post("/revise", response_model=ReviseResponse)
@@ -246,6 +363,29 @@ def revert(draft_id: str, payload: RevertRequest, db: Session = Depends(get_db))
         versionId=new_draft.id,
         version=new_draft.version,
         diffSummary=[f"已回退至版本 v{target.version}（{target.id}）"],
+        generatedAt=new_draft.created_at,
+        model=new_draft.model,
+    )
+
+
+@router.post("/{draft_id}/edit", response_model=ReviseResponse)
+def edit_draft_content(draft_id: str, payload: EditRequest, db: Session = Depends(get_db)):
+    """手动编辑正文：基于当前草稿生成新版本并落库（不经过 LLM）。"""
+    base = db.get(Draft, draft_id)
+    if not base:
+        raise HTTPException(404, "草稿不存在")
+    content = payload.content.strip()
+    if not content:
+        raise HTTPException(422, detail={"message": "正文不能为空"})
+
+    from ..services.revise import persist_revision
+
+    new_draft = persist_revision(db, base, content, "手动编辑正文", ["已手动编辑正文"])
+    return ReviseResponse(
+        draft=new_draft.content,
+        versionId=new_draft.id,
+        version=new_draft.version,
+        diffSummary=["已手动编辑正文"],
         generatedAt=new_draft.created_at,
         model=new_draft.model,
     )

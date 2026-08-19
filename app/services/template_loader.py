@@ -6,7 +6,7 @@ from pathlib import Path
 from jsonschema import Draft202012Validator
 from sqlalchemy.orm import Session
 
-from ..models import Template
+from ..models import StyleConfig, Template
 
 logger = logging.getLogger(__name__)
 
@@ -97,10 +97,50 @@ def validate_template(data: dict) -> list[str]:
     return errors
 
 
-def load_styles() -> dict:
-    """读取文风配置（5 种文风 + 渠道映射）。"""
+def load_styles(db: Session | None = None) -> dict:
+    """读取文风配置（styles 数组 + channel_style_map）。
+
+    优先读 style_config 表；库中无配置时用 styles.json 种子初始化入库；
+    传入 db 为 None 时回退到文件读取（兼容启动前等无会话场景）。
+    """
+    if db is not None:
+        row = db.query(StyleConfig).filter(StyleConfig.config_key == "styles").first()
+        if row and row.value:
+            return row.value
+        # 无则从文件种子初始化
+        seed = _load_styles_file()
+        _save_styles(db, seed)
+        return seed
+    return _load_styles_file()
+
+
+def _load_styles_file() -> dict:
     with open(DATA_DIR / "styles.json", encoding="utf-8") as f:
         return json.load(f)
+
+
+def save_styles(db: Session, data: dict) -> dict:
+    """保存文风配置（校验结构后覆盖写库）。"""
+    data = dict(data)
+    styles = data.get("styles") or []
+    if not isinstance(styles, list) or not styles:
+        raise ValueError("文风列表不能为空")
+    if not isinstance(data.get("channel_style_map"), dict):
+        data["channel_style_map"] = {}
+    keys = [s.get("key") for s in styles if isinstance(s, dict) and s.get("key")]
+    if len(keys) != len(set(keys)):
+        raise ValueError("文风 key 存在重复")
+    _save_styles(db, data)
+    return data
+
+
+def _save_styles(db: Session, data: dict) -> None:
+    row = db.query(StyleConfig).filter(StyleConfig.config_key == "styles").first()
+    if row:
+        row.value = data
+    else:
+        db.add(StyleConfig(config_key="styles", value=data))
+    db.commit()
 
 
 def load_seed_templates(db: Session) -> int:

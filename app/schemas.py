@@ -94,6 +94,10 @@ class ReviseRequest(BaseModel):
     instruction: str
 
 
+class EditRequest(BaseModel):
+    content: str
+
+
 class RevertRequest(BaseModel):
     targetId: str
 

@@ -7,9 +7,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from .config import settings
-from .db import SessionLocal
+from .db import Base, SessionLocal, engine
 from .routers import drafts, materials, templates
-from .services.template_loader import load_seed_templates
+from .services.template_loader import load_seed_templates, load_styles
 
 # 统一 UTF-8：确保 Windows 控制台/日志输出中文不乱码（PEP 540 之前的 locale 编码问题）
 if hasattr(sys.stdout, "reconfigure"):
@@ -20,10 +20,13 @@ if hasattr(sys.stderr, "reconfigure"):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # 确保所有业务表存在（含 style_config），幂等
+    Base.metadata.create_all(bind=engine)
     # 启动时灌入内置种子模板（upsert，幂等）
     db = SessionLocal()
     try:
         load_seed_templates(db)
+        load_styles(db)  # 初始化文风配置（无则从 styles.json 种子入库）
     finally:
         db.close()
     yield

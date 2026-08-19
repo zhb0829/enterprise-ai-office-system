@@ -2,7 +2,7 @@
 import re
 from pathlib import PurePosixPath, PureWindowsPath
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile
 from sqlalchemy.orm import Session
 
 from ..config import settings
@@ -98,3 +98,15 @@ def get_material(material_id: int, db: Session = Depends(get_db)):
         created_at=m.created_at,
         text_content=m.text_content,
     )
+
+
+@router.delete("/{material_id}", status_code=204)
+def delete_material(material_id: int, db: Session = Depends(get_db)):
+    """删除素材记录与原始文件。"""
+    m = db.get(ReferenceMaterial, material_id)
+    if not m:
+        raise HTTPException(404, "素材不存在")
+    (settings.upload_path / f"{m.id}_{m.filename}").unlink(missing_ok=True)
+    db.delete(m)
+    db.commit()
+    return Response(status_code=204)

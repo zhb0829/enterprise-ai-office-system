@@ -50,6 +50,29 @@ class LLMClient:
         text = self.chat(messages, model=model, temperature=temperature)
         return parse_json_text(text)
 
+    def chat_stream(self, messages: list[dict], model: str | None = None, temperature: float | None = None):
+        """流式生成，逐块 yield 文本片段（SSE 实时输出用）。"""
+        if self.is_mock:
+            raise LLMError("LLM 未配置 API Key，处于 Mock 模式，不可调用 chat_stream()")
+        model = model or settings.llm_model_generation
+        temperature = settings.llm_temperature if temperature is None else temperature
+        try:
+            resp = self._client.chat.completions.create(
+                model=model,
+                messages=messages,
+                temperature=temperature,
+                stream=True,
+            )
+            for chunk in resp:
+                if not chunk.choices:
+                    continue
+                delta = chunk.choices[0].delta.content
+                if delta:
+                    yield delta
+        except Exception as e:  # noqa: BLE001
+            logger.error("LLM 流式调用失败: %s", e)
+            raise LLMError(str(e)) from e
+
 
 def parse_json_text(text: str) -> dict:
     """从模型输出中解析 JSON 对象，容错处理代码块包裹与前后缀。"""

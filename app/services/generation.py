@@ -137,6 +137,15 @@ def generate_content(request: dict, template: dict, elements: list[dict], style:
     return llm.chat(messages, model=settings.llm_model_generation, temperature=settings.llm_temperature)
 
 
+def generate_content_stream(request: dict, template: dict, elements: list[dict], style: str, materials: str, llm: LLMClient):
+    """流式生成单文风草稿，逐块 yield 文本（SSE 实时输出用）。Mock 模式一次性 yield 全文。"""
+    if llm.is_mock:
+        yield mock_generate_content(request, template, elements, style, materials)
+        return
+    messages = build_generation_messages(request, template, elements, style, materials)
+    yield from llm.chat_stream(messages, model=settings.llm_model_generation, temperature=settings.llm_temperature)
+
+
 def suggest_content(request: dict, template: dict, main: dict, llm: LLMClient) -> list[str]:
     if llm.is_mock:
         return mock_suggest(request, template, main)

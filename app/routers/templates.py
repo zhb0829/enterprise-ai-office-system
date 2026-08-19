@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from ..db import get_db
 from ..models import Template
 from ..schemas import TemplateCreate, TemplateOut
-from ..services.template_loader import load_styles, validate_template
+from ..services.template_loader import load_styles, save_styles, validate_template
 
 router = APIRouter()
 
@@ -26,9 +26,18 @@ def list_templates(
 
 
 @router.get("/styles")
-def list_styles():
-    """可用文风配置 + 发布渠道映射。"""
-    return load_styles()
+def list_styles(db: Session = Depends(get_db)):
+    """可用文风配置 + 发布渠道映射（读库，无则种子初始化）。"""
+    return load_styles(db)
+
+
+@router.post("/styles")
+def update_styles(payload: dict, db: Session = Depends(get_db)):
+    """保存完整文风配置（styles 数组 + channel_style_map），用于自定义新增文风。"""
+    try:
+        return save_styles(db, payload)
+    except ValueError as e:
+        raise HTTPException(422, detail={"message": str(e)})
 
 
 @router.get("/{template_id}", response_model=TemplateOut)

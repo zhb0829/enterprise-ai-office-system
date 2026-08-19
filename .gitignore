@@ -13,8 +13,11 @@ venv/
 # Node
 node_modules/
 frontend/dist/
+admin-system/frontend/dist/
 
 # App data
+exports/
+uploads/
 backend/exports/
 backend/uploads/
 
