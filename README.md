@@ -1,20 +1,16 @@
 # 企业AI智能办公系统
 
-面向企业的 AI 智能办公平台，当前完成 **P0 公告与新闻稿智能撰写** 模块：模板化生成、风格适配、内容润色、事实核查、多轮修改、版本历史、导出（MD/DOCX）。
+面向企业的 AI 智能办公平台，当前完成 **P0 公告与新闻稿智能撰写**，并新增 **P0 行业政策法规智能问答 MVP**：公开政策文件解析、条款级切分、混合检索、引用溯源、条款解读与合规初步比对。
 
-统一仓库，包含 **Java 后台管理端** 与 **Python AI/agent 服务** 两个独立项目。
+本项目为 **Python AI/agent 服务**。Java 后台管理系统已独立迁移至
+`E:\project\enterprise-ai-office-system-admin`，不再位于本项目目录中。
 
 ## 仓库结构
 
 ```
-├── admin/                # Java 后台管理系统（Spring Boot + Vue3）
-│   ├── admin-server/     # Spring Boot 3.4.5（JDK21 / 端口 8080）：网关 + JWT 认证 + 反向代理
-│   ├── frontend/         # 用户端 Vue3 + Vite（端口 5173）：撰写工作台
-│   ├── frontend-admin/   # 管理端 Vue3 + Vite（端口 5174）：模板/文风/素材管理
-│   └── docker-compose.yml# PostgreSQL 16 + pgvector（端口 5433）
 ├── app/                  # Python FastAPI AI 服务（端口 8000）
-│   ├── routers/          # drafts / templates / materials
-│   ├── services/         # llm / extraction / generation / revise / polish / factcheck / export
+│   ├── routers/          # drafts / templates / materials / policy
+│   ├── services/         # llm / extraction / generation / policy / revise / polish / factcheck / export
 │   ├── graphs/           # LangGraph 状态图编排
 │   └── data/             # 种子模板与文风配置
 ├── alembic/              # Python 数据库迁移
@@ -26,15 +22,15 @@
 
 | 服务 | 端口 | 说明 |
 |---|---|---|
-| 用户端（撰写工作台） | 5173 | http://localhost:5173 |
-| 管理端（后台管理） | 5174 | http://localhost:5174/admin/templates |
-| Java 网关 | 8080 | JWT 认证（可开关）、反向代理到 Python |
 | Python AI | 8000 | 生成/润色/核查/素材，API 文档 /docs |
 | PostgreSQL | 5433 | eaos / eaos_dev_password / eaos |
 
+后台管理系统的 Java 网关、用户端和管理端端口及启动方式，见
+`E:\project\enterprise-ai-office-system-admin\README.md`。
+
 ## 启动
 
-一键启动（部署编排，含 DB + Python + Java + 用户端 + 管理端）：
+一键启动（部署编排，含 DB + Python 及独立后台管理系统）：
 
 ```cmd
 E:\project\eaos-deploy\start.bat
@@ -55,6 +51,16 @@ E:\project\eaos-deploy\stop.bat
 cd E:\project\enterprise-ai-office-system-new
 .\.venv\Scripts\python.exe -m pytest tests -q --basetemp=C:\Temp\opencode\pytest-basetemp
 ```
+
+政策问答接口：
+
+- `POST /api/policy/chat` 或 `POST /api/chat/policy`
+- `POST /api/policy/interpret`
+- `POST /api/policy/compliance/check` 或 `POST /api/compliance/check`
+- `POST /api/policy/documents/upload`、`POST /api/policy/documents/from-url`
+- `GET /api/policy/documents`、`GET /api/policy/search`
+
+无 `LLM_API_KEY` 时使用离线检索与规则化降级实现；未命中现行有效条款时明确拒答，不生成无依据结论。
 
 ## 技术栈
 

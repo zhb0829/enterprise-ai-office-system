@@ -223,3 +223,115 @@ class MaterialChunkOut(TimestampedModel):
     score: float = 0
     meta: dict[str, Any] = Field(default_factory=dict)
     created_at: datetime | None = None
+
+
+# ===== 行业政策法规智能问答 =====
+class Citation(BaseModel):
+    id: int | None = None
+    docTitle: str
+    articleNo: str = ""
+    excerpt: str
+    sourceUrl: str = ""
+    page: int = 0
+    status: str = "现行有效"
+
+
+class PolicyDocumentOut(TimestampedModel):
+    id: int
+    title: str
+    doc_number: str
+    issuing_authority: str
+    level: str
+    publish_date: datetime | None = None
+    effective_date: datetime | None = None
+    status: str
+    industry_tags: list[str] = Field(default_factory=list)
+    source_url: str
+    file_path: str
+    parse_status: str
+    clause_count: int = 0
+    created_at: datetime
+
+
+class PolicyQuery(BaseModel):
+    question: str = Field(min_length=2, max_length=4000)
+    industry: str = ""
+    level: str = ""
+    authority: str = ""
+    sessionId: str = ""
+    limit: int = Field(default=6, ge=1, le=20)
+
+
+class PolicyAnswer(BaseModel):
+    answer: str
+    clauses: list[Citation] = Field(default_factory=list)
+    sources: list[Citation] = Field(default_factory=list)
+    confidence: str = "none"
+    generatedAt: datetime
+    model: str = ""
+    riskFlags: list[str] = Field(default_factory=list)
+    intent: str = "检索"
+    queryTerms: list[str] = Field(default_factory=list)
+
+
+class InterpretRequest(BaseModel):
+    clauseId: int | None = None
+    clauseText: str | None = None
+    docTitle: str = ""
+    articleNo: str = ""
+    sourceUrl: str = ""
+
+
+class Interpretation(BaseModel):
+    plainSummary: str
+    applicableObjects: list[str] = Field(default_factory=list)
+    obligations: list[str] = Field(default_factory=list)
+    prohibitions: list[str] = Field(default_factory=list)
+    consequences: list[str] = Field(default_factory=list)
+    relatedClauses: list[Citation] = Field(default_factory=list)
+    citations: list[Citation] = Field(default_factory=list)
+    disclaimer: str = "AI 生成，仅供参考，不构成法律意见。"
+    generatedAt: datetime
+    model: str = ""
+    riskFlags: list[str] = Field(default_factory=list)
+
+
+class ComplianceRequest(BaseModel):
+    businessDesc: str = Field(min_length=10, max_length=10000)
+    industry: str = ""
+    sessionId: str = ""
+    limit: int = Field(default=8, ge=1, le=20)
+
+
+class ComplianceItem(BaseModel):
+    requirement: str
+    citation: Citation | None = None
+    enterpriseMatch: str
+    riskLevel: str
+    suggestion: str
+
+
+class ComplianceResponse(BaseModel):
+    items: list[ComplianceItem] = Field(default_factory=list)
+    disclaimer: str = "本结果为基于公开信息的初步比对，不构成法律意见；请结合完整材料咨询专业人士。"
+    generatedAt: datetime
+    model: str = ""
+    riskFlags: list[str] = Field(default_factory=list)
+
+
+class PolicyUrlRequest(BaseModel):
+    url: str = Field(min_length=8, max_length=2048)
+    title: str = ""
+    industryTags: list[str] = Field(default_factory=list)
+    level: str = "其他"
+
+
+class PolicyDocumentCreate(BaseModel):
+    title: str = Field(min_length=1, max_length=256)
+    content: str = Field(min_length=20, max_length=500000)
+    docNumber: str = ""
+    issuingAuthority: str = ""
+    level: str = "其他"
+    status: str = "现行有效"
+    industryTags: list[str] = Field(default_factory=list)
+    sourceUrl: str = ""

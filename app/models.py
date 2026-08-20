@@ -1,6 +1,7 @@
 """数据模型（SQLAlchemy 2.0）。
 
 表：template / draft / draft_element / fact_check / export_log / reference_material / style_config
+    / policy_document / policy_clause / qa_log / compliance_report
 """
 from datetime import datetime
 
@@ -124,3 +125,71 @@ class StyleConfig(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), onupdate=func.now()
     )
+
+
+class PolicyDocument(Base):
+    """公开政策法规文档元数据。政策域由 Python 负责解析和索引，Java 只做网关与管理查询。"""
+
+    __tablename__ = "policy_document"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    title: Mapped[str] = mapped_column(String(256), index=True)
+    doc_number: Mapped[str] = mapped_column(String(128), default="", index=True)
+    issuing_authority: Mapped[str] = mapped_column(String(256), default="")
+    level: Mapped[str] = mapped_column(String(64), default="其他", index=True)
+    publish_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    effective_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    status: Mapped[str] = mapped_column(String(32), default="现行有效", index=True)
+    industry_tags: Mapped[list] = mapped_column(JSON, default=list)
+    source_url: Mapped[str] = mapped_column(String(1024), default="")
+    file_path: Mapped[str] = mapped_column(String(512), default="")
+    text_content: Mapped[str] = mapped_column(Text, default="")
+    parse_status: Mapped[str] = mapped_column(String(32), default="已完成", index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+    clauses: Mapped[list["PolicyClause"]] = relationship(
+        back_populates="document", cascade="all, delete-orphan"
+    )
+
+
+class PolicyClause(Base):
+    """条款级索引单元，embedding 使用 JSON 保存，便于离线开发环境运行。"""
+
+    __tablename__ = "policy_clause"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    doc_id: Mapped[int] = mapped_column(ForeignKey("policy_document.id"), index=True)
+    chapter_path: Mapped[str] = mapped_column(String(256), default="")
+    article_no: Mapped[str] = mapped_column(String(64), default="", index=True)
+    content: Mapped[str] = mapped_column(Text, default="")
+    page: Mapped[int] = mapped_column(Integer, default=0)
+    embedding: Mapped[list[float]] = mapped_column(JSON, default=list)
+    meta: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+    document: Mapped[PolicyDocument] = relationship(back_populates="clauses")
+
+
+class QALog(Base):
+    __tablename__ = "qa_log"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    session_id: Mapped[str] = mapped_column(String(64), default="", index=True)
+    question: Mapped[str] = mapped_column(Text)
+    answer: Mapped[str] = mapped_column(Text, default="")
+    citations: Mapped[list] = mapped_column(JSON, default=list)
+    model: Mapped[str] = mapped_column(String(128), default="")
+    latency_ms: Mapped[int] = mapped_column(Integer, default=0)
+    feedback: Mapped[str] = mapped_column(String(32), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class ComplianceReport(Base):
+    __tablename__ = "compliance_report"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    business_desc: Mapped[str] = mapped_column(Text)
+    industry: Mapped[str] = mapped_column(String(128), default="", index=True)
+    items: Mapped[list] = mapped_column(JSON, default=list)
+    model: Mapped[str] = mapped_column(String(128), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
