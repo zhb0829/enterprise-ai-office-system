@@ -27,6 +27,7 @@ from ..schemas import (
     RevertRequest,
     ReviseRequest,
     ReviseResponse,
+    StatusUpdateRequest,
     VersionNode,
 )
 from ..services import generation
@@ -49,6 +50,35 @@ def _get_template(db: Session, name: str) -> Template:
     return tpl
 
 
+def _material_query(request: dict) -> str:
+    facts = " ".join(f"{x.get('name', '')} {x.get('value', '')}" for x in request.get("keyFacts") or [])
+    people = " ".join(f"{x.get('name', '')} {x.get('title', '')}" for x in request.get("people") or [])
+    return " ".join([request.get("title") or "", request.get("eventDesc") or "", facts, people]).strip()
+
+
+def _to_draft_detail(draft: Draft) -> DraftDetail:
+    return DraftDetail(
+        id=draft.id,
+        title=draft.title,
+        template_name=draft.template_name,
+        style=draft.style,
+        content=draft.content,
+        version=draft.version,
+        parent_id=draft.parent_id,
+        root_id=draft.root_id,
+        status=draft.status,
+        model=draft.model,
+        revision_instruction=draft.revision_instruction,
+        input_payload=draft.input_payload,
+        created_at=draft.created_at,
+        elements=[ElementOut.model_validate(e) for e in draft.elements],
+        fact_checks=[
+            FactCheckItem(claim=fc.claim, status=fc.status, basis=fc.basis, suggestion=fc.suggestion)
+            for fc in draft.fact_checks
+        ],
+    )
+
+
 @router.post("/news", response_model=GenerateResponse)
 def generate_news(payload: GenerateRequest, db: Session = Depends(get_db)):
     """初稿生成：要素 + 模板 + 文风 → 草稿 + 建议 + 多文风版本。
@@ -58,7 +88,9 @@ def generate_news(payload: GenerateRequest, db: Session = Depends(get_db)):
     request = payload.model_dump()
     template = _get_template(db, request["template"])
     llm = LLMClient()
-    materials = generation.load_materials_text(db, request.get("referenceMaterials") or [])
+    materials = generation.load_materials_text(
+        db, request.get("referenceMaterials") or [], _material_query(request)
+    )
 
     from ..graphs.drafting import build_draft_graph
 
@@ -120,7 +152,9 @@ def generate_news_stream(payload: GenerateRequest, db: Session = Depends(get_db)
     request = payload.model_dump()
     template = _get_template(db, request["template"])
     llm = LLMClient()
-    materials = generation.load_materials_text(db, request.get("referenceMaterials") or [])
+    materials = generation.load_materials_text(
+        db, request.get("referenceMaterials") or [], _material_query(request)
+    )
 
     def _sse(obj: dict) -> str:
         return f"data: {json.dumps(obj, ensure_ascii=False)}\n\n"
@@ -229,8 +263,9 @@ def revise(payload: ReviseRequest, db: Session = Depends(get_db)):
         {"name": e.name, "value": e.value, "source_ref": e.source_ref, "verified_status": e.verified_status}
         for e in base.elements
     ]
+    base_request = base.input_payload or {}
     materials = generation.load_materials_text(
-        db, (base.input_payload or {}).get("referenceMaterials") or []
+        db, base_request.get("referenceMaterials") or [], _material_query(base_request)
     )
     graph = build_revision_graph(llm)
     state = graph.invoke(
@@ -336,6 +371,50 @@ def get_version_tree(draft_id: str, db: Session = Depends(get_db)):
     return build_version_tree(db, draft)
 
 
+@router.get("/{draft_id}/factcheck", response_model=list[FactCheckItem])
+def get_factcheck_report(draft_id: str, db: Session = Depends(get_db)):
+    """独立查询核查报告，供发布前复核与历史查看。"""
+    draft = db.get(Draft, draft_id)
+    if not draft:
+        raise HTTPException(404, "草稿不存在")
+    return [
+        FactCheckItem(claim=fc.claim, status=fc.status, basis=fc.basis, suggestion=fc.suggestion)
+        for fc in draft.fact_checks
+    ]
+
+
+@router.post("/{draft_id}/status", response_model=DraftDetail)
+def update_draft_status(draft_id: str, payload: StatusUpdateRequest, db: Session = Depends(get_db)):
+    """状态流转：草稿/审阅/发布。发布前存在不一致或无法核实时阻断。"""
+    draft = db.get(Draft, draft_id)
+    if not draft:
+        raise HTTPException(404, "草稿不存在")
+
+    transitions = {
+        "草稿": {"审阅"},
+        "审阅": {"草稿", "发布"},
+        "发布": set(),
+    }
+    current = draft.status if draft.status in transitions else "草稿"
+    target = payload.status
+    if target == current:
+        return _to_draft_detail(draft)
+    if target not in transitions[current]:
+        raise HTTPException(422, detail={"message": f"不允许从「{current}」流转到「{target}」"})
+    if target == "发布":
+        risks = [fc for fc in draft.fact_checks if fc.status != "一致"]
+        if risks:
+            raise HTTPException(
+                422,
+                detail={"message": "核查报告仍存在风险项，不能发布", "risk_count": len(risks)},
+            )
+
+    draft.status = target
+    db.commit()
+    db.refresh(draft)
+    return _to_draft_detail(draft)
+
+
 @router.post("/{draft_id}/revert", response_model=ReviseResponse)
 def revert(draft_id: str, payload: RevertRequest, db: Session = Depends(get_db)):
     """回退：基于当前版本生成一个新版本，其内容等于目标历史版本。"""
@@ -397,23 +476,4 @@ def get_draft(draft_id: str, db: Session = Depends(get_db)):
     draft = db.get(Draft, draft_id)
     if not draft:
         raise HTTPException(404, "草稿不存在")
-    return DraftDetail(
-        id=draft.id,
-        title=draft.title,
-        template_name=draft.template_name,
-        style=draft.style,
-        content=draft.content,
-        version=draft.version,
-        parent_id=draft.parent_id,
-        root_id=draft.root_id,
-        status=draft.status,
-        model=draft.model,
-        revision_instruction=draft.revision_instruction,
-        input_payload=draft.input_payload,
-        created_at=draft.created_at,
-        elements=[ElementOut.model_validate(e) for e in draft.elements],
-        fact_checks=[
-            FactCheckItem(claim=fc.claim, status=fc.status, basis=fc.basis, suggestion=fc.suggestion)
-            for fc in draft.fact_checks
-        ],
-    )
+    return _to_draft_detail(draft)

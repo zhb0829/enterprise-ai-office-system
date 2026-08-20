@@ -1,6 +1,6 @@
-"""要素结构化抽取与必填校验。
+"""要素结构化抽取。
 
-- 必填校验：纯规则化，按模板 placeholders.source 映射到请求字段，不依赖 LLM，快速确定。
+- 必填校验：当前不按模板 placeholders 阻断生成，由用户填写的要素直接参与生成。
 - 要素抽取：有 Key 时用 LLM 从事件描述提炼时间/地点/事件要点；Mock 模式规则化兜底。
   用户显式提供的要素 verified_status=来自用户输入；LLM 抽取的标记为待核实。
 """
@@ -20,37 +20,8 @@ _KEYFACTS_PREFIX = "keyFacts:"
 
 
 def validate_required(request: dict, template: dict) -> list[str]:
-    """按模板必填 placeholders 校验，返回缺失要素的中文名列表；空列表表示齐全。"""
-    missing: list[str] = []
-    event_desc = (request.get(_EVENT) or "").strip()
-    key_facts = request.get("keyFacts") or []
-    people = request.get(_PEOPLE) or []
-    audience = (request.get(_AUDIENCE) or "").strip()
-    title = (request.get(_TITLE) or "").strip()
-    kf = {k.get("name"): (k.get("value") or "") for k in key_facts}
-
-    for ph in template.get("placeholders", []):
-        if not ph.get("required"):
-            continue
-        source = ph.get("source", "")
-        if source == _EVENT:
-            ok = bool(event_desc)
-        elif source == _KEYS_ANY:
-            ok = bool(key_facts)
-        elif source == _PEOPLE:
-            ok = bool(people)
-        elif source == _AUDIENCE:
-            ok = bool(audience)
-        elif source == _TITLE:
-            ok = bool(title)
-        elif source.startswith(_KEYFACTS_PREFIX):
-            name = source.split(":", 1)[1]
-            ok = bool(kf.get(name, "").strip())
-        else:
-            ok = True
-        if not ok:
-            missing.append(ph.get("name") or ph.get("key"))
-    return missing
+    """保留接口形状，但不再按模板必填项阻断生成。"""
+    return []
 
 
 def extract_elements(request: dict, template: dict, llm: LLMClient) -> list[dict]:

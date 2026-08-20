@@ -102,6 +102,10 @@ class RevertRequest(BaseModel):
     targetId: str
 
 
+class StatusUpdateRequest(BaseModel):
+    status: Literal["草稿", "审阅", "发布"]
+
+
 class ReviseResponse(TimestampedModel):
     draft: str
     versionId: str
@@ -183,6 +187,17 @@ class ExportResponse(BaseModel):
     format: str
 
 
+class ExportLogOut(TimestampedModel):
+    model_config = {"from_attributes": True}
+
+    id: int
+    draft_id: str
+    format: str
+    file_path: str
+    download_url: str = ""
+    created_at: datetime
+
+
 # ===== 素材 =====
 class MaterialOut(TimestampedModel):
     id: int
@@ -195,3 +210,16 @@ class MaterialOut(TimestampedModel):
 
 class MaterialDetail(MaterialOut):
     text_content: str = ""
+
+
+class MaterialChunkOut(TimestampedModel):
+    model_config = {"from_attributes": True}
+
+    id: int
+    material_id: int
+    filename: str = ""
+    chunk_index: int
+    text: str
+    score: float = 0
+    meta: dict[str, Any] = Field(default_factory=dict)
+    created_at: datetime | None = None

@@ -8,8 +8,14 @@ from sqlalchemy.orm import Session
 from ..config import settings
 from ..db import get_db
 from ..models import ReferenceMaterial
-from ..schemas import MaterialDetail, MaterialOut
-from ..services.materials import MaterialParseError, UnsupportedFileError, parse_material
+from ..schemas import MaterialChunkOut, MaterialDetail, MaterialOut
+from ..services.materials import (
+    MaterialParseError,
+    UnsupportedFileError,
+    build_material_chunks,
+    parse_material,
+    search_material_chunks,
+)
 
 router = APIRouter()
 
@@ -53,6 +59,8 @@ async def upload_material(file: UploadFile = File(...), db: Session = Depends(ge
     )
     db.add(material)
     db.flush()
+    chunk_count = build_material_chunks(db, material)
+    material.status = f"已入库/{chunk_count}块"
     (settings.upload_path / f"{material.id}_{safe_name}").write_bytes(data)
     db.commit()
     db.refresh(material)
@@ -83,13 +91,30 @@ def list_materials(db: Session = Depends(get_db)):
     ]
 
 
+@router.get("/search", response_model=list[MaterialChunkOut])
+def search_materials(
+    q: str,
+    material_ids: str | None = None,
+    limit: int = 6,
+    db: Session = Depends(get_db),
+):
+    """参考素材引用检索：返回最相关素材片段，用于事实依据与生成引用。"""
+    ids = []
+    if material_ids:
+        for raw in material_ids.split(","):
+            raw = raw.strip()
+            if raw.isdigit():
+                ids.append(int(raw))
+    return search_material_chunks(db, q, ids or None, limit)
+
+
 @router.get("/{material_id}", response_model=MaterialDetail)
 def get_material(material_id: int, db: Session = Depends(get_db)):
     """素材详情。"""
     m = db.get(ReferenceMaterial, material_id)
     if not m:
         raise HTTPException(404, "素材不存在")
-    return MaterialOut(
+    return MaterialDetail(
         id=m.id,
         filename=m.filename,
         content_type=m.content_type,

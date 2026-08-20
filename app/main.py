@@ -8,7 +8,7 @@ from fastapi.staticfiles import StaticFiles
 
 from .config import settings
 from .db import Base, SessionLocal, engine
-from .routers import drafts, materials, templates
+from .routers import drafts, exports, materials, templates
 from .services.template_loader import load_seed_templates, load_styles
 
 # 统一 UTF-8：确保 Windows 控制台/日志输出中文不乱码（PEP 540 之前的 locale 编码问题）
@@ -49,6 +49,7 @@ app.add_middleware(
 app.include_router(templates.router, prefix="/api/templates", tags=["templates"])
 app.include_router(drafts.router, prefix="/api/drafts", tags=["drafts"])
 app.include_router(materials.router, prefix="/api/materials", tags=["materials"])
+app.include_router(exports.router, prefix="/api/exports", tags=["exports"])
 
 # 静态文件：导出文件与上传素材下载
 app.mount("/static/exports", StaticFiles(directory=str(settings.export_path)), name="exports")

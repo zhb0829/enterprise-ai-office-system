@@ -60,19 +60,34 @@ def _style_guidelines(style_name: str) -> str:
     return ""
 
 
-def load_materials_text(db: Session, refs: list) -> str:
-    """按素材 id 读取文本内容，用于生成时注入上下文（全文注入简化方案）。"""
+def load_materials_text(db: Session, refs: list, query: str = "") -> str:
+    """按素材 id 读取文本内容，优先注入分块检索片段，缺少分块时回退全文摘要。"""
     if not refs:
         return ""
-    chunks = []
+    material_ids = []
     for ref in refs:
         material_id = ref
         if isinstance(ref, str) and ref.isdigit():
             material_id = int(ref)
         if isinstance(material_id, int):
-            m = db.get(ReferenceMaterial, material_id)
-            if m and m.status == "已入库" and m.text_content:
-                chunks.append(f"[素材:{m.filename}]\n{m.text_content[:8000]}")
+            material_ids.append(material_id)
+
+    search_query = query.strip()
+    if search_query:
+        from .materials import search_material_chunks
+
+        hits = search_material_chunks(db, search_query, material_ids, limit=8)
+        if hits:
+            return "\n\n".join(
+                f"[素材:{h['filename']}#片段{h['chunk_index'] + 1}]\n{h['text'][:1200]}"
+                for h in hits
+            )
+
+    chunks = []
+    for material_id in material_ids:
+        m = db.get(ReferenceMaterial, material_id)
+        if m and m.status.startswith("已入库") and m.text_content:
+            chunks.append(f"[素材:{m.filename}]\n{m.text_content[:8000]}")
     return "\n\n".join(chunks)
 
 

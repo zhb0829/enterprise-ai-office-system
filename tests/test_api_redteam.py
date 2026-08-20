@@ -106,7 +106,7 @@ def test_generation_prompt_resists_injection():
     assert malicious in messages[1]["content"]
 
 
-def test_validate_required_reports_missing_elements():
+def test_validate_required_allows_user_supplied_elements_without_template_blocking():
     template = {
         "placeholders": [
             {"name": "标题", "key": "title", "required": True, "source": "title"},
@@ -116,7 +116,7 @@ def test_validate_required_reports_missing_elements():
     }
     request = {"title": "", "eventDesc": "已有事项", "audience": ""}
 
-    assert validate_required(request, template) == ["标题", "受众"]
+    assert validate_required(request, template) == []
 
 
 def test_check_risks_flags_sensitive_terms():

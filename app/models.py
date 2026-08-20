@@ -95,6 +95,24 @@ class ReferenceMaterial(Base):
     status: Mapped[str] = mapped_column(String(32), default="已入库")  # 已入库/解析失败
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
+    chunks: Mapped[list["MaterialChunk"]] = relationship(
+        back_populates="material", cascade="all, delete-orphan"
+    )
+
+
+class MaterialChunk(Base):
+    __tablename__ = "material_chunk"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    material_id: Mapped[int] = mapped_column(ForeignKey("reference_material.id"), index=True)
+    chunk_index: Mapped[int] = mapped_column(Integer)
+    text: Mapped[str] = mapped_column(Text, default="")
+    embedding: Mapped[list[float]] = mapped_column(JSON, default=list)
+    meta: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+    material: Mapped[ReferenceMaterial] = relationship(back_populates="chunks")
+
 
 class StyleConfig(Base):
     __tablename__ = "style_config"
