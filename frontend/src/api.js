@@ -85,6 +85,10 @@ export function fetchVersions(id) {
   return request(`/api/drafts/${encodeURIComponent(id)}/versions`);
 }
 
+export function fetchFactCheckReport(id) {
+  return request(`/api/drafts/${encodeURIComponent(id)}/factcheck`);
+}
+
 export async function createDraftStream(payload, onEvent) {
   const response = await fetch('/api/drafts/news/stream', {
     method: 'POST',
@@ -118,10 +122,23 @@ export async function createDraftStream(payload, onEvent) {
 }
 
 export function exportDraft(draftId, format) {
-  return request('/api/drafts/export', {
+  return request('/api/exports', {
     method: 'POST',
     headers: jsonHeaders,
     body: JSON.stringify({ draftId, format }),
+  });
+}
+
+export function fetchExportHistory(draftId) {
+  const query = draftId ? `?draft_id=${encodeURIComponent(draftId)}` : '';
+  return request(`/api/exports${query}`);
+}
+
+export function updateDraftStatus(draftId, status) {
+  return request(`/api/drafts/${encodeURIComponent(draftId)}/status`, {
+    method: 'POST',
+    headers: jsonHeaders,
+    body: JSON.stringify({ status }),
   });
 }
 
@@ -164,4 +181,51 @@ export function uploadMaterial(file) {
     method: 'POST',
     body: form,
   });
+}
+
+export function searchMaterials(query, materialIds = [], limit = 6) {
+  const params = new URLSearchParams({ q: query, limit: String(limit) });
+  if (materialIds.length) params.set('material_ids', materialIds.join(','));
+  return request(`/api/materials/search?${params.toString()}`);
+}
+
+export function askPolicy(payload) {
+  return request('/api/policy/chat', {
+    method: 'POST',
+    headers: jsonHeaders,
+    body: JSON.stringify(payload),
+  });
+}
+
+export function interpretPolicyClause(payload) {
+  return request('/api/policy/interpret', {
+    method: 'POST',
+    headers: jsonHeaders,
+    body: JSON.stringify(payload),
+  });
+}
+
+export function checkPolicyCompliance(payload) {
+  return request('/api/policy/compliance/check', {
+    method: 'POST',
+    headers: jsonHeaders,
+    body: JSON.stringify(payload),
+  });
+}
+
+export function searchPolicy(query, filters = {}) {
+  const params = new URLSearchParams({ q: query, limit: String(filters.limit || 6) });
+  if (filters.industry) params.set('industry', filters.industry);
+  if (filters.level) params.set('level', filters.level);
+  if (filters.authority) params.set('authority', filters.authority);
+  return request(`/api/policy/search?${params.toString()}`);
+}
+
+export function fetchPolicyDocuments(filters = {}) {
+  const params = new URLSearchParams();
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value) params.set(key, value);
+  });
+  const query = params.toString() ? `?${params.toString()}` : '';
+  return request(`/api/policy/documents${query}`);
 }

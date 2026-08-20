@@ -1,11 +1,71 @@
 <template>
-  <main class="workspace">
-    <section class="compose-panel">
-      <div class="section-title">
+  <main ref="workspaceRoot" class="workspace-page">
+    <section class="workspace-hero" aria-labelledby="workspace-title">
+      <div class="hero-copy">
+        <p class="eyebrow">公告与新闻稿智能撰写</p>
+        <h2 id="workspace-title">
+          把发布事项
+          <span class="inline-image" aria-hidden="true"></span>
+          变成可审、可改、可导出的正式稿件
+        </h2>
+        <p class="hero-summary">
+          当前用户端先聚焦企业公告与新闻稿撰写，后续将扩展政策法规问答、行业动态聚合、舆情分析、资质指南编制与会议公开信息整理。
+        </p>
+      </div>
+      <div class="hero-actions" aria-label="主要操作">
+        <a class="primary-button hero-button" href="#compose-panel">开始撰写</a>
+        <a class="ghost-button hero-link" href="#draft-panel">查看草稿</a>
+      </div>
+    </section>
+
+    <section class="module-bento" aria-labelledby="module-bento-title">
+      <div class="module-bento-head">
+        <div>
+          <h2 id="module-bento-title">企业办公智能能力矩阵</h2>
+          <p>每个能力后续独立页面承载，当前先开放公告与新闻稿智能撰写。</p>
+        </div>
+      </div>
+      <div class="module-grid" aria-label="功能模块">
+        <article
+          v-for="module in featureModules"
+          :key="module.title"
+          :class="['module-card', { current: module.current }]"
+        >
+          <span>{{ module.status }}</span>
+          <h3>{{ module.title }}</h3>
+          <p>{{ module.description }}</p>
+        </article>
+      </div>
+      <div class="module-marquee" aria-hidden="true">
+        <div>
+          <span>政策问答</span>
+          <span>动态聚合</span>
+          <span>舆情分析</span>
+          <span>资质指南</span>
+          <span>会议信息</span>
+        </div>
+        <div>
+          <span>政策问答</span>
+          <span>动态聚合</span>
+          <span>舆情分析</span>
+          <span>资质指南</span>
+          <span>会议信息</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="workspace" aria-label="公告撰写工作区">
+    <section id="compose-panel" class="compose-panel motion-card" aria-label="创建草稿">
+      <div class="section-title compose-panel-heading">
         <h2>创建草稿</h2>
         <button class="ghost-button" type="button" @click="resetForm">重置</button>
       </div>
 
+      <section class="compose-group" aria-labelledby="writing-elements-title">
+        <div class="compose-group-head">
+          <h3 id="writing-elements-title">撰写要素</h3>
+          <span>说明发布的核心事项</span>
+        </div>
       <label class="field">
         <span>标题</span>
         <input v-model="form.title" placeholder="例如：关于智能办公平台试运行的通知" />
@@ -15,7 +75,13 @@
         <span>核心事项</span>
         <textarea v-model="form.eventDesc" rows="5" placeholder="描述事件背景、发布时间、面向对象、关键动作"></textarea>
       </label>
+      </section>
 
+      <section class="compose-group" aria-labelledby="template-style-title">
+        <div class="compose-group-head">
+          <h3 id="template-style-title">模板与文风</h3>
+          <span>匹配发布场景与渠道</span>
+        </div>
       <div class="grid two">
         <label class="field">
           <span>模板类型</span>
@@ -39,6 +105,25 @@
         </label>
       </div>
 
+      <div class="subsection compact-block">
+        <div class="section-title compact">
+          <h3>并行文风</h3>
+          <small class="muted-hint">生成后可在右侧对比采用</small>
+        </div>
+        <div class="style-pick-list">
+          <label v-for="style in styles" :key="style.name" class="style-check-row">
+            <input v-model="form.styles" type="checkbox" :value="style.name" :disabled="style.name === form.style" />
+            <span>{{ style.name }}</span>
+          </label>
+        </div>
+      </div>
+      </section>
+
+      <section class="compose-group" aria-labelledby="facts-title">
+        <div class="compose-group-head">
+          <h3 id="facts-title">关键信息</h3>
+          <span>为生成和核查提供依据</span>
+        </div>
       <label class="field">
         <span>受众</span>
         <input v-model="form.audience" placeholder="例如：全体员工、媒体、合作伙伴" />
@@ -47,27 +132,33 @@
       <div class="subsection">
         <div class="section-title compact">
           <h3>关键要素</h3>
-          <button class="icon-button" type="button" title="添加要素" @click="addFact">+</button>
+          <button class="icon-button" type="button" title="添加要素" aria-label="添加要素" @click="addFact">+</button>
         </div>
         <div v-for="(fact, index) in form.keyFacts" :key="index" class="inline-row">
           <input v-model="fact.name" placeholder="要素名" />
           <input v-model="fact.value" placeholder="要素值" />
-          <button class="icon-button danger" type="button" title="删除要素" @click="removeFact(index)">×</button>
+          <button class="icon-button danger" type="button" title="删除要素" aria-label="删除要素" @click="removeFact(index)">×</button>
         </div>
       </div>
 
       <div class="subsection">
         <div class="section-title compact">
           <h3>相关人员</h3>
-          <button class="icon-button" type="button" title="添加人员" @click="addPerson">+</button>
+          <button class="icon-button" type="button" title="添加人员" aria-label="添加人员" @click="addPerson">+</button>
         </div>
         <div v-for="(person, index) in form.people" :key="index" class="inline-row">
           <input v-model="person.name" placeholder="姓名" />
           <input v-model="person.title" placeholder="职务" />
-          <button class="icon-button danger" type="button" title="删除人员" @click="removePerson(index)">×</button>
+          <button class="icon-button danger" type="button" title="删除人员" aria-label="删除人员" @click="removePerson(index)">×</button>
         </div>
       </div>
+      </section>
 
+      <section class="compose-group materials-group" aria-labelledby="materials-title">
+        <div class="compose-group-head">
+          <h3 id="materials-title">参考素材</h3>
+          <span>选择可引用的资料</span>
+        </div>
       <div class="subsection">
         <div class="section-title compact">
           <h3>素材</h3>
@@ -80,21 +171,47 @@
             <small>{{ material.status }} · {{ material.text_length }} 字</small>
           </label>
         </div>
+        <div class="material-search">
+          <div class="export-input-row">
+            <input v-model="materialQuery" placeholder="检索素材引用，例如 上线时间、机构名称" />
+            <button class="ghost-button" type="button" :disabled="searchingMaterials" @click="submitMaterialSearch">
+              {{ searchingMaterials ? '检索中...' : '检索' }}
+            </button>
+          </div>
+          <div v-if="materialHits.length" class="material-hit-list">
+            <div v-for="hit in materialHits" :key="hit.id" class="material-hit">
+              <div class="fact-topline">
+                <strong>{{ hit.filename }} · 片段 {{ hit.chunk_index + 1 }}</strong>
+                <span>{{ hit.score }}</span>
+              </div>
+              <p>{{ hit.text }}</p>
+              <button class="apply-button" type="button" @click="applyMaterialHit(hit)">引用</button>
+            </div>
+          </div>
+        </div>
       </div>
+      </section>
 
-      <button class="primary-button" type="button" :disabled="submitting" @click="submitDraft">
-        {{ submitting ? '生成中...' : '生成草稿' }}
-      </button>
-      <p v-if="errorMessage" class="error-text">{{ errorMessage }}</p>
+      <div class="compose-submit">
+        <button class="primary-button" type="button" :disabled="submitting" @click="submitDraft">
+          {{ submitting ? '生成中...' : '生成草稿' }}
+        </button>
+        <p v-if="errorMessage" class="error-text" role="alert">{{ errorMessage }}</p>
+      </div>
     </section>
 
-    <section class="draft-panel">
+    <section id="draft-panel" class="draft-panel motion-card">
       <div class="draft-header">
         <div>
           <p class="eyebrow">草稿查看</p>
           <h2>{{ currentDraft.title || '未命名草稿' }}</h2>
         </div>
         <div class="draft-actions">
+          <div v-if="currentDraft.id" class="status-flow">
+            <button v-for="action in statusActions" :key="action.status" class="ghost-button" type="button" :disabled="statusUpdating" @click="submitStatus(action.status)">
+              {{ action.label }}
+            </button>
+          </div>
           <button v-if="!editing && currentDraft.id" class="ghost-button" type="button" :disabled="polishing" @click="submitPolish">
             {{ polishing ? '润色中...' : '润色' }}
           </button>
@@ -135,20 +252,43 @@
           <select v-model="exportFormat">
             <option value="md">Markdown (.md)</option>
             <option value="docx">Word (.docx)</option>
+            <option value="pdf">PDF (.pdf)</option>
           </select>
           <button class="primary-button export-submit" type="button" :disabled="exporting || !currentDraft.id" @click="submitExport">
             {{ exporting ? '导出中...' : '导出' }}
           </button>
         </div>
+        <div v-if="exportHistory.length" class="export-history">
+          <a v-for="item in exportHistory" :key="item.id" :href="item.download_url" target="_blank">
+            {{ item.format.toUpperCase() }} · {{ formatDate(item.created_at) }}
+          </a>
+        </div>
       </div>
 
-      <div class="tabs">
-        <button v-for="tab in tabs" :key="tab.key" :class="{ active: activeTab === tab.key }" type="button" @click="activeTab = tab.key">
+      <div class="tabs" role="tablist" aria-label="草稿查看内容">
+        <button
+          v-for="tab in tabs"
+          :id="`draft-tab-${tab.key}`"
+          :key="tab.key"
+          :aria-controls="`draft-panel-${tab.key}`"
+          :aria-selected="activeTab === tab.key"
+          :class="{ active: activeTab === tab.key }"
+          :tabindex="activeTab === tab.key ? 0 : -1"
+          role="tab"
+          type="button"
+          @click="activeTab = tab.key"
+        >
           {{ tab.label }}
         </button>
       </div>
 
-      <article v-if="activeTab === 'content'" class="draft-content">
+      <article
+        v-if="activeTab === 'content'"
+        id="draft-panel-content"
+        class="draft-content"
+        role="tabpanel"
+        aria-labelledby="draft-tab-content"
+      >
         <div v-if="editing" class="edit-area">
           <textarea v-model="editText" rows="20" placeholder="在此直接编辑正文..."></textarea>
           <div class="edit-actions">
@@ -167,7 +307,13 @@
         <p v-if="submitting && streamStage" class="stream-status">{{ stageLabel }}…</p>
       </article>
 
-      <div v-else-if="activeTab === 'suggestions'" class="list-panel">
+      <div
+        v-else-if="activeTab === 'suggestions'"
+        id="draft-panel-suggestions"
+        class="list-panel"
+        role="tabpanel"
+        aria-labelledby="draft-tab-suggestions"
+      >
         <div v-if="polishChanges.length" class="polish-panel">
           <p class="panel-note">润色修改说明（已生成新版本 v{{ currentDraft.version }}）：</p>
           <div v-for="(change, index) in polishChanges" :key="index" class="polish-item">
@@ -187,9 +333,33 @@
           <p>{{ suggestion }}</p>
           <button class="apply-button" type="button" @click="applySuggestion(suggestion)">应用</button>
         </div>
+        <section v-if="variants.length" class="variant-section" aria-labelledby="variant-title">
+          <div class="variant-section-head">
+            <div>
+              <h3 id="variant-title">多文风备选</h3>
+              <p>可将任一备选文风作为新的正文版本。</p>
+            </div>
+          </div>
+          <div v-for="variant in variants" :key="variant.style" class="variant-card">
+            <div class="fact-topline">
+              <strong>{{ variant.style }}</strong>
+              <button class="apply-button" type="button" :disabled="savingEdit || !currentDraft.id" @click="useVariant(variant)">采用</button>
+            </div>
+            <pre>{{ variant.content }}</pre>
+          </div>
+        </section>
       </div>
 
-      <div v-else-if="activeTab === 'factcheck'" class="list-panel">
+      <div
+        v-else-if="activeTab === 'factcheck'"
+        id="draft-panel-factcheck"
+        class="list-panel"
+        role="tabpanel"
+        aria-labelledby="draft-tab-factcheck"
+      >
+        <div class="list-toolbar">
+          <button class="ghost-button" type="button" :disabled="!currentDraft.id" @click="refreshFactcheck">刷新核查报告</button>
+        </div>
         <div v-for="(item, index) in factChecks" :key="index" class="fact-item">
           <div class="fact-topline">
             <strong>{{ item.claim }}</strong>
@@ -200,17 +370,44 @@
         </div>
       </div>
 
-      <div v-else class="version-tree">
+      <div
+        v-else
+        id="draft-panel-versions"
+        class="version-tree"
+        role="tabpanel"
+        aria-labelledby="draft-tab-versions"
+      >
         <VersionNodeView :node="versionTree" :current-id="currentDraft.id" :on-revert="revertToVersion" />
       </div>
+    </section>
     </section>
   </main>
 </template>
 
 <script setup>
-import { computed, defineComponent, h, onMounted, reactive, ref, watch } from 'vue';
-import { createDraft, createDraftStream, editDraftContent, exportDraft, fetchDraft, fetchMaterials, fetchStyles, fetchTemplates, fetchVersions, polishDraft, revertDraft, reviseDraft } from '../api';
+import { computed, defineComponent, h, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
+import { gsap } from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import {
+  createDraftStream,
+  editDraftContent,
+  exportDraft,
+  fetchDraft,
+  fetchExportHistory,
+  fetchFactCheckReport,
+  fetchMaterials,
+  fetchStyles,
+  fetchTemplates,
+  fetchVersions,
+  polishDraft,
+  revertDraft,
+  reviseDraft,
+  searchMaterials,
+  updateDraftStatus,
+} from '../api';
 import { demoDraft, demoMaterials, demoStyles, demoSuggestions, demoTemplates, demoVersions } from '../demoData';
+
+gsap.registerPlugin(ScrollTrigger);
 
 const tabs = [
   { key: 'content', label: '正文' },
@@ -219,12 +416,53 @@ const tabs = [
   { key: 'versions', label: '版本历史' },
 ];
 
+const featureModules = [
+  {
+    title: '公告与新闻稿智能撰写',
+    description: '按模板、文风、素材和核查结果生成可编辑草稿。',
+    status: '当前开放',
+    current: true,
+  },
+  {
+    title: '行业政策法规智能问答',
+    description: '围绕政策条文、监管口径和业务场景提供可追溯问答。',
+    status: '规划中',
+  },
+  {
+    title: '行业动态与竞品信息智能聚合',
+    description: '聚合公开资讯、竞品动态和趋势摘要，形成研判素材。',
+    status: '规划中',
+  },
+  {
+    title: '企业舆情分析',
+    description: '跟踪外部声量、风险议题和情绪变化，辅助响应决策。',
+    status: '规划中',
+  },
+  {
+    title: '企业资质与服务指南智能编制',
+    description: '沉淀资质说明、办事流程和服务手册，支持快速成稿。',
+    status: '规划中',
+  },
+  {
+    title: '会议公开信息整理',
+    description: '整理会议公开资料、纪要要点和对外发布信息。',
+    status: '规划中',
+  },
+];
+
+const workspaceRoot = ref(null);
 const apiReady = ref(false);
 const submitting = ref(false);
 const revising = ref(false);
 const exporting = ref(false);
 const polishing = ref(false);
+const statusUpdating = ref(false);
 const polishChanges = ref([]);
+const variants = ref([]);
+const exportHistory = ref([]);
+const materialQuery = ref('');
+const materialHits = ref([]);
+const searchingMaterials = ref(false);
 const errorMessage = ref('');
 const activeTab = ref('content');
 const revisionInstruction = ref('');
@@ -246,6 +484,7 @@ const form = reactive({
   eventDesc: '公司计划启动智能办公平台试运行，用于提升公告、新闻稿和内部通知的起草效率。请各部门参与体验并反馈问题。',
   template: 'news_release',
   style: '正式',
+  styles: ['正式', '严谨', '活泼'],
   audience: '全体员工',
   keyFacts: [
     { name: '启动时间', value: '2026 年 8 月 20 日' },
@@ -276,7 +515,7 @@ function restoreDraftState() {
     if (saved.revisionSuggestions) revisionSuggestions.value = saved.revisionSuggestions;
     if (saved.versionTree) versionTree.value = saved.versionTree;
     if (saved.revisionInstruction !== undefined) revisionInstruction.value = saved.revisionInstruction;
-    if (saved.activeTab) activeTab.value = saved.activeTab;
+    if (tabs.some((tab) => tab.key === saved.activeTab)) activeTab.value = saved.activeTab;
   } catch {
     // 忽略损坏的缓存
   }
@@ -291,6 +530,14 @@ watch(
     localStorage.setItem(FORM_STORAGE_KEY, JSON.stringify(form));
   },
   { deep: true }
+);
+
+watch(
+  () => form.style,
+  (style) => {
+    if (!Array.isArray(form.styles)) form.styles = [];
+    if (style && !form.styles.includes(style)) form.styles.unshift(style);
+  }
 );
 
 watch(
@@ -330,6 +577,18 @@ const stageLabel = computed(() => {
 
 const factChecks = computed(() => {
   return currentDraft.value.fact_checks?.length ? currentDraft.value.fact_checks : demoDraft.fact_checks;
+});
+
+const statusActions = computed(() => {
+  const status = currentDraft.value.status || '草稿';
+  if (status === '草稿' || status === '已生成') return [{ label: '送审', status: '审阅' }];
+  if (status === '审阅' || status === '待审核') {
+    return [
+      { label: '退回草稿', status: '草稿' },
+      { label: '发布', status: '发布' },
+    ];
+  }
+  return [];
 });
 
 const templateGroups = computed(() => {
@@ -424,6 +683,7 @@ function resetForm() {
   form.eventDesc = '';
   form.template = templates.value[0]?.name || 'news_release';
   form.style = styles.value[0]?.name || '正式';
+  form.styles = [form.style];
   form.audience = '';
   form.keyFacts = [{ name: '', value: '' }];
   form.people = [];
@@ -440,6 +700,8 @@ async function loadBootstrapData() {
     materials.value = materialRows.length ? materialRows : demoMaterials;
     if (!templates.value.some((t) => t.name === form.template)) form.template = templates.value[0]?.name || form.template;
     if (!styles.value.some((s) => s.name === form.style)) form.style = styles.value[0]?.name || form.style;
+    if (!Array.isArray(form.styles) || !form.styles.length) form.styles = [form.style];
+    if (!form.styles.includes(form.style)) form.styles.unshift(form.style);
     apiReady.value = true;
   } catch {
     apiReady.value = false;
@@ -460,7 +722,7 @@ async function submitDraft() {
     people: form.people.filter((item) => item.name || item.title),
     audience: form.audience,
     style: form.style,
-    styles: [form.style],
+    styles: form.styles?.length ? form.styles : [form.style],
     template: form.template,
     referenceMaterials: form.referenceMaterials,
   };
@@ -491,6 +753,7 @@ async function submitDraft() {
 
 async function applyGeneratedDraft(result) {
   polishChanges.value = [];
+  variants.value = result.variants || [];
   if (streamText.value) {
     currentDraft.value = {
       ...currentDraft.value,
@@ -511,6 +774,7 @@ async function applyGeneratedDraft(result) {
   try {
     currentDraft.value = await fetchDraft(result.versionId);
     versionTree.value = await fetchVersions(result.versionId);
+    exportHistory.value = await fetchExportHistory(result.versionId);
   } catch {
     versionTree.value = { ...demoVersions, id: result.versionId, title: form.title || '未命名草稿' };
   }
@@ -538,6 +802,19 @@ async function submitPolish() {
     errorMessage.value = `润色失败：${error.message}`;
   } finally {
     polishing.value = false;
+  }
+}
+
+async function submitStatus(status) {
+  if (!currentDraft.value.id) return;
+  statusUpdating.value = true;
+  errorMessage.value = '';
+  try {
+    currentDraft.value = await updateDraftStatus(currentDraft.value.id, status);
+  } catch (error) {
+    errorMessage.value = `状态流转失败：${error.message}`;
+  } finally {
+    statusUpdating.value = false;
   }
 }
 
@@ -626,11 +903,61 @@ async function loadDraft(versionId) {
   try {
     currentDraft.value = await fetchDraft(versionId);
     versionTree.value = await fetchVersions(versionId);
+    exportHistory.value = await fetchExportHistory(versionId);
   } catch {
     versionTree.value = { ...demoVersions, id: versionId };
   }
   activeTab.value = 'content';
   apiReady.value = true;
+}
+
+async function refreshFactcheck() {
+  if (!currentDraft.value.id) return;
+  errorMessage.value = '';
+  try {
+    const report = await fetchFactCheckReport(currentDraft.value.id);
+    currentDraft.value = { ...currentDraft.value, fact_checks: report };
+  } catch (error) {
+    errorMessage.value = `核查报告刷新失败：${error.message}`;
+  }
+}
+
+async function useVariant(variant) {
+  if (!variant?.content || !currentDraft.value.id) return;
+  savingEdit.value = true;
+  errorMessage.value = '';
+  try {
+    const result = await editDraftContent(currentDraft.value.id, variant.content);
+    revisionSuggestions.value = [`已采用「${variant.style}」文风版本作为当前正文。`];
+    await loadDraft(result.versionId);
+  } catch (error) {
+    errorMessage.value = `采用文风版本失败：${error.message}`;
+  } finally {
+    savingEdit.value = false;
+  }
+}
+
+async function submitMaterialSearch() {
+  const query = (materialQuery.value || form.eventDesc || form.title).trim();
+  if (!query) {
+    errorMessage.value = '请输入素材检索关键词。';
+    return;
+  }
+  searchingMaterials.value = true;
+  errorMessage.value = '';
+  try {
+    materialHits.value = await searchMaterials(query, form.referenceMaterials, 6);
+    if (!materialHits.value.length) errorMessage.value = '没有检索到匹配素材片段。';
+  } catch (error) {
+    errorMessage.value = `素材检索失败：${error.message}`;
+  } finally {
+    searchingMaterials.value = false;
+  }
+}
+
+function applyMaterialHit(hit) {
+  const text = `参考素材「${hit.filename}」片段：${hit.text}`;
+  form.eventDesc = form.eventDesc ? `${form.eventDesc}\n${text}` : text;
 }
 
 async function submitExport() {
@@ -643,6 +970,7 @@ async function submitExport() {
   try {
     const result = await exportDraft(currentDraft.value.id, exportFormat.value);
     triggerDownload(result.download_url);
+    exportHistory.value = await fetchExportHistory(currentDraft.value.id);
   } catch (error) {
     errorMessage.value = `导出失败：${error.message}`;
   } finally {
@@ -660,5 +988,67 @@ function triggerDownload(url) {
   document.body.removeChild(a);
 }
 
-onMounted(loadBootstrapData);
+function initWorkspaceMotion() {
+  const root = workspaceRoot.value;
+  if (!root || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  const ctx = gsap.context(() => {
+    gsap.from('.workspace-hero .eyebrow, .workspace-hero h2, .hero-summary, .hero-actions', {
+      y: 28,
+      opacity: 0,
+      duration: 0.9,
+      ease: 'power3.out',
+      stagger: 0.08,
+    });
+
+    gsap.from('.module-card', {
+      scrollTrigger: {
+        trigger: '.module-bento',
+        start: 'top 78%',
+      },
+      y: 34,
+      opacity: 0,
+      duration: 0.7,
+      ease: 'power3.out',
+      stagger: 0.06,
+    });
+
+    gsap.from('.motion-card', {
+      scrollTrigger: {
+        trigger: '.workspace',
+        start: 'top 76%',
+      },
+      y: 42,
+      opacity: 0,
+      duration: 0.8,
+      ease: 'power3.out',
+      stagger: 0.12,
+    });
+
+    gsap.to('.hero-copy', {
+      scrollTrigger: {
+        trigger: '.workspace-hero',
+        start: 'top top+=96',
+        end: 'bottom top+=140',
+        scrub: true,
+      },
+      opacity: 0.28,
+      y: -18,
+      ease: 'none',
+    });
+  }, root);
+
+  return () => ctx.revert();
+}
+
+let teardownMotion;
+
+onMounted(() => {
+  loadBootstrapData();
+  teardownMotion = initWorkspaceMotion();
+});
+
+onBeforeUnmount(() => {
+  if (typeof teardownMotion === 'function') teardownMotion();
+});
 </script>

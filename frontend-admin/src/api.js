@@ -173,3 +173,35 @@ export function uploadMaterial(file) {
     body: form,
   });
 }
+
+export function fetchPolicyDocuments(filters = {}) {
+  const params = new URLSearchParams();
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value) params.set(key, value);
+  });
+  const query = params.toString() ? `?${params.toString()}` : '';
+  return request(`/api/policy/documents${query}`);
+}
+
+export function uploadPolicyDocument(file, fields = {}) {
+  const form = new FormData();
+  form.append('file', file);
+  Object.entries(fields).forEach(([key, value]) => {
+    if (value) form.append(key, value);
+  });
+  return request('/api/policy/documents/upload', { method: 'POST', body: form });
+}
+
+export function collectPolicyUrl(payload) {
+  return request('/api/policy/documents/from-url', {
+    method: 'POST',
+    headers: jsonHeaders,
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updatePolicyDocumentStatus(id, status) {
+  return request(`/api/policy/documents/${encodeURIComponent(id)}/status?status=${encodeURIComponent(status)}`, {
+    method: 'POST',
+  });
+}

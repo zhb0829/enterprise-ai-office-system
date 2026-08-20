@@ -8,7 +8,8 @@
 
 ```
 ├── admin-server/      # Spring Boot 3 后端（含安全/JWT/网关/业务接口）
-├── frontend/          # Vue3 + Vite 前端
+├── frontend/          # Vue3 + Vite 用户工作台（撰写 / 政策问答）
+├── frontend-admin/    # Vue3 + Vite 管理端（模板 / 素材 / 政策知识库）
 └── docker-compose.yml # 数据库编排（PostgreSQL + pgvector，端口 5433）
 ```
 
@@ -45,6 +46,13 @@
 - 数据库（admin-server/src/main/resources/application.yml，环境变量可覆盖）：默认 `localhost:5433/eaos`，账号 `eaos/eaos_dev_password`
 - `AI_BASE_URL`：Python AI 服务地址（默认 `http://localhost:8000`）
 - `JWT_SECRET`：生产必须通过环境变量替换
+
+政策法规模块：
+
+- 用户端：`http://localhost:5173/workspace/policy`
+- 管理端：`http://localhost:5174/admin/policy-documents`
+- Java 网关转发 `/api/policy/**`、`/api/chat/**`、`/api/compliance/**` 到 Python AI 服务
+- 合规结果仅作公开信息初步比对和风险提示，前端与接口均附免责声明
 
 ## 与 Python 项目协作
 

@@ -45,9 +45,10 @@ const apiReady = ref(false);
 const menuItems = [
   { path: '/admin/templates', title: '模板管理', group: '内容管理' },
   { path: '/admin/materials', title: '素材管理', group: '内容管理' },
+  { path: '/admin/policy-documents', title: '政策法规知识库', group: '知识库管理' },
 ];
 
-const groups = ['内容管理'];
+const groups = ['内容管理', '知识库管理'];
 
 const currentTitle = computed(() => route.meta.title || '后台管理');
 
