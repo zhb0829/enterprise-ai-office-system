@@ -1,16 +1,15 @@
-# enterprise-ai-office-system-admin（Java 后台管理系统）
+# 企业 AI 智能办公系统
 
-企业 AI 智能办公系统的 **后台管理系统**（Java 独立项目）。作为对外唯一 API 网关：负责认证鉴权、业务/管理型 CRUD、列表/看板/报表查询、配置管理、通知通道、任务调度面板，并将 AI/文档/采集类请求转发给 Python AI 服务（`enterprise-ai-office-system-new`）。
-
-> 与 Python AI 服务完全分离，两个独立项目。本仓库自带前端与数据库编排。
+企业 AI 智能办公系统采用 Monorepo 管理。Java 负责统一 API 网关、认证授权和管理型业务；Python 负责 LLM、文档解析、检索增强生成和网页采集。运行时仍是独立服务，通过共享 PostgreSQL 和内网 HTTP 协作。
 
 ## 目录结构
 
 ```
-├── admin-server/      # Spring Boot 3 后端（含安全/JWT/网关/业务接口）
-├── frontend/          # Vue3 + Vite 用户工作台（撰写 / 政策问答）
-├── frontend-admin/    # Vue3 + Vite 管理端（模板 / 素材 / 政策知识库）
-└── docker-compose.yml # 数据库编排（PostgreSQL + pgvector，端口 5433）
+├── admin-server/      # Spring Boot 3：统一网关、认证、管理型业务 API
+├── ai-server/         # FastAPI：LLM、文档解析、RAG、政策问答、合规初步比对
+├── frontend/          # Vue3 用户工作台（端口 5173）
+├── frontend-admin/    # Vue3 管理端（端口 5174）
+└── docker-compose.yml # PostgreSQL + pgvector（宿主机端口 5433）
 ```
 
 ## 快速启动
@@ -22,7 +21,18 @@
    docker-compose up -d
    ```
 
-2. 启动后端（需 JDK 21，Temurin 位于 D:\JDK21\jdk-21.0.12+8）：
+2. 启动 Python AI 服务：
+
+   ```powershell
+   cd E:\project\enterprise-ai-office-system-admin\ai-server
+   Copy-Item .env.example .env
+   .\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --port 8000
+   ```
+
+   - 首次安装依赖：`py -m venv .venv`，然后 `.\.venv\Scripts\pip.exe install -r requirements.txt`
+   - API 文档：`http://localhost:8000/docs`
+
+3. 启动 Java 网关（需 JDK 21，Temurin 位于 D:\JDK21\jdk-21.0.12+8）：
 
    ```powershell
    cd E:\project\enterprise-ai-office-system-admin\admin-server
@@ -33,10 +43,18 @@
    - 默认端口 8080，Swagger：http://localhost:8080/swagger-ui.html
    - 首次启动自动建表并初始化管理员 `admin / admin123`（生产必改）
 
-3. 启动前端：
+4. 启动用户端：
 
    ```powershell
    cd E:\project\enterprise-ai-office-system-admin\frontend
+   npm install
+   npm run dev
+   ```
+
+5. 启动管理端：
+
+   ```powershell
+   cd E:\project\enterprise-ai-office-system-admin\frontend-admin
    npm install
    npm run dev
    ```
@@ -54,8 +72,9 @@
 - Java 网关转发 `/api/policy/**`、`/api/chat/**`、`/api/compliance/**` 到 Python AI 服务
 - 合规结果仅作公开信息初步比对和风险提示，前端与接口均附免责声明
 
-## 与 Python 项目协作
+## 服务协作
 
-- 同步请求：Java 经 `AiService`（RestTemplate）调用 Python 的 `/internal/**` 内网接口
-- 异步任务：Java 写任务表 → Python Celery Worker 消费 → 回写状态
+- 同步请求：Java 网关转发用户端请求至 Python AI 服务
+- 异步任务：Python 负责解析、向量化和采集，结果回写共享数据库
 - 数据库同一套 PostgreSQL（本仓库 docker-compose 提供）
+- Python 不对公网暴露；权限校验由 Java 网关统一负责

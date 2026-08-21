@@ -1,0 +1,21 @@
+{
+  "name": "appointment_announcement",
+  "title": "任命公告",
+  "category": "公告",
+  "output_format": "markdown",
+  "tone_guidelines": "规范人事公告语体，信息准确完整；任命决定、人员背景、职责与生效信息交代清楚。",
+  "sections": [
+    { "key": "headline", "name": "标题", "required": true, "hint": "关于×××同志任职的公告/通知" },
+    { "key": "decision", "name": "任命决定", "required": true, "hint": "经研究决定，任命××担任××职务" },
+    { "key": "profile", "name": "人员介绍", "required": false, "hint": "被任命人背景与履历简介" },
+    { "key": "responsibility", "name": "职责说明", "required": false, "hint": "岗位职责与汇报关系" },
+    { "key": "effective", "name": "生效日期", "required": true, "hint": "任命自何时起生效" },
+    { "key": "closing", "name": "落款", "required": false, "hint": "发布单位与日期" }
+  ],
+  "placeholders": [
+    { "key": "event", "name": "任命事项", "required": true, "source": "eventDesc", "hint": "任命何人任何职" },
+    { "key": "被任命人", "name": "被任命人", "required": true, "source": "people", "hint": "被任命人姓名及头衔" },
+    { "key": "生效日期", "name": "生效日期", "required": true, "source": "keyFacts:生效日期", "hint": "任命生效日期" },
+    { "key": "发布部门", "name": "发布部门", "required": false, "source": "keyFacts:发布部门", "hint": "落款单位/部门" }
+  ]
+}

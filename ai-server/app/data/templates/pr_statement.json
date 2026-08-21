@@ -1,0 +1,21 @@
+{
+  "name": "pr_statement",
+  "title": "公关声明",
+  "category": "声明",
+  "output_format": "markdown",
+  "tone_guidelines": "措辞审慎克制，事实与立场分明；回应关切、表明态度、给出措施；避免绝对化与情绪化表述。",
+  "sections": [
+    { "key": "headline", "name": "标题", "required": true, "hint": "关于……的声明" },
+    { "key": "reason", "name": "声明事由", "required": true, "hint": "针对何事发布本声明" },
+    { "key": "facts", "name": "事实说明", "required": true, "hint": "经核实的事实经过" },
+    { "key": "stance", "name": "立场态度", "required": true, "hint": "公司的立场与态度" },
+    { "key": "measures", "name": "整改措施", "required": false, "hint": "已采取/将采取的措施" },
+    { "key": "contact", "name": "联系方式", "required": false, "hint": "沟通渠道与联系人" }
+  ],
+  "placeholders": [
+    { "key": "event", "name": "事件", "required": true, "source": "eventDesc", "hint": "被回应的事件" },
+    { "key": "声明日期", "name": "声明日期", "required": true, "source": "keyFacts:声明日期", "hint": "声明发布日期" },
+    { "key": "关键事实", "name": "关键事实", "required": true, "source": "keyFactsAny", "hint": "已核实的关键事实/数据" },
+    { "key": "发言人", "name": "发言人", "required": false, "source": "people", "hint": "出面说明的人物及头衔" }
+  ]
+}
