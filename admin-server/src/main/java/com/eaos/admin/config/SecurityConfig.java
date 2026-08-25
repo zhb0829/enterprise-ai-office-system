@@ -36,7 +36,7 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final ObjectMapper objectMapper;
 
-    @Value("${eaos.security.enabled:false}")
+    @Value("${eaos.security.enabled:true}")
     private boolean securityEnabled;
 
     @Bean
@@ -62,6 +62,7 @@ public class SecurityConfig {
                             "/swagger-ui/**",
                             "/v3/api-docs/**",
                             "/actuator/health",
+                            "/internal/**",
                             "/error"
                     ).permitAll();
                     if (securityEnabled) {
