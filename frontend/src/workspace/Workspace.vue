@@ -9,7 +9,7 @@
           变成可审、可改、可导出的正式稿件
         </h2>
         <p class="hero-summary">
-          当前用户端先聚焦企业公告与新闻稿撰写，后续将扩展政策法规问答、行业动态聚合、舆情分析、资质指南编制与会议公开信息整理。
+          当前用户端先聚焦企业公告与新闻稿撰写，后续将扩展政策法规问答、行业动态聚合、资质指南编制与会议公开信息整理。
         </p>
       </div>
       <div class="hero-actions" aria-label="主要操作">
@@ -40,14 +40,12 @@
         <div>
           <span>政策问答</span>
           <span>动态聚合</span>
-          <span>舆情分析</span>
           <span>资质指南</span>
           <span>会议信息</span>
         </div>
         <div>
           <span>政策问答</span>
           <span>动态聚合</span>
-          <span>舆情分析</span>
           <span>资质指南</span>
           <span>会议信息</span>
         </div>
@@ -431,12 +429,8 @@ const featureModules = [
   {
     title: '行业动态与竞品信息智能聚合',
     description: '聚合公开资讯、竞品动态和趋势摘要，形成研判素材。',
-    status: '规划中',
-  },
-  {
-    title: '企业舆情分析',
-    description: '跟踪外部声量、风险议题和情绪变化，辅助响应决策。',
-    status: '规划中',
+    status: '当前开放',
+    current: true,
   },
   {
     title: '企业资质与服务指南智能编制',

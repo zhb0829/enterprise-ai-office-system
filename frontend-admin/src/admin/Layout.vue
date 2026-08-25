@@ -46,9 +46,13 @@ const menuItems = [
   { path: '/admin/templates', title: '模板管理', group: '内容管理' },
   { path: '/admin/materials', title: '素材管理', group: '内容管理' },
   { path: '/admin/policy-documents', title: '政策法规知识库', group: '知识库管理' },
+  { path: '/admin/intelligence', title: '行业与竞品情报', group: '情报聚合' },
+  { path: '/admin/opinion-sources', title: '舆情采集源治理', group: '舆情分析' },
+  { path: '/admin/opinion-alert-rules', title: '告警规则', group: '舆情分析' },
+  { path: '/admin/opinion-cases', title: '历史应对案例', group: '舆情分析' },
 ];
 
-const groups = ['内容管理', '知识库管理'];
+const groups = ['内容管理', '知识库管理', '情报聚合', '舆情分析'];
 
 const currentTitle = computed(() => route.meta.title || '后台管理');
 

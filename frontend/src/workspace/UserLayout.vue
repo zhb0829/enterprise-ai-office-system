@@ -12,8 +12,10 @@
       <nav class="module-nav" aria-label="用户端功能导航">
         <router-link class="module-nav-item" exact-active-class="active" to="/workspace">公告撰写</router-link>
         <router-link class="module-nav-item" active-class="active" to="/workspace/policy">政策问答</router-link>
-        <span class="module-nav-item disabled" aria-disabled="true">动态聚合</span>
-        <span class="module-nav-item disabled" aria-disabled="true">舆情分析</span>
+        <router-link class="module-nav-item" active-class="active" to="/workspace/intelligence">行业情报</router-link>
+        <router-link class="module-nav-item" active-class="active" to="/workspace/opinion">舆情分析</router-link>
+        <router-link class="module-nav-item" active-class="active" to="/workspace/opinion-alerts">舆情告警</router-link>
+        <router-link class="module-nav-item" active-class="active" to="/workspace/opinion-reports">舆情报告</router-link>
       </nav>
     </header>
     <main id="workspace-main" class="user-content" tabindex="-1">

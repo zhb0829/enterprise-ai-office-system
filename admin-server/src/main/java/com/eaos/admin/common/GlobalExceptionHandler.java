@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.validation.BindException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -40,6 +41,22 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public R<Void> handleBind(BindException e) {
         return R.error(400, "参数绑定失败：" + e.getMessage());
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public R<Void> handleIllegalArgument(IllegalArgumentException e) {
+        return R.error(400, e.getMessage());
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public R<Void> handleDataIntegrityViolation(DataIntegrityViolationException e) {
+        log.warn("数据约束冲突", e);
+        if (e.getMessage() != null && e.getMessage().contains("source_config_url_key")) {
+            return R.error(409, "该采集来源 URL 已存在，请直接使用或修改现有来源");
+        }
+        return R.error(409, "数据已存在或不符合数据约束");
     }
 
     @ExceptionHandler(Exception.class)

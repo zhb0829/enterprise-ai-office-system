@@ -34,13 +34,17 @@ public class GatewayProxyController {
     /** 需要转发给 Python AI 服务的路径前缀（与前端 api.js 调用保持一致） */
     private static final List<String> PROXY_PREFIXES =
             List.of("/api/templates", "/api/drafts", "/api/materials", "/api/exports",
-                    "/api/policy", "/api/chat", "/api/compliance", "/api/sources");
+                    "/api/policy", "/api/chat", "/api/compliance", "/api/intelligence/items",
+                    "/api/intelligence/clusters", "/api/intelligence/summarize");
 
     private final AiServiceProperties aiServiceProperties;
 
     @RequestMapping({
             "/api/templates/**", "/api/drafts/**", "/api/materials/**", "/api/exports/**",
-            "/api/policy/**", "/api/chat/**", "/api/compliance/**", "/api/sources/**"
+            "/api/policy/**", "/api/chat/**", "/api/compliance/**",
+            "/api/intelligence/items", "/api/intelligence/items/**",
+            "/api/intelligence/clusters", "/api/intelligence/clusters/**",
+            "/api/intelligence/summarize", "/api/intelligence/summarize/**"
     })
     public void proxy(HttpServletRequest request, HttpServletResponse response) throws IOException {
         String path = request.getRequestURI();
