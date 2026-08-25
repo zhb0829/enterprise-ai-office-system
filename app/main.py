@@ -8,8 +8,10 @@ from fastapi.staticfiles import StaticFiles
 
 from .config import settings
 from .db import Base, SessionLocal, engine
-from .routers import drafts, exports, materials, policy, policy_aliases, templates
+from .routers import drafts, exports, intelligence, materials, policy, policy_aliases, templates
 from .services.template_loader import load_seed_templates, load_styles
+from .opinion import models_ai  # noqa: F401  登记 AI 记录表供 create_all
+from .opinion.routers import internal_router as opinion_internal_router
 
 # 统一 UTF-8：确保 Windows 控制台/日志输出中文不乱码（PEP 540 之前的 locale 编码问题）
 if hasattr(sys.stdout, "reconfigure"):
@@ -53,6 +55,9 @@ app.include_router(exports.router, prefix="/api/exports", tags=["exports"])
 app.include_router(policy.router, prefix="/api/policy", tags=["policy"])
 app.include_router(policy_aliases.router, prefix="/api/chat", tags=["policy"])
 app.include_router(policy_aliases.router, prefix="/api/compliance", tags=["compliance"])
+app.include_router(intelligence.router, prefix="/api", tags=["intelligence"])
+app.include_router(intelligence.internal_router, tags=["internal-intelligence"])
+app.include_router(opinion_internal_router, tags=["internal-opinion"])
 
 # 静态文件：导出文件与上传素材下载
 app.mount("/static/exports", StaticFiles(directory=str(settings.export_path)), name="exports")
@@ -62,3 +67,8 @@ app.mount("/static/uploads", StaticFiles(directory=str(settings.upload_path)), n
 @app.get("/api/health")
 def health():
     return {"status": "ok", "env": settings.app_env}
+
+
+@app.get("/internal/health")
+def internal_health():
+    return {"status": "ok", "service": "ai-server", "env": settings.app_env}

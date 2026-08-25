@@ -26,12 +26,37 @@ class Settings(BaseSettings):
     llm_temperature: float = 0.3
     llm_timeout: int = 120
 
+    # Embedding（OpenAI 兼容接口；DeepSeek 对话模型不承担向量化）
+    embedding_api_key: str = ""
+    embedding_base_url: str = "https://api.openai.com/v1"
+    embedding_model: str = "text-embedding-3-small"
+    embedding_dimensions: int = 0
+    embedding_timeout: int = 60
+    embedding_batch_size: int = 64
+
     # 应用
     app_env: str = "dev"
     export_dir: str = "exports"
     upload_dir: str = "uploads"
     pdf_chinese_font: str = "Microsoft YaHei"
     cors_origins: str = "http://localhost:5173"
+
+    # 情报聚合 / Celery。权限由 Java 网关统一负责。
+    redis_url: str = "redis://localhost:6379/0"
+    celery_enabled: bool = False
+    collection_user_agent: str = "EAOS-IntelligenceCollector/0.1 (+internal)"
+    collection_timeout: int = 20
+    collection_max_items: int = 50
+    collection_failure_pause_after: int = 3
+
+    # 舆情分析（P1）：Python 是纯 Worker，业务数据全部经由 Java 内部接口读写，
+    # 本服务仅在自己的 AI 记录表中保存任务运行/模型调用记录。
+    opinion_java_base_url: str = "http://localhost:8080"
+    opinion_java_token: str = "eaos-opinion-internal-dev-token"
+    opinion_internal_token: str = "eaos-opinion-internal-dev-token"
+    opinion_max_articles_per_source: int = 200
+    opinion_analysis_budget_per_job: int = 50
+    opinion_asr_service_url: str = ""
 
     @property
     def cors_origin_list(self) -> list[str]:
