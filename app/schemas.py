@@ -335,3 +335,75 @@ class PolicyDocumentCreate(BaseModel):
     status: str = "现行有效"
     industryTags: list[str] = Field(default_factory=list)
     sourceUrl: str = ""
+
+
+class EmbeddingReindexResult(BaseModel):
+    documents: int
+    clauses: int
+    embedding_backend: str
+    embedding_model: str
+    embedding_dimensions: int
+
+
+class MaterialEmbeddingReindexResult(BaseModel):
+    materials: int
+    chunks: int
+    embedding_backend: str
+    embedding_model: str
+    embedding_dimensions: int
+
+
+# ===== 行业动态与竞品情报聚合 =====
+class SourceConfigOut(TimestampedModel):
+    model_config = {"from_attributes": True}
+
+    id: int
+    name: str
+    type: str
+    url: str
+    keywords: list[str] = Field(default_factory=list)
+    competitors: list[str] = Field(default_factory=list)
+    frequency: str
+    status: str
+    health_status: str
+    consecutive_failures: int
+    last_run_at: datetime | None = None
+    last_success_at: datetime | None = None
+    last_error: str = ""
+    created_at: datetime
+    updated_at: datetime | None = None
+
+
+class CollectionTaskOut(TimestampedModel):
+    model_config = {"from_attributes": True}
+
+    id: int
+    source_id: int
+    celery_task_id: str = ""
+    started_at: datetime | None = None
+    finished_at: datetime | None = None
+    status: str
+    error: str = ""
+    items_count: int
+    retry_count: int
+    created_at: datetime
+
+
+class IntelligenceSummarizeRequest(BaseModel):
+    articleIds: list[int] = Field(default_factory=list)
+    clusterId: int | None = None
+
+
+class IntelligenceReportOut(TimestampedModel):
+    model_config = {"from_attributes": True}
+
+    id: int
+    title: str
+    period: str
+    topic_tags: list[str] = Field(default_factory=list)
+    items: list[Any] = Field(default_factory=list)
+    trend: dict[str, Any] = Field(default_factory=dict)
+    sources: list[Any] = Field(default_factory=list)
+    generated_at: datetime
+    model: str = ""
+    risk_flags: list[str] = Field(default_factory=list)

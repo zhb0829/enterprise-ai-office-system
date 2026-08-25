@@ -19,13 +19,29 @@ from sqlalchemy.orm import Session, joinedload
 from ..config import settings
 from ..models import ComplianceReport, PolicyClause, PolicyDocument, QALog
 from .llm import LLMClient, LLMError
-from .materials import embed_text, parse_material, split_text
+from .materials import (
+    EmbeddingError,
+    embed_text,
+    embed_texts,
+    embedding_info,
+    embedding_is_compatible,
+    parse_material,
+    split_text,
+)
 
 DISCLAIMER = "本结果为基于公开信息的初步比对，不构成法律意见；请结合完整材料咨询专业人士。"
 AI_DISCLAIMER = "AI 生成，仅供参考，不构成法律意见。"
 CURRENT_STATUSES = {"现行有效", "有效"}
 ARTICLE_RE = re.compile(r"(?m)(?<!\S)(第[一二三四五六七八九十百千万零〇\d]+条)")
 TERM_RE = re.compile(r"[\u4e00-\u9fa5]{2,}|[A-Za-z0-9_.%\-]+")
+
+
+class PublicSourceFetchError(Exception):
+    """公开链接抓取失败，可安全地映射为 API 错误。"""
+
+    def __init__(self, status_code: int, message: str):
+        super().__init__(message)
+        self.status_code = status_code
 
 
 class _VisibleTextParser(HTMLParser):
@@ -130,7 +146,9 @@ def create_policy_document(
     )
     db.add(document)
     db.flush()
-    for clause in split_policy_clauses(content):
+    clauses = split_policy_clauses(content)
+    vectors = embed_texts([clause["content"] for clause in clauses])
+    for clause, vector in zip(clauses, vectors):
         db.add(
             PolicyClause(
                 doc_id=document.id,
@@ -138,14 +156,36 @@ def create_policy_document(
                 chapter_path=clause["chapter_path"],
                 content=clause["content"],
                 page=clause["page"],
-                embedding=embed_text(clause["content"]),
-                meta={"source": "公开文件" if source_url else "用户上传"},
+                embedding=vector,
+                meta={
+                    "source": "公开文件" if source_url else "用户上传",
+                    **embedding_info(vector),
+                },
             )
         )
     document.parse_status = "已完成"
     db.commit()
     db.refresh(document)
     return document
+
+
+def reindex_policy_embeddings(db: Session, document_id: int | None = None) -> dict:
+    query = db.query(PolicyClause)
+    if document_id is not None:
+        query = query.filter(PolicyClause.doc_id == document_id)
+    clauses = query.order_by(PolicyClause.id).all()
+    vectors = embed_texts([clause.content for clause in clauses]) if clauses else []
+    document_ids: set[int] = set()
+    for clause, vector in zip(clauses, vectors):
+        clause.embedding = vector
+        clause.meta = {**(clause.meta or {}), **embedding_info(vector)}
+        document_ids.add(clause.doc_id)
+    db.commit()
+    return {
+        "documents": len(document_ids),
+        "clauses": len(clauses),
+        **embedding_info(vectors[0] if vectors else None),
+    }
 
 
 def _cosine(left: list[float], right: list[float]) -> float:
@@ -194,7 +234,11 @@ def search_policy_clauses(
         ).lower()
         keyword_hits = sum(1 for term in terms if term in haystack)
         title_hits = sum(1 for term in terms if term in (document.title or "").lower())
-        cosine = _cosine(q_vec, clause.embedding or [])
+        cosine = (
+            _cosine(q_vec, clause.embedding or [])
+            if embedding_is_compatible(clause.meta, q_vec)
+            else 0.0
+        )
         score = keyword_hits * 2.0 + title_hits * 1.0 + max(0.0, cosine)
         if score <= 0:
             continue
@@ -331,6 +375,14 @@ def _interpret_fallback(text: str) -> dict:
     }
 
 
+def _interpret_list(value: object) -> list[str]:
+    if isinstance(value, str):
+        return [value.strip()] if value.strip() else []
+    if isinstance(value, (list, tuple)):
+        return [str(item).strip() for item in value if str(item).strip()]
+    return []
+
+
 def interpret_clause(db: Session, request, llm: LLMClient | None = None) -> dict:
     llm = llm or LLMClient()
     clause = db.get(PolicyClause, request.clauseId) if request.clauseId else None
@@ -357,9 +409,13 @@ def interpret_clause(db: Session, request, llm: LLMClient | None = None) -> dict
         ]
         try:
             candidate = llm.chat_json(messages, model=settings.llm_model_generation, temperature=0)
-            for key in result:
-                if candidate.get(key):
-                    result[key] = candidate[key]
+            plain_summary = candidate.get("plainSummary")
+            if isinstance(plain_summary, str) and plain_summary.strip():
+                result["plainSummary"] = plain_summary.strip()
+            for key in ("applicableObjects", "obligations", "prohibitions", "consequences"):
+                items = _interpret_list(candidate.get(key))
+                if items:
+                    result[key] = items
         except (LLMError, ValueError, TypeError) as exc:
             risk_flags.append(f"模型解读失败，已使用规则化摘要：{exc}")
     related = []
@@ -444,9 +500,24 @@ def fetch_public_source(url: str) -> str:
     parsed = urlparse(url)
     if parsed.scheme not in {"http", "https"} or not parsed.netloc:
         raise ValueError("仅支持 http/https 公开链接")
-    with httpx.Client(timeout=20, follow_redirects=True, headers={"User-Agent": "EAOS-PolicyBot/0.1"}) as client:
-        response = client.get(url)
-        response.raise_for_status()
+    try:
+        with httpx.Client(timeout=20, follow_redirects=True, headers={"User-Agent": "EAOS-PolicyBot/0.1"}) as client:
+            response = client.get(url)
+            response.raise_for_status()
+    except httpx.HTTPStatusError as exc:
+        if exc.response.status_code == 403:
+            raise PublicSourceFetchError(
+                403,
+                "目标网站禁止程序化采集，请下载政策文件后通过“上传政策文件”入库。",
+            ) from exc
+        raise PublicSourceFetchError(
+            502,
+            f"目标网站返回 HTTP {exc.response.status_code}，暂时无法采集。",
+        ) from exc
+    except httpx.TimeoutException as exc:
+        raise PublicSourceFetchError(504, "目标网站响应超时，请稍后重试或下载文件后上传。") from exc
+    except httpx.HTTPError as exc:
+        raise PublicSourceFetchError(502, "无法连接目标网站，请检查链接或稍后重试。") from exc
     content_type = response.headers.get("content-type", "").lower()
     if "html" in content_type or response.text.lstrip().startswith("<"):
         parser = _VisibleTextParser()
