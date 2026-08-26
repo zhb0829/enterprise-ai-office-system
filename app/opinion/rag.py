@@ -52,6 +52,9 @@ def reindex_cases() -> dict:
         db.query(OpinionCaseChunk).delete()
         for case in cases:
             source_text = "\n".join(filter(None, [
+                f"案例标题：{case.get('title', '')}",
+                f"事件类型：{case.get('eventType', '')}",
+                f"风险等级：{case.get('riskLevel', '')}",
                 f"策略：{case.get('strategy', '')}",
                 f"处置：{case.get('content', '')}",
                 f"效果：{case.get('effect', '')}",
@@ -157,12 +160,13 @@ def generate_suggestion(context: dict) -> dict:
             content = str(raw.get("content") or "")
             if content:
                 model = settings.llm_model_generation
-                known_ids = {h["case_id"] for h in hits}
+                known_hits = {h["case_id"]: h for h in hits}
                 citations = [{
-                    "caseId": c.get("caseId"),
-                    "title": c.get("title", ""),
-                    "excerpt": c.get("excerpt", ""),
-                } for c in raw.get("citations", []) if c.get("caseId") in known_ids] or citations
+                    "caseId": case_id,
+                    "title": c.get("title") or known_hits[case_id]["case_title"],
+                    "excerpt": c.get("excerpt") or known_hits[case_id]["text"],
+                } for c in raw.get("citations", [])
+                    if (case_id := c.get("caseId")) in known_hits] or citations
         except (LLMError, ValueError, AttributeError) as exc:
             logger.warning("应对建议 LLM 生成失败，使用检索结果: %s", exc)
     return {
