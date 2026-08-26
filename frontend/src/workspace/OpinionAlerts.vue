@@ -56,13 +56,9 @@
               <small>{{ notification.content || notification.error }}</small>
             </li>
           </ul>
-          <div v-if="suggestions[alert.id]?.length" class="suggestion-box">
-            <div v-for="suggestion in suggestions[alert.id]" :key="suggestion.id" class="suggestion-item">
+          <div v-if="visibleSuggestions(alert.id).length" class="suggestion-box">
+            <div v-for="suggestion in visibleSuggestions(alert.id)" :key="suggestion.id" class="suggestion-item">
               <p>{{ suggestion.content }}</p>
-              <div v-if="suggestion.citations?.length" class="citations">
-                <span>引用案例</span>
-                <span v-for="(cite, index) in suggestion.citations" :key="index">#{{ cite.caseId }} {{ cite.title }}</span>
-              </div>
               <small>模型 {{ suggestion.model || 'rule-based' }} · 状态 {{ suggestion.status }}</small>
               <div v-if="suggestion.status === 'pending'" class="feedback-actions">
                 <button type="button" @click="feedbackSuggestion(suggestion, 'accepted')">采纳</button>
@@ -174,6 +170,12 @@ async function generateSuggestion(alert) {
     suggestions.value = { ...suggestions.value, [alert.id]: await fetchOpinionSuggestions('alert', alert.id) };
   } catch (e) { error.value = `建议生成失败：${e.message}`; } finally { suggesting.value = null; }
 }
+function visibleSuggestions(alertId) {
+  const items = suggestions.value[alertId] || [];
+  const hasCaseBackedSuggestion = items.some((item) => item.citations?.length);
+  if (!hasCaseBackedSuggestion) return items;
+  return items.filter((item) => item.citations?.length || !item.content?.includes('暂未检索到足够相似'));
+}
 async function feedbackSuggestion(suggestion, status) {
   try {
     await feedbackOpinionSuggestion(suggestion.id, { status, feedback: status === 'rejected' ? '内容不适用' : '已采纳' });
@@ -223,9 +225,8 @@ onMounted(loadAll);
 .notification-list li { display: flex; gap: 8px; align-items: center; font-size: 12px; color: #52615f; }
 .notification-list small { color: #94a3b8; }
 .suggestion-box { display: grid; gap: 10px; margin-top: 12px; padding: 12px; background: #fff8f1; border: 1px solid #f0c98a; border-radius: 7px; }
-.suggestion-item { display: grid; gap: 6px; }
-.suggestion-item p { margin: 0; color: #8a421a; font-size: 13px; line-height: 1.65; white-space: pre-wrap; }
-.citations { display: grid; gap: 4px; color: #0f5f59; font-size: 12px; }
+.suggestion-item { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; gap: 6px; }
+.suggestion-item p { min-width: 0; margin: 0; color: #8a421a; font-size: 13px; line-height: 1.65; white-space: pre-wrap; overflow-wrap: anywhere; }
 .feedback-actions { display: flex; gap: 6px; }
 .edge-item { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .edge-type { font-weight: 800; color: #1d4ed8; }
