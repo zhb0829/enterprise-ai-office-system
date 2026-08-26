@@ -21,17 +21,6 @@ frontend-admin/node_modules/
 # Env & secrets
 .env
 *.local
-ai-server/.env
-
-# Python AI service
-ai-server/.venv/
-ai-server/venv/
-ai-server/.pytest_cache/
-ai-server/.mypy_cache/
-ai-server/**/__pycache__/
-ai-server/exports/
-ai-server/uploads/
-ai-server/*.egg-info/
 
 # Logs
 *.log

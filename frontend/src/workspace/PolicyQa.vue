@@ -124,7 +124,14 @@
                   <strong>{{ clause.docTitle }}</strong>
                   <span>{{ clause.articleNo || '语义片段' }} · {{ clause.status }}</span>
                 </div>
-                <button class="small-action" type="button" @click="interpret(clause)">解读</button>
+                <button
+                  class="small-action"
+                  type="button"
+                  :disabled="interpretingClauseId === clause.id"
+                  @click="interpret(clause)"
+                >
+                  {{ interpretingClauseId === clause.id ? '解读中...' : '解读' }}
+                </button>
               </div>
               <p class="clause-excerpt">{{ clause.excerpt }}</p>
               <div class="clause-source">
@@ -224,6 +231,7 @@ const answer = ref(null);
 const compliance = ref(null);
 const selectedCitation = ref(null);
 const interpretation = ref(null);
+const interpretingClauseId = ref(null);
 const filters = ref({ industry: '', level: '' });
 
 const confidenceLabel = computed(() => ({ high: '高相关', medium: '中相关', none: '无命中' }[answer.value?.confidence] || '待核验'));
@@ -266,10 +274,14 @@ async function submitCompliance() {
 
 async function interpret(clause) {
   errorMessage.value = '';
+  interpretation.value = null;
+  interpretingClauseId.value = clause.id;
   try {
     interpretation.value = await interpretPolicyClause({ clauseId: clause.id });
   } catch (error) {
-    errorMessage.value = error.message;
+    errorMessage.value = `条款解读失败：${error.message}`;
+  } finally {
+    interpretingClauseId.value = null;
   }
 }
 
@@ -635,6 +647,11 @@ function openCitation(citation) {
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
+}
+
+.small-action:disabled {
+  cursor: wait;
+  opacity: 0.65;
 }
 
 .clause-excerpt {

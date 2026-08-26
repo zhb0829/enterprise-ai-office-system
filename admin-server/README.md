@@ -1,6 +1,6 @@
 # admin-server — 后台管理系统（Java / Spring Boot 3）
 
-企业AI智能办公系统后台管理系统，作为对外唯一 API 网关：负责认证鉴权、业务/管理型 CRUD、列表/看板/报表查询、配置管理、通知通道、任务调度面板，并将 AI/文档/采集类请求转发给 Python agent 服务（`ai-server`）。
+企业AI智能办公系统后台管理系统，作为对外唯一 API 网关：负责认证鉴权、业务/管理型 CRUD、列表/看板/报表查询、配置管理、通知通道、任务调度面板，并将 AI/文档/采集类请求转发给独立 Python agent 服务（`E:\project\enterprise-ai-office-system-new`）。
 
 ## 技术栈
 
@@ -28,7 +28,7 @@
 | `DB_HOST` / `DB_PORT` / `DB_NAME` | localhost / 5433 / eaos | PostgreSQL |
 | `DB_USER` / `DB_PASSWORD` | eaos / eaos_dev_password | 数据库账号 |
 | `JWT_SECRET` | 开发用密钥 | 生产必须通过环境变量替换 |
-| `AI_BASE_URL` | http://localhost:8000 | Python agent 服务地址 |
+| `AI_BASE_URL` | http://localhost:8000 | Python agent 服务地址（本地源码位于 `E:\project\enterprise-ai-office-system-new`） |
 
 ## 目录结构
 

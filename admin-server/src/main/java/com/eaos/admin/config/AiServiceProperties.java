@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 @ConfigurationProperties(prefix = "eaos.ai")
 public class AiServiceProperties {
 
-    /** Python agent 服务（ai-server）内网地址，如 http://localhost:8000 */
+    /** 独立 Python agent 服务内网地址，如 http://localhost:8000 */
     private String baseUrl = "http://localhost:8000";
 
     /** Python 侧内网接口前缀 */

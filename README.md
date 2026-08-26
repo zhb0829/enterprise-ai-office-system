@@ -1,12 +1,11 @@
 # 企业 AI 智能办公系统
 
-企业 AI 智能办公系统采用 Monorepo 管理。Java 负责统一 API 网关、认证授权和管理型业务；Python 负责 LLM、文档解析、检索增强生成和网页采集。运行时仍是独立服务，通过共享 PostgreSQL 和内网 HTTP 协作。
+企业 AI 智能办公系统的管理端仓库。Java 负责统一 API 网关、认证授权和管理型业务；Python AI 服务位于独立仓库 `E:\project\enterprise-ai-office-system-new`。运行时通过共享 PostgreSQL 和内网 HTTP 协作。
 
 ## 目录结构
 
 ```
 ├── admin-server/      # Spring Boot 3：统一网关、认证、管理型业务 API
-├── ai-server/         # FastAPI：LLM、文档解析、RAG、政策问答、合规初步比对
 ├── frontend/          # Vue3 用户工作台（端口 5173）
 ├── frontend-admin/    # Vue3 管理端（端口 5174）
 └── docker-compose.yml # PostgreSQL + pgvector（宿主机端口 5433）
@@ -21,11 +20,10 @@
    docker-compose up -d
    ```
 
-2. 启动 Python AI 服务：
+2. 启动独立 Python AI 服务：
 
    ```powershell
-   cd E:\project\enterprise-ai-office-system-admin\ai-server
-   Copy-Item .env.example .env
+   cd E:\project\enterprise-ai-office-system-new
    .\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --port 8000
    ```
 
@@ -62,7 +60,7 @@
 ## 关键配置
 
 - 数据库（admin-server/src/main/resources/application.yml，环境变量可覆盖）：默认 `localhost:5433/eaos`，账号 `eaos/eaos_dev_password`
-- `AI_BASE_URL`：Python AI 服务地址（默认 `http://localhost:8000`）
+- `AI_BASE_URL`：Python AI 服务地址（默认 `http://localhost:8000`）。本地源码位于 `E:\project\enterprise-ai-office-system-new`。
 - `JWT_SECRET`：生产必须通过环境变量替换
 
 政策法规模块：
@@ -71,6 +69,12 @@
 - 管理端：`http://localhost:5174/admin/policy-documents`
 - Java 网关转发 `/api/policy/**`、`/api/chat/**`、`/api/compliance/**` 到 Python AI 服务
 - 合规结果仅作公开信息初步比对和风险提示，前端与接口均附免责声明
+
+行业动态与竞品情报聚合：
+
+- 管理端页面：`http://localhost:5174/admin/intelligence`
+- Java 管理接口：来源配置 `/api/sources`，任务面板 `/api/intelligence/tasks`，简报查询/生成 `/api/reports/intelligence`，通知通道 `/api/notification-channels`
+- Python 负责采集、正文抽取、SimHash 去重、向量辅助聚类、摘要与趋势生成；Java 仅做统一鉴权、配置管理、面板查询和内网任务触发。
 
 ## 服务协作
 
