@@ -5,7 +5,9 @@ __pycache__/
 .venv/
 venv/
 .pytest_cache/
+.pytest-local/
 .mypy_cache/
+*.log
 
 # Env & secrets
 .env

@@ -8,12 +8,14 @@ from sqlalchemy.orm import Session
 from ..config import settings
 from ..db import get_db
 from ..models import ReferenceMaterial
-from ..schemas import MaterialChunkOut, MaterialDetail, MaterialOut
+from ..schemas import MaterialChunkOut, MaterialDetail, MaterialEmbeddingReindexResult, MaterialOut
 from ..services.materials import (
+    EmbeddingError,
     MaterialParseError,
     UnsupportedFileError,
     build_material_chunks,
     parse_material,
+    reindex_material_embeddings,
     search_material_chunks,
 )
 
@@ -59,7 +61,11 @@ async def upload_material(file: UploadFile = File(...), db: Session = Depends(ge
     )
     db.add(material)
     db.flush()
-    chunk_count = build_material_chunks(db, material)
+    try:
+        chunk_count = build_material_chunks(db, material)
+    except EmbeddingError as e:
+        db.rollback()
+        raise HTTPException(503, detail={"message": str(e)}) from e
     material.status = f"已入库/{chunk_count}块"
     (settings.upload_path / f"{material.id}_{safe_name}").write_bytes(data)
     db.commit()
@@ -105,7 +111,19 @@ def search_materials(
             raw = raw.strip()
             if raw.isdigit():
                 ids.append(int(raw))
-    return search_material_chunks(db, q, ids or None, limit)
+    try:
+        return search_material_chunks(db, q, ids or None, limit)
+    except EmbeddingError as exc:
+        raise HTTPException(503, detail={"message": str(exc)}) from exc
+
+
+@router.post("/reindex", response_model=MaterialEmbeddingReindexResult)
+def reindex_materials(material_id: int | None = None, db: Session = Depends(get_db)):
+    try:
+        return reindex_material_embeddings(db, material_id)
+    except EmbeddingError as exc:
+        db.rollback()
+        raise HTTPException(503, detail={"message": str(exc)}) from exc
 
 
 @router.get("/{material_id}", response_model=MaterialDetail)

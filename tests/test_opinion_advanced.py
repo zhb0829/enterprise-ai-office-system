@@ -41,11 +41,13 @@ def test_simhash_distance_reflects_similarity():
 def test_spread_analyze_returns_inferred_and_verified_edges():
     articles = [
         {"id": 1, "title": "某公司被曝质量问题", "content": "消费者投诉产品存在缺陷。", "url": "https://a.com/1",
-         "sourceId": 1, "collectedAt": "2026-08-24 08:00:00"},
+         "sourceId": 1, "publishTime": "2026-08-24 08:00:00"},
         {"id": 2, "title": "某公司被曝质量问题（转载自某网）", "content": "本文转载自某网，消费者投诉产品存在缺陷。",
-         "url": "https://b.com/2", "sourceId": 2, "collectedAt": "2026-08-24 10:00:00"},
+         "url": "https://b.com/2", "sourceId": 2, "publishTime": "2026-08-24 10:00:00"},
         {"id": 3, "title": "某公司发布年度财报", "content": "营收增长。", "url": "https://c.com/3",
-         "sourceId": 3, "collectedAt": "2026-08-24 09:00:00"},
+         "sourceId": 3, "publishTime": "2026-08-24 09:00:00"},
+        {"id": 4, "title": "某公司被曝质量问题后续", "content": "消费者继续投诉产品存在缺陷。",
+         "url": "https://d.com/4", "sourceId": 4, "publishTime": "2026-08-24 11:00:00"},
     ]
     result = analyze_spread(10, articles)
     edges = result["edges"]
@@ -55,6 +57,22 @@ def test_spread_analyze_returns_inferred_and_verified_edges():
     assert any(e["relationType"] == "相似" for e in inferred)
     for edge in edges:
         assert edge["fromArticleId"] != edge["toArticleId"]
+        assert edge["fromArticleId"] < edge["toArticleId"]
+
+
+def test_spread_analyze_keeps_one_nearest_inferred_parent_per_article():
+    articles = [
+        {"id": 1, "title": "产品质量问题持续发酵", "content": "消费者投诉产品存在质量缺陷。",
+         "publishTime": "2026-08-24 08:00:00"},
+        {"id": 2, "title": "产品质量问题持续发酵", "content": "消费者投诉产品存在质量缺陷。",
+         "publishTime": "2026-08-24 09:00:00"},
+        {"id": 3, "title": "产品质量问题持续发酵", "content": "消费者投诉产品存在质量缺陷。",
+         "publishTime": "2026-08-24 10:00:00"},
+    ]
+    edges = analyze_spread(10, articles)["edges"]
+    incoming = [edge for edge in edges if edge["toArticleId"] == 3]
+    assert len(incoming) == 1
+    assert incoming[0]["fromArticleId"] == 2
 
 
 def test_rag_chunking_and_query_text():
