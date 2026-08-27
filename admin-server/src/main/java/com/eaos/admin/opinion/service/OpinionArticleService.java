@@ -152,10 +152,10 @@ public class OpinionArticleService {
             wrapper.and(w -> w.like(OpinionArticle::getTitle, like)
                     .or().like(OpinionArticle::getContent, like));
         }
-        wrapper.orderByDesc(OpinionArticle::getCollectedAt);
         long total = articleMapper.selectCount(wrapper);
         int page = Math.max(1, query.getPage());
         int pageSize = Math.min(100, Math.max(1, query.getPageSize()));
+        wrapper.orderByDesc(OpinionArticle::getCollectedAt);
         wrapper.last("LIMIT " + pageSize + " OFFSET " + ((page - 1) * pageSize));
         List<OpinionArticle> items = articleMapper.selectList(wrapper);
         return Map.of("items", items, "total", total, "page", page, "pageSize", pageSize);

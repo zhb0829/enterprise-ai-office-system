@@ -10,6 +10,7 @@ import com.eaos.admin.opinion.support.OpinionAuditService;
 import com.eaos.admin.opinion.support.OpinionCurrentUser;
 import com.eaos.admin.opinion.support.OpinionUrlPolicy;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -22,6 +23,9 @@ public class OpinionSourceService {
 
     private final OpinionSourceMapper sourceMapper;
     private final OpinionAuditService auditService;
+
+    @Value("${eaos.security.enabled:false}")
+    private boolean securityEnabled;
 
     public List<OpinionSource> list(String auditStatus, String status) {
         requireAdmin(OpinionCurrentUser.isAdmin());
@@ -126,7 +130,7 @@ public class OpinionSourceService {
     }
 
     private void requireAdmin(boolean admin) {
-        if (!admin) {
+        if (securityEnabled && !admin) {
             throw new IllegalArgumentException("仅系统管理员可管理采集源");
         }
     }

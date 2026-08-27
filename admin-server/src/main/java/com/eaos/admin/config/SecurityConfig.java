@@ -36,7 +36,7 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final ObjectMapper objectMapper;
 
-    @Value("${eaos.security.enabled:true}")
+    @Value("${eaos.security.enabled:false}")
     private boolean securityEnabled;
 
     @Bean

@@ -67,7 +67,10 @@ function switchTab(key) {
 
 <style scoped>
 .opinion-hub {
-  width: min(1480px, 100%);
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 1480px;
+  overflow-x: hidden;
   margin: 0 auto;
   padding: clamp(24px, 4vw, 52px) clamp(16px, 4vw, 48px) 72px;
   color: #17233a;

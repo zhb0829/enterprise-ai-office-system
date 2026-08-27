@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.eaos.admin.opinion.entity.OpinionMonitor;
 import com.eaos.admin.opinion.mapper.OpinionMonitorMapper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -15,6 +16,9 @@ import java.util.Objects;
 public class OpinionAccessService {
 
     private final OpinionMonitorMapper monitorMapper;
+
+    @Value("${eaos.security.enabled:false}")
+    private boolean securityEnabled;
 
     public OpinionMonitor requireMonitor(Long monitorId) {
         if (monitorId == null) {
@@ -41,7 +45,7 @@ public class OpinionAccessService {
     }
 
     public void requireAdmin() {
-        if (!OpinionCurrentUser.isAdmin()) {
+        if (securityEnabled && !OpinionCurrentUser.isAdmin()) {
             throw new IllegalArgumentException("仅系统管理员可执行该操作");
         }
     }

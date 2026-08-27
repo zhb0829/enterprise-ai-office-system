@@ -59,7 +59,6 @@
         <div class="metrics">
           <div class="metric-card"><span>采集文章</span><strong>{{ articles.total || 0 }}</strong><small>已匹配入库</small></div>
           <div class="metric-card"><span>热点事件</span><strong>{{ events.length }}</strong><small>已聚合事件</small></div>
-          <div class="metric-card"><span>负面文章</span><strong>{{ negativeCount }}</strong><small>情感为负面</small></div>
         </div>
 
         <p v-if="error" class="feedback danger" role="alert">{{ error }}<button type="button" @click="loadAll">重试</button></p>
@@ -79,15 +78,18 @@
                 <span :class="['risk-badge', riskClass(event.riskLevel)]">{{ event.riskLevel }}</span>
               </div>
               <p>{{ event.summary }}</p>
+              <div class="event-sentiments" aria-label="情感倾向">
+                <span class="sentiment-badge ok">正面 {{ (event.sentimentDist || {}).positive || 0 }} 条</span>
+                <span class="sentiment-badge warn">中性 {{ (event.sentimentDist || {}).neutral || 0 }} 条</span>
+                <span class="sentiment-badge danger">负面 {{ (event.sentimentDist || {}).negative || 0 }} 条</span>
+              </div>
               <div class="event-meta">
-                <span>{{ (event.sentimentDist || {}).negative || 0 }} 条负面</span>
                 <span>{{ event.reportCount }} 篇文章</span>
                 <span>{{ event.sourceWeight || 0 }} 个来源</span>
                 <button type="button" @click="expandEvent(event)">{{ eventExpanded === event.id ? '收起' : '查看文章' }}</button>
               </div>
               <div v-if="eventExpanded === event.id" class="event-articles">
                 <article v-for="article in eventArticles[event.id] || []" :key="article.id">
-                  <span :class="['sentiment-badge', sentimentClass(article.analysis?.sentiment)]">{{ sentimentLabel(article.analysis?.sentiment) }}</span>
                   <div>
                     <strong>{{ article.title }}</strong>
                     <small>{{ article.url }}</small>
@@ -99,60 +101,16 @@
           </ul>
         </div>
 
-        <div class="panel">
-          <div class="panel-title">
-            <h3>文章与情感分析</h3>
-            <div class="panel-actions">
-              <select v-model="sentimentFilter" aria-label="情感筛选" @change="loadArticles">
-                <option value="">全部情感</option><option value="positive">正面</option><option value="neutral">中性</option><option value="negative">负面</option>
-              </select>
-              <input v-model.trim="articleKeyword" type="search" placeholder="搜索标题/内容" @keyup.enter="loadArticles" />
-              <button class="ghost-button" type="button" @click="loadArticles">查询</button>
-            </div>
-          </div>
-          <div v-if="!articles.items?.length" class="empty-cell">暂无文章，触发采集后再来查看。</div>
-          <ul v-else class="article-list">
-            <li v-for="article in articles.items" :key="article.id" class="article-list-item">
-              <div class="article-row">
-                <span :class="['sentiment-badge', sentimentClass(article.analysis?.sentiment || (article.articleAnalysis?.at(-1)?.sentiment))]">{{ sentimentLabel(article.analysis?.sentiment || (article.articleAnalysis?.at(-1)?.sentiment)) }}</span>
-                <div class="article-row-main">
-                  <strong>{{ article.title }}</strong>
-                  <small>{{ article.url }}</small>
-                </div>
-                <button class="ghost-button" type="button" @click="toggleArticle(article)">{{ detailArticleId === article.id ? '收起' : '详情/复核' }}</button>
-              </div>
-              <div v-if="detailArticleId === article.id" class="article-detail">
-                <p>{{ excerpt(article.content, 300) }}</p>
-                <div class="analysis-meta" v-if="article.analysis">
-                  <span>置信度 {{ (article.analysis.confidence * 100).toFixed(1) }}%</span>
-                  <span>风险分 {{ article.analysis.riskScore }}</span>
-                  <span>模型 {{ article.analysis.model || 'rule-based' }}</span>
-                  <span v-if="article.analysis.reason" class="reason">理由：{{ article.analysis.reason }}</span>
-                </div>
-                <div v-if="currentDetailArticleId === article.id" class="review-form">
-                  <label><span>人工修正情感</span>
-                    <select v-model="reviewForm.sentiment">
-                      <option value="positive">正面</option><option value="neutral">中性</option><option value="negative">负面</option>
-                    </select>
-                  </label>
-                  <label><span>风险分</span><input type="number" min="0" max="100" v-model.number="reviewForm.riskScore" /></label>
-                  <label><span>修正原因</span><input v-model.trim="reviewForm.reason" placeholder="必填，便于审计追溯" /></label>
-                  <button class="primary-button" type="button" :disabled="reviewing" @click="submitReview(article)">{{ reviewing ? '提交中...' : '提交修正' }}</button>
-                </div>
-              </div>
-            </li>
-          </ul>
-        </div>
       </section>
     </section>
   </main>
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue';
+import { onMounted, reactive, ref } from 'vue';
 import {
   createOpinionMonitor, deleteOpinionMonitor, fetchOpinionArticles, fetchOpinionEvents,
-  fetchOpinionMonitors, reviewOpinionAnalysis, toggleOpinionMonitor, triggerOpinionMonitor,
+  fetchOpinionMonitors, toggleOpinionMonitor, triggerOpinionMonitor,
 } from '../api';
 
 const monitors = ref([]);
@@ -160,34 +118,20 @@ const articles = ref({ items: [], total: 0 });
 const events = ref([]);
 const selectedMonitorId = ref(null);
 const riskFilter = ref('');
-const sentimentFilter = ref('');
-const articleKeyword = ref('');
 const eventExpanded = ref(null);
 const eventArticles = ref({});
-const detailArticleId = ref(null);
-const currentDetailArticleId = ref(null);
 const loading = ref(false);
 const saving = ref(false);
 const collecting = ref(false);
-const reviewing = ref(false);
 const message = ref('');
 const error = ref('');
 const form = reactive({
   name: '', enterpriseName: '', brandWords: '', competitorWords: '', executiveNames: '',
   excludeWords: '', matchMode: 'any', timeWindowDays: 7,
 });
-const reviewForm = reactive({ sentiment: 'negative', riskScore: 0, reason: '' });
 
 const split = (value) => String(value || '').split(/[,，]/).map((item) => item.trim()).filter(Boolean);
-const negativeCount = computed(() => (articles.value.items || []).filter((article) =>
-  (article.analysis?.sentiment || article.articleAnalysis?.at(-1)?.sentiment) === 'negative').length);
-const sentimentLabel = (value) => ({ positive: '正面', neutral: '中性', negative: '负面' }[value] || '未分析');
-const sentimentClass = (value) => ({ positive: 'ok', neutral: 'warn', negative: 'danger' }[value] || 'warn');
 const riskClass = (value) => ({ 危机: 'danger', 预警: 'warn', 关注: 'ok' }[value] || 'warn');
-const excerpt = (value, length = 120) => {
-  const text = String(value || '').replace(/\s+/g, ' ').trim();
-  return text.length > length ? `${text.slice(0, length)}...` : text;
-};
 const formatTime = (value) => {
   if (!value) return '-';
   const raw = String(value).trim();
@@ -202,18 +146,8 @@ async function loadMonitors() {
 }
 async function loadArticles() {
   if (!selectedMonitorId.value) { articles.value = { items: [], total: 0 }; return; }
-  const result = await fetchOpinionArticles({ monitorId: selectedMonitorId.value, keyword: articleKeyword.value, pageSize: 50 });
-  const withAnalysis = await Promise.all((result.items || []).map(async (article) => {
-    const analysis = article.articleAnalysis?.at(-1);
-    if (analysis) return { ...article, analysis };
-    try {
-      const analyses = await fetchAnalysisFor(article.id);
-      return { ...article, articleAnalysis: analyses, analysis: analyses?.at(-1) };
-    } catch {
-      return { ...article };
-    }
-  }));
-  articles.value = { items: withAnalysis, total: result.total || withAnalysis.length };
+  const result = await fetchOpinionArticles({ monitorId: selectedMonitorId.value, pageSize: 50 });
+  articles.value = { items: result.items || [], total: result.total || result.items?.length || 0 };
 }
 async function loadEvents() {
   if (!selectedMonitorId.value) { events.value = []; return; }
@@ -292,31 +226,6 @@ async function expandEvent(event) {
     eventArticles.value = { ...eventArticles.value, [event.id]: [] };
   }
 }
-async function toggleArticle(article) {
-  if (detailArticleId.value === article.id) { detailArticleId.value = null; return; }
-  detailArticleId.value = article.id;
-  currentDetailArticleId.value = article.id;
-  Object.assign(reviewForm, { sentiment: article.analysis?.sentiment || 'neutral', riskScore: article.analysis?.riskScore || 0, reason: '' });
-}
-async function fetchAnalysisFor(articleId) {
-  const { fetchOpinionAnalysis } = await import('../api');
-  return fetchOpinionAnalysis(articleId);
-}
-async function submitReview(article) {
-  const analysisId = article.analysis?.id;
-  if (!analysisId) { message.value = '该文章暂无分析结果可修正。'; return; }
-  if (!reviewForm.reason.trim()) { message.value = '请填写修正原因（审计追溯）。'; return; }
-  reviewing.value = true;
-  try {
-    await reviewOpinionAnalysis(analysisId, { targetType: 'opinion_analysis', targetId: analysisId, field: 'review', sentiment: reviewForm.sentiment, riskScore: reviewForm.riskScore, reason: reviewForm.reason });
-    message.value = '修正已提交并记录审计。';
-    await Promise.all([loadArticles(), loadEvents()]);
-  } catch (e) {
-    message.value = `修正失败：${e.message}`;
-  } finally {
-    reviewing.value = false;
-  }
-}
 onMounted(loadAll);
 </script>
 
@@ -328,6 +237,7 @@ onMounted(loadAll);
 .opinion-status { display: inline-flex; align-items: center; gap: 8px; border: 1px solid #b9ddd3; border-radius: 999px; padding: 8px 11px; color: #0f5f59; background: #f0fbf7; font-size: 13px; font-weight: 700; }
 .opinion-status span { width: 8px; height: 8px; border-radius: 50%; background: #0f9f6e; }
 .opinion-layout { display: grid; grid-template-columns: minmax(280px, 360px) minmax(0, 1fr); gap: 14px; margin-top: 20px; align-items: start; }
+.opinion-side { display: grid; gap: 14px; min-width: 0; }
 .panel { border: 1px solid rgba(37, 67, 63, 0.15); border-radius: 8px; background: rgba(255, 255, 255, 0.9); overflow: hidden; }
 .panel-title { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 16px; border-bottom: 1px solid #e1ebe7; background: #fbfdfc; }
 .panel-title h3 { margin: 0; color: #17233a; font-size: 16px; }
@@ -335,14 +245,16 @@ onMounted(loadAll);
 .monitor-form { display: grid; gap: 10px; padding: 16px; }
 .monitor-form label { display: grid; gap: 5px; color: #334155; font-size: 13px; font-weight: 700; }
 .monitor-form input, .monitor-form select, .panel-actions select, .panel-actions input { min-height: 38px; border: 1px solid #cbd5e1; border-radius: 6px; padding: 7px 9px; font-size: 13px; }
-.monitor-list { display: grid; }
-.monitor-item { padding: 12px 16px; border-top: 1px solid #e7efeb; }
-.monitor-item.active { background: #f3faf7; border-left: 3px solid #0f766e; }
-.monitor-select { width: 100%; display: grid; gap: 4px; border: 0; padding: 0; color: #17233a; background: transparent; text-align: left; }
-.monitor-select strong { font-size: 14px; }
+.monitor-list { display: grid; margin: 0; padding: 0; list-style: none; }
+.monitor-item { min-width: 0; padding: 12px 16px; border-top: 1px solid #e7efeb; background: #fff; transition: background 0.15s, box-shadow 0.15s; }
+.monitor-item:hover { background: #fbfdfc; }
+.monitor-item.active { background: #f0faf6; box-shadow: inset 3px 0 0 #0f766e; }
+.monitor-select { width: 100%; display: grid; gap: 3px; border: 0; padding: 0; color: #17233a; background: transparent; text-align: left; }
+.monitor-select strong { overflow-wrap: anywhere; font-size: 14px; line-height: 1.4; }
 .monitor-select small { color: #64748b; font-size: 12px; }
-.monitor-actions { display: flex; gap: 6px; margin-top: 9px; }
-.monitor-actions button, .primary-button, .ghost-button, .event-meta button, .article-row button { min-height: 32px; border-radius: 6px; padding: 5px 9px; font-size: 12px; font-weight: 700; }
+.monitor-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-top: 9px; }
+.monitor-actions button, .primary-button, .ghost-button, .event-meta button { min-height: 32px; border-radius: 6px; padding: 5px 9px; font-size: 12px; font-weight: 700; }
+.monitor-actions button { min-width: 0; padding-right: 4px; padding-left: 4px; }
 .monitor-actions button, .ghost-button { border: 1px solid #b8d3cb; color: #0f5f59; background: #fff; }
 .primary-button { border: 1px solid #112927; color: #fff; background: #112927; }
 .feedback { padding: 9px 13px; border-radius: 7px; font-size: 12px; margin: 10px 16px 16px; color: #1d4ed8; background: #eef3ff; }
@@ -355,9 +267,9 @@ onMounted(loadAll);
 .metric-card strong { color: #112927; font-size: 25px; font-variant-numeric: tabular-nums; }
 .panel-actions { display: flex; gap: 8px; align-items: center; }
 .empty-cell { padding: 20px 16px; color: #64748b; font-size: 13px; text-align: center; }
-.event-list, .article-list { display: grid; }
-.event-item, .article-list-item { padding: 14px 16px; border-top: 1px solid #e7efeb; }
-.event-head, .article-row, .event-meta { display: flex; align-items: center; gap: 10px; }
+.event-list { display: grid; }
+.event-item { padding: 14px 16px; border-top: 1px solid #e7efeb; }
+.event-head, .event-meta { display: flex; align-items: center; gap: 10px; }
 .event-head { justify-content: space-between; }
 .event-head strong { font-size: 14px; }
 .risk-badge, .sentiment-badge { border-radius: 999px; padding: 3px 9px; font-size: 12px; font-weight: 800; }
@@ -365,26 +277,16 @@ onMounted(loadAll);
 .risk-badge.warn, .sentiment-badge.warn { color: #92400e; background: #fff7ed; border: 1px solid #f0c98a; }
 .risk-badge.danger, .sentiment-badge.danger { color: #9f1c16; background: #fdf0ef; border: 1px solid #efc0ba; }
 .event-item p { margin: 9px 0 0; color: #52615f; font-size: 13px; line-height: 1.65; }
+.event-sentiments { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
 .event-meta { margin-top: 9px; color: #64748b; font-size: 12px; }
 .event-meta button { margin-left: auto; }
 .event-articles { display: grid; gap: 8px; margin-top: 12px; padding: 12px; background: #f7fbf9; border: 1px solid #dce9e4; border-radius: 7px; }
 .event-articles article { display: flex; align-items: center; gap: 9px; }
 .event-articles article > div { display: grid; gap: 3px; min-width: 0; }
 .event-articles strong { font-size: 13px; }
-.event-articles small, .article-row-main small { color: #64748b; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.event-articles a, .article-row a { color: #0f5f59; font-size: 12px; font-weight: 700; text-decoration: none; flex: 0 0 auto; }
-.article-row { align-items: flex-start; }
-.article-row-main { display: grid; gap: 4px; min-width: 0; flex: 1; }
-.article-row-main strong { font-size: 14px; }
-.article-row button { flex: 0 0 auto; }
-.article-detail { margin-top: 10px; padding: 12px; background: #f7fbf9; border: 1px solid #dce9e4; border-radius: 7px; }
-.article-detail > p { margin: 0; color: #52615f; font-size: 13px; line-height: 1.65; }
-.analysis-meta { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 10px; color: #64748b; font-size: 12px; }
-.analysis-meta .reason { width: 100%; color: #52615f; }
-.review-form { display: grid; grid-template-columns: 140px 120px 1fr auto; gap: 8px; align-items: end; margin-top: 12px; padding-top: 12px; border-top: 1px solid #e1ebe7; }
-.review-form label { display: grid; gap: 5px; color: #334155; font-size: 12px; font-weight: 700; }
-.review-form input, .review-form select { min-height: 34px; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 8px; font-size: 13px; }
+.event-articles small { color: #64748b; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.event-articles a { color: #0f5f59; font-size: 12px; font-weight: 700; text-decoration: none; flex: 0 0 auto; }
 button:disabled { opacity: 0.55; cursor: not-allowed; }
 @media (max-width: 960px) { .opinion-layout { grid-template-columns: 1fr; } .metrics { grid-template-columns: repeat(3, 1fr); } }
-@media (max-width: 620px) { .metrics { grid-template-columns: 1fr; } .review-form { grid-template-columns: 1fr; } .opinion-head { flex-direction: column; align-items: flex-start; } }
+@media (max-width: 620px) { .metrics { grid-template-columns: 1fr; } .opinion-head { flex-direction: column; align-items: flex-start; } }
 </style>

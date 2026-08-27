@@ -25,8 +25,6 @@ public class OpinionMonitorService {
         LambdaQueryWrapper<OpinionMonitor> wrapper = Wrappers.lambdaQuery();
         if (OpinionCurrentUser.isAuthenticated() && !OpinionCurrentUser.isAdmin()) {
             wrapper.eq(OpinionMonitor::getUserId, OpinionCurrentUser.id());
-        } else if (!OpinionCurrentUser.isAuthenticated()) {
-            return List.of();
         }
         return monitorMapper.selectList(wrapper.orderByDesc(OpinionMonitor::getCreatedAt));
     }

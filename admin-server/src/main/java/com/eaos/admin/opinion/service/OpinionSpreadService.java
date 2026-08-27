@@ -99,7 +99,8 @@ public class OpinionSpreadService {
             item.put("content", article.getContent().length() > 4000 ? article.getContent().substring(0, 4000) : article.getContent());
             item.put("url", article.getUrl());
             item.put("sourceId", article.getSourceId());
-            item.put("collectedAt", String.valueOf(article.getCollectedAt()));
+            item.put("publishTime", String.valueOf(
+                    article.getPublishTime() == null ? article.getCollectedAt() : article.getPublishTime()));
             items.add(item);
         }
         String base = aiProperties.getBaseUrl();

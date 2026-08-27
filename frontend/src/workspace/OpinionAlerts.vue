@@ -83,30 +83,108 @@
         </div>
       </div>
       <div v-if="!edges.length" class="empty-cell">暂无传播关系，点击「分析传播路径」基于相似度与时间推断。</div>
-      <ul v-else class="edge-list">
-        <li v-for="edge in edges" :key="edge.id" class="edge-item">
-          <span :class="['state-badge', edge.verified ? 'ok' : 'warn']">{{ edge.verified ? '已验证' : '推测' }}</span>
-          <span class="edge-type">{{ edge.relationType }}</span>
-          <strong>#{{ edge.fromArticleId }} → #{{ edge.toArticleId }}</strong>
-          <small>{{ edge.evidence }}</small>
-        </li>
-      </ul>
+      <div v-else class="spread-view">
+        <div class="spread-summary">
+          <div class="spread-kpis">
+            <span><strong>{{ graphModel.nodes.length }}</strong> 个节点</span>
+            <span><strong>{{ graphModel.edges.length }}</strong> 条主路径</span>
+            <span><strong>{{ verifiedEdgeCount }}</strong> 条已验证</span>
+          </div>
+          <div class="spread-legend">
+            <span><i class="legend-line verified"></i>已验证关系</span>
+            <span><i class="legend-line inferred"></i>推测关系</span>
+          </div>
+        </div>
+
+        <div v-if="!graphModel.nodes.length" class="empty-cell">传播关系已加载，暂未找到对应文章。</div>
+        <div v-else class="spread-graph-scroll">
+          <div
+            class="spread-graph"
+            role="img"
+            :aria-label="`传播图包含 ${graphModel.nodes.length} 个节点和 ${graphModel.edges.length} 条主路径`"
+            :style="{ width: `${graphModel.width}px`, height: `${graphModel.height}px` }"
+          >
+            <svg
+              class="spread-lines"
+              :viewBox="`0 0 ${graphModel.width} ${graphModel.height}`"
+              aria-hidden="true"
+            >
+              <defs>
+                <marker id="spread-arrow-verified" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                  <path d="M 0 0 L 10 5 L 0 10 z" class="arrow-verified" />
+                </marker>
+                <marker id="spread-arrow-inferred" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                  <path d="M 0 0 L 10 5 L 0 10 z" class="arrow-inferred" />
+                </marker>
+              </defs>
+              <path
+                v-for="edge in graphModel.edges"
+                :key="edge.displayKey"
+                :d="edge.path"
+                :class="['graph-edge', edge.verified ? 'verified' : 'inferred']"
+                :marker-end="edge.verified ? 'url(#spread-arrow-verified)' : 'url(#spread-arrow-inferred)'"
+              />
+            </svg>
+
+            <article
+              v-for="node in graphModel.nodes"
+              :key="node.id"
+              :class="['graph-node', node.kind]"
+              :style="{
+                width: `${graphModel.nodeWidth}px`,
+                height: `${graphModel.nodeHeight}px`,
+                transform: `translate(${node.x}px, ${node.y}px)`,
+              }"
+            >
+              <div class="graph-node-top">
+                <span class="graph-node-kind">{{ node.label }}</span>
+                <strong>#{{ node.id }}</strong>
+              </div>
+              <h4 :title="node.title">{{ node.title }}</h4>
+              <div class="graph-node-meta">
+                <span :title="node.author || `来源 ${node.sourceId || '-'}`">{{ node.author || `来源 ${node.sourceId || '-'}` }}</span>
+                <time>{{ formatTime(node.publishTime || node.collectedAt) }}</time>
+              </div>
+            </article>
+          </div>
+        </div>
+
+        <div class="spread-evidence">
+          <div class="spread-evidence-head">
+            <strong>关系证据</strong>
+            <span>{{ normalizedEdges.length }} 条</span>
+          </div>
+          <ul class="edge-list">
+            <li v-for="edge in normalizedEdges" :key="edge.displayKey" class="edge-item">
+              <div class="edge-route">
+                <span class="edge-article">#{{ edge.fromArticleId }}</span>
+                <span class="edge-route-line" :class="{ verified: edge.verified }"></span>
+                <span class="edge-article">#{{ edge.toArticleId }}</span>
+              </div>
+              <span :class="['state-badge', edge.verified ? 'ok' : 'warn']">{{ edge.verified ? '已验证' : '推测' }}</span>
+              <span class="edge-type">{{ edge.relationType }}</span>
+              <small>{{ edge.evidence }}</small>
+            </li>
+          </ul>
+        </div>
+      </div>
     </section>
   </main>
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import {
   analyzeOpinionSpread, feedbackOpinionSuggestion, fetchOpinionAlerts, fetchOpinionMonitors,
-  fetchOpinionNotifications, fetchOpinionSpread, fetchOpinionSuggestions, generateOpinionSuggestion,
-  handleOpinionAlert,
+  fetchOpinionArticles, fetchOpinionNotifications, fetchOpinionSpread, fetchOpinionSuggestions,
+  generateOpinionSuggestion, handleOpinionAlert,
 } from '../api';
 
 const monitors = ref([]);
 const monitorId = ref(null);
 const alerts = ref([]);
 const edges = ref([]);
+const spreadArticles = ref([]);
 const notifications = ref({});
 const suggestions = ref({});
 const verifiedFilter = ref('');
@@ -121,6 +199,158 @@ const suggesting = ref(null);
 const analyzing = ref(false);
 const error = ref('');
 
+const articleTime = (article) => new Date(article?.publishTime || article?.collectedAt || 0).getTime() || 0;
+const compareArticles = (left, right) =>
+  articleTime(left) - articleTime(right) || Number(left?.id || 0) - Number(right?.id || 0);
+const articleById = computed(() => new Map(
+  spreadArticles.value.map((article) => [Number(article.id), article]),
+));
+const normalizedEdges = computed(() => {
+  const byKey = new Map();
+  for (const raw of edges.value) {
+    let fromArticleId = Number(raw.fromArticleId);
+    let toArticleId = Number(raw.toArticleId);
+    const from = articleById.value.get(fromArticleId);
+    const to = articleById.value.get(toArticleId);
+    if (from && to && compareArticles(from, to) > 0) {
+      [fromArticleId, toArticleId] = [toArticleId, fromArticleId];
+    }
+    if (fromArticleId === toArticleId) continue;
+    const displayKey = `${fromArticleId}-${toArticleId}-${raw.relationType}`;
+    const existing = byKey.get(displayKey);
+    if (!existing || Number(raw.confidence || 0) > Number(existing.confidence || 0)) {
+      byKey.set(displayKey, { ...raw, fromArticleId, toArticleId, displayKey });
+    }
+  }
+  return [...byKey.values()].sort((a, b) => Number(b.verified) - Number(a.verified)
+    || Number(b.confidence || 0) - Number(a.confidence || 0));
+});
+const primaryEdges = computed(() => {
+  const verified = normalizedEdges.value.filter((edge) => edge.verified);
+  const selected = [...verified];
+  const verifiedTargets = new Set(verified.map((edge) => edge.toArticleId));
+  const inferredByTarget = new Map();
+
+  for (const edge of normalizedEdges.value) {
+    if (edge.verified || verifiedTargets.has(edge.toArticleId)) continue;
+    const group = inferredByTarget.get(edge.toArticleId) || [];
+    group.push(edge);
+    inferredByTarget.set(edge.toArticleId, group);
+  }
+
+  for (const candidates of inferredByTarget.values()) {
+    const bestConfidence = Math.max(...candidates.map((edge) => Number(edge.confidence || 0)));
+    const plausible = candidates.filter((edge) =>
+      Number(edge.confidence || 0) >= bestConfidence - 0.05);
+    plausible.sort((left, right) => {
+      const leftFrom = articleById.value.get(left.fromArticleId);
+      const rightFrom = articleById.value.get(right.fromArticleId);
+      return articleTime(rightFrom) - articleTime(leftFrom)
+        || Number(right.confidence || 0) - Number(left.confidence || 0);
+    });
+    if (plausible[0]) selected.push(plausible[0]);
+  }
+
+  return selected.sort((left, right) => {
+    const leftFrom = articleById.value.get(left.fromArticleId);
+    const rightFrom = articleById.value.get(right.fromArticleId);
+    return compareArticles(leftFrom, rightFrom)
+      || Number(right.verified) - Number(left.verified)
+      || Number(right.confidence || 0) - Number(left.confidence || 0);
+  });
+});
+const graphModel = computed(() => {
+  const nodeWidth = 220;
+  const nodeHeight = 124;
+  const minimumColumnGap = 112;
+  const rowGap = 28;
+  const padding = 28;
+  const graphEdges = primaryEdges.value.filter((edge) =>
+    articleById.value.has(edge.fromArticleId) && articleById.value.has(edge.toArticleId));
+  const nodeIds = new Set(graphEdges.flatMap((edge) => [edge.fromArticleId, edge.toArticleId]));
+  const articles = spreadArticles.value
+    .filter((article) => nodeIds.has(Number(article.id)))
+    .sort(compareArticles);
+  const incoming = new Map(articles.map((article) => [Number(article.id), []]));
+
+  for (const edge of graphEdges) {
+    incoming.get(edge.toArticleId)?.push(edge);
+  }
+
+  const depthById = new Map();
+  for (const article of articles) {
+    const parents = incoming.get(Number(article.id)) || [];
+    const depth = parents.length
+      ? Math.max(...parents.map((edge) => depthById.get(edge.fromArticleId) ?? 0)) + 1
+      : 0;
+    depthById.set(Number(article.id), depth);
+  }
+
+  const layers = new Map();
+  for (const article of articles) {
+    const depth = depthById.get(Number(article.id)) || 0;
+    const layer = layers.get(depth) || [];
+    layer.push(article);
+    layers.set(depth, layer);
+  }
+  for (const layer of layers.values()) layer.sort(compareArticles);
+
+  const maxDepth = Math.max(0, ...layers.keys());
+  const maxRows = Math.max(1, ...[...layers.values()].map((layer) => layer.length));
+  const contentHeight = maxRows * nodeHeight + Math.max(0, maxRows - 1) * rowGap;
+  const minimumWidth = 1040;
+  const naturalWidth = padding * 2 + (maxDepth + 1) * nodeWidth + maxDepth * minimumColumnGap;
+  const width = Math.max(minimumWidth, naturalWidth);
+  const columnGap = maxDepth > 0
+    ? Math.max(minimumColumnGap, (width - padding * 2 - (maxDepth + 1) * nodeWidth) / maxDepth)
+    : minimumColumnGap;
+  const height = Math.max(220, padding * 2 + contentHeight);
+  const positions = new Map();
+
+  for (const [depth, layer] of layers.entries()) {
+    const layerHeight = layer.length * nodeHeight + Math.max(0, layer.length - 1) * rowGap;
+    const startY = padding + (contentHeight - layerHeight) / 2;
+    layer.forEach((article, index) => {
+      positions.set(Number(article.id), {
+        x: padding + depth * (nodeWidth + columnGap),
+        y: startY + index * (nodeHeight + rowGap),
+      });
+    });
+  }
+
+  const nodes = articles.map((article) => {
+    const articleId = Number(article.id);
+    const incomingEdges = incoming.get(articleId) || [];
+    const verifiedParent = incomingEdges.find((edge) => edge.verified);
+    const position = positions.get(articleId) || { x: padding, y: padding };
+    return {
+      ...article,
+      ...position,
+      id: articleId,
+      kind: incomingEdges.length === 0 ? 'origin' : verifiedParent ? 'verified' : 'inferred',
+      label: incomingEdges.length === 0
+        ? '首发'
+        : verifiedParent?.relationType || '推测扩散',
+    };
+  });
+  const laidOutEdges = graphEdges.map((edge) => {
+    const from = positions.get(edge.fromArticleId);
+    const to = positions.get(edge.toArticleId);
+    const startX = from.x + nodeWidth;
+    const startY = from.y + nodeHeight / 2;
+    const endX = to.x;
+    const endY = to.y + nodeHeight / 2;
+    const bendX = startX + (endX - startX) / 2;
+    return {
+      ...edge,
+      path: `M ${startX} ${startY} C ${bendX} ${startY}, ${bendX} ${endY}, ${endX - 8} ${endY}`,
+    };
+  });
+
+  return { width, height, nodeWidth, nodeHeight, nodes, edges: laidOutEdges };
+});
+const verifiedEdgeCount = computed(() =>
+  graphModel.value.edges.filter((edge) => edge.verified).length);
 const riskClass = (value) => ({ 危机: 'danger', 预警: 'warn', 关注: 'ok' }[value] || 'warn');
 const stateClass = (value) => ({ resolved: 'ok', closed: 'ok', acknowledged: 'warn', processing: 'warn', triggered: 'danger' }[value] || 'warn');
 const stateLabel = (value) => ({ triggered: '已触发', acknowledged: '已确认', processing: '处理中', resolved: '已解决', closed: '已关闭' }[value] || value);
@@ -128,7 +358,7 @@ const formatTime = (value) => {
   if (!value) return '-';
   const raw = String(value).trim();
   const hasTz = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(raw);
-  const date = new Date(hasTz ? raw : `${raw.replace(' ', 'T')}Z`);
+  const date = new Date(hasTz ? raw : raw.replace(' ', 'T'));
   return Number.isNaN(date.getTime()) ? raw : date.toLocaleString();
 };
 function statsLabel(stats) {
@@ -144,12 +374,23 @@ async function loadAll() {
       monitorId.value ? fetchOpinionSpread(monitorId.value, verifiedFilter.value === '' ? undefined : verifiedFilter.value === 'true') : Promise.resolve([]),
     ]);
     monitors.value = m; alerts.value = a; edges.value = e;
+    spreadArticles.value = monitorId.value
+      ? (await fetchOpinionArticles({ monitorId: monitorId.value, pageSize: 50 })).items || []
+      : [];
     if (!monitorId.value && m.length) { monitorId.value = m[0].id; await loadAll(); }
   } catch (e) {
     error.value = `加载失败：${e.message}`;
   } finally { loading.value = false; }
 }
-async function loadSpread() { edges.value = await fetchOpinionSpread(monitorId.value, verifiedFilter.value === '' ? undefined : verifiedFilter.value === 'true'); }
+async function loadSpread() {
+  if (!monitorId.value) { edges.value = []; spreadArticles.value = []; return; }
+  const [nextEdges, result] = await Promise.all([
+    fetchOpinionSpread(monitorId.value, verifiedFilter.value === '' ? undefined : verifiedFilter.value === 'true'),
+    fetchOpinionArticles({ monitorId: monitorId.value, pageSize: 50 }),
+  ]);
+  edges.value = nextEdges;
+  spreadArticles.value = result.items || [];
+}
 function openHandle(alert) { handleAlertId.value = handleAlertId.value === alert.id ? null : alert.id; handleState.value = alert.state === 'triggered' ? 'acknowledged' : alert.state; handleNote.value = alert.handleNote || ''; }
 async function submitHandle(alert) {
   submitting.value = true;
@@ -228,8 +469,49 @@ onMounted(loadAll);
 .suggestion-item { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; gap: 6px; }
 .suggestion-item p { min-width: 0; margin: 0; color: #8a421a; font-size: 13px; line-height: 1.65; white-space: pre-wrap; overflow-wrap: anywhere; }
 .feedback-actions { display: flex; gap: 6px; }
-.edge-item { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.spread-view { padding: 16px; }
+.spread-summary { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding-bottom: 14px; border-bottom: 1px solid #e7efeb; }
+.spread-kpis { display: flex; flex-wrap: wrap; gap: 8px 18px; }
+.spread-kpis span { color: #64748b; font-size: 12px; }
+.spread-kpis strong { margin-right: 3px; color: #112927; font-size: 16px; font-variant-numeric: tabular-nums; }
+.spread-evidence-head strong { color: #112927; font-size: 14px; }
+.spread-evidence-head span { color: #64748b; font-size: 12px; }
+.spread-legend { display: flex; flex-wrap: wrap; gap: 10px 14px; }
+.spread-legend span { display: inline-flex; align-items: center; gap: 6px; color: #52615f; font-size: 12px; }
+.legend-line { display: inline-block; width: 24px; height: 3px; border-radius: 2px; background: #0f766e; }
+.legend-line.inferred { height: 0; border-top: 2px dashed #d97706; background: transparent; }
+.spread-graph-scroll { overflow-x: auto; margin: 0 -4px; padding: 20px 4px 24px; }
+.spread-graph { position: relative; min-width: 760px; border: 1px solid #dce9e4; border-radius: 8px; background-color: #fbfdfc; background-image: linear-gradient(#edf4f1 1px, transparent 1px), linear-gradient(90deg, #edf4f1 1px, transparent 1px); background-size: 32px 32px; }
+.spread-lines { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.graph-edge { fill: none; stroke-linecap: round; }
+.graph-edge.verified { stroke: #0f766e; stroke-width: 3; }
+.graph-edge.inferred { stroke: #d97706; stroke-width: 2.5; stroke-dasharray: 8 7; }
+.arrow-verified { fill: #0f766e; }
+.arrow-inferred { fill: #d97706; }
+.graph-node { position: absolute; top: 0; left: 0; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 8px; padding: 13px 14px; overflow: hidden; border: 1px solid #cbded8; border-radius: 8px; background: #fff; box-shadow: 0 5px 14px rgba(17, 41, 39, 0.08); }
+.graph-node.origin { border-color: #0f766e; box-shadow: 0 0 0 3px #e2f3ed, 0 5px 14px rgba(17, 41, 39, 0.08); }
+.graph-node.verified { border-color: #73b7a4; }
+.graph-node.inferred { border-color: #dfb66e; }
+.graph-node-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.graph-node-top strong { color: #0f5f59; font-size: 15px; font-variant-numeric: tabular-nums; }
+.graph-node-kind { max-width: 130px; overflow: hidden; color: #0f5f59; font-size: 11px; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
+.graph-node.inferred .graph-node-kind { color: #9a5708; }
+.graph-node h4 { display: -webkit-box; margin: 0; overflow: hidden; color: #17233a; font-size: 13px; line-height: 1.5; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.graph-node-meta { display: grid; gap: 3px; min-width: 0; }
+.graph-node-meta span, .graph-node-meta time { display: block; overflow: hidden; color: #52615f; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.graph-node-meta time { color: #64748b; font-variant-numeric: tabular-nums; }
+.spread-evidence { padding-top: 14px; border-top: 1px solid #e7efeb; }
+.spread-evidence-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+.spread-evidence .edge-list { display: grid; }
+.spread-evidence .edge-item { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 12px 0; border-top: 1px solid #eef3f1; }
+.spread-evidence .edge-item small { min-width: 0; flex: 1 1 260px; white-space: normal; overflow-wrap: anywhere; }
+.edge-route { display: inline-flex; align-items: center; gap: 7px; min-width: 112px; }
+.edge-article { color: #17233a; font-size: 14px; font-weight: 800; }
+.edge-route-line { position: relative; width: 28px; height: 0; border-top: 2px dashed #d97706; }
+.edge-route-line::after { content: ''; position: absolute; right: -1px; top: -4px; border-top: 5px solid transparent; border-bottom: 5px solid transparent; border-left: 7px solid #d97706; }
+.edge-route-line.verified { height: 2px; border-top: 0; background: #0f766e; }
+.edge-route-line.verified::after { border-left-color: #0f766e; }
 .edge-type { font-weight: 800; color: #1d4ed8; }
 .feedback { padding: 9px 13px; border-radius: 7px; font-size: 12px; margin: 10px 0; color: #9f1c16; background: #fff5f4; border: 1px solid #f0b7b2; }
-@media (max-width: 620px) { .opinion-head { flex-direction: column; align-items: flex-start; } .handle-form { grid-template-columns: 1fr; } }
+@media (max-width: 620px) { .opinion-head { flex-direction: column; align-items: flex-start; } .monitor-bar { display: grid; grid-template-columns: minmax(0, 1fr) 88px; } .monitor-bar select { min-width: 0; width: 100%; } .monitor-bar .primary-button { width: 88px; min-width: 0; } .panel-title { align-items: flex-start; flex-wrap: wrap; } .panel-title .panel-actions { display: grid; grid-template-columns: minmax(0, 1fr) auto; width: 100%; } .panel-actions select { min-width: 0; width: 100%; } .handle-form { grid-template-columns: 1fr; } .spread-summary { align-items: flex-start; flex-direction: column; } .spread-view { padding: 12px; } .spread-evidence .edge-item small { flex-basis: 100%; } }
 </style>

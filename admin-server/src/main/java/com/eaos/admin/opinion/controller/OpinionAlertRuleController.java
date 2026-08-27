@@ -7,6 +7,7 @@ import com.eaos.admin.opinion.service.OpinionAlertRuleService;
 import com.eaos.admin.opinion.support.OpinionCurrentUser;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -25,6 +26,9 @@ import java.util.List;
 public class OpinionAlertRuleController {
 
     private final OpinionAlertRuleService service;
+
+    @Value("${eaos.security.enabled:false}")
+    private boolean securityEnabled;
 
     @GetMapping
     public R<List<OpinionAlertRule>> list(@RequestParam(required = false) Long monitorId) {
@@ -58,7 +62,7 @@ public class OpinionAlertRuleController {
     }
 
     private void requireAdmin() {
-        if (!OpinionCurrentUser.isAdmin()) {
+        if (securityEnabled && !OpinionCurrentUser.isAdmin()) {
             throw new IllegalArgumentException("仅系统管理员可配置告警规则");
         }
     }
