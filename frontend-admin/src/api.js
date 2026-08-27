@@ -361,3 +361,26 @@ export function fetchOpinionReports(filters = {}) {
 export function generateOpinionReport(monitorId, period = 'daily') {
   return request(`/api/opinion/reports/generate?monitorId=${encodeURIComponent(monitorId)}&period=${encodeURIComponent(period)}`, { method: 'POST' });
 }
+
+export function fetchQualGuides() {
+  return request('/api/qual/guides');
+}
+
+export function uploadQualGuide(file, fields) {
+  const form = new FormData();
+  form.append('file', file);
+  Object.entries(fields).forEach(([key, value]) => form.append(key, value));
+  return request('/api/qual/guides/upload', { method: 'POST', body: form });
+}
+
+export function fetchQualValidationRules() {
+  return request('/api/qual/validation-rules');
+}
+
+export function saveQualValidationRule(payload) {
+  return request('/api/qual/validation-rules', {
+    method: 'POST',
+    headers: jsonHeaders,
+    body: JSON.stringify(payload),
+  });
+}

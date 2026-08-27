@@ -21,7 +21,9 @@ spring:
     timeout-per-shutdown-phase: 20s
   servlet:
     multipart:
-      enabled: false
+      enabled: true
+      max-file-size: 20MB
+      max-request-size: 25MB
 
 mybatis-plus:
   configuration:
@@ -54,8 +56,9 @@ eaos:
     # 独立 Python agent 服务（E:\project\enterprise-ai-office-system-new）内网地址
     base-url: ${AI_BASE_URL:http://localhost:8000}
     internal-prefix: /internal
+    internal-token: ${AI_INTERNAL_TOKEN:eaos-internal-token-change-me}
   opinion:
-    # 服务间共享令牌：Python Worker 调用本服务 /internal/opinion/** 的校验值（生产必须换）
+    # Python Worker 调用本服务 /internal/opinion/** 使用的服务间令牌
     internal-token: ${OPINION_INTERNAL_TOKEN:eaos-opinion-internal-dev-token}
     max-items-per-ingest: 200
     max-analysis-jobs-per-collect: 200
@@ -63,8 +66,10 @@ eaos:
     stale-task-minutes: ${OPINION_STALE_TASK_MINUTES:15}
     notification-max-retries: ${OPINION_NOTIFICATION_MAX_RETRIES:3}
     auto-report-enabled: ${OPINION_AUTO_REPORT_ENABLED:true}
-    # 告警 Webhook 回调地址（可选，为空则不发送）
     webhook-url: ${OPINION_WEBHOOK_URL:}
+  qual:
+    storage-dir: ${QUAL_STORAGE_DIR:qual-storage}
+    citation-min-score: ${QUAL_CITATION_MIN_SCORE:0.72}
 
 logging:
   level:

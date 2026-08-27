@@ -13,6 +13,7 @@
         <router-link class="module-nav-item" exact-active-class="active" to="/workspace">公告撰写</router-link>
         <router-link class="module-nav-item" active-class="active" to="/workspace/policy">政策问答</router-link>
         <router-link class="module-nav-item" active-class="active" to="/workspace/intelligence">行业情报</router-link>
+        <router-link class="module-nav-item" active-class="active" to="/workspace/qualification">资质编制</router-link>
         <router-link
           class="module-nav-item"
           :class="{ active: isOpinionRoute }"

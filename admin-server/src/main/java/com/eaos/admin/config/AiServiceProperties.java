@@ -14,4 +14,6 @@ public class AiServiceProperties {
 
     /** Python 侧内网接口前缀 */
     private String internalPrefix = "/internal";
+
+    private String internalToken = "";
 }

@@ -450,3 +450,107 @@ export function fetchOpinionCases(filters = {}) {
   const query = params.toString() ? `?${params.toString()}` : '';
   return request(`/api/opinion/cases${query}`).then(unwrap);
 }
+
+async function qualRequest(path, options = {}) {
+  const data = await request(path, options);
+  return data?.data ?? data;
+}
+
+export function fetchQualGuides() {
+  return qualRequest('/api/qual/guides');
+}
+
+export function uploadQualGuide(file, fields) {
+  const form = new FormData();
+  form.append('file', file);
+  Object.entries(fields).forEach(([key, value]) => form.append(key, value));
+  return qualRequest('/api/qual/guides/upload', { method: 'POST', body: form });
+}
+
+export function fetchQualMaterials() {
+  return qualRequest('/api/qual/materials');
+}
+
+export function uploadQualMaterial(file) {
+  const form = new FormData();
+  form.append('file', file);
+  return qualRequest('/api/qual/materials/upload', { method: 'POST', body: form });
+}
+
+export function createQualTask(payload) {
+  return qualRequest('/api/qual/tasks', {
+    method: 'POST',
+    headers: jsonHeaders,
+    body: JSON.stringify(payload),
+  });
+}
+
+export function fetchQualTasks() {
+  return qualRequest('/api/qual/tasks');
+}
+
+export function fetchQualTask(id) {
+  return qualRequest(`/api/qual/tasks/${encodeURIComponent(id)}`);
+}
+
+export function fetchQualReports(taskId) {
+  return qualRequest(`/api/qual/tasks/${encodeURIComponent(taskId)}/reports`);
+}
+
+export function fetchQualDocument(id) {
+  return qualRequest(`/api/qual/documents/${encodeURIComponent(id)}`);
+}
+
+export function saveQualDocument(id, content, changeNote = '') {
+  return qualRequest(`/api/qual/documents/${encodeURIComponent(id)}/edit`, {
+    method: 'POST',
+    headers: jsonHeaders,
+    body: JSON.stringify({ content, changeNote }),
+  });
+}
+
+export function fetchQualVersions(id) {
+  return qualRequest(`/api/qual/documents/${encodeURIComponent(id)}/versions`);
+}
+
+export function reviewQualDocument(id, action, comment = '') {
+  return qualRequest(`/api/qual/documents/${encodeURIComponent(id)}/review/${action}`, {
+    method: 'POST',
+    headers: jsonHeaders,
+    body: JSON.stringify({ comment }),
+  });
+}
+
+export async function downloadQualDocument(id) {
+  const response = await fetch(`/api/qual/documents/${encodeURIComponent(id)}/export`, {
+    headers: authHeaders(),
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => null);
+    throw new Error(data?.message || data?.detail || `导出失败：${response.status}`);
+  }
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = '资质申报材料初稿.docx';
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+export function subscribeQualTask(taskId, onEvent, onError) {
+  const source = new EventSource(`/api/qual/tasks/${encodeURIComponent(taskId)}/events`);
+  ['progress', 'partial', 'document', 'failed'].forEach((type) => {
+    source.addEventListener(type, (event) => {
+      try {
+        onEvent(type, JSON.parse(event.data));
+      } catch {
+        onEvent(type, {});
+      }
+    });
+  });
+  source.onerror = (error) => {
+    if (onError) onError(error);
+  };
+  return source;
+}

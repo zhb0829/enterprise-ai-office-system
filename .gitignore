@@ -25,6 +25,7 @@ frontend-admin/node_modules/
 # Logs
 *.log
 logs/
+deploy/nginx.pid
 
 # OS
 Thumbs.db

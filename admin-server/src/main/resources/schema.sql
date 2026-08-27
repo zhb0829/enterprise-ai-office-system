@@ -505,3 +505,118 @@ CREATE TABLE IF NOT EXISTS opinion_suggestion (
 
 COMMENT ON TABLE opinion_suggestion IS '应对建议（基于历史案例 RAG，默认需人工确认）';
 CREATE INDEX IF NOT EXISTS idx_opinion_suggestion_target ON opinion_suggestion(target_type, target_id);
+
+CREATE TABLE IF NOT EXISTS qual_guide_schema (
+    id VARCHAR(64) PRIMARY KEY,
+    owner_enterprise_id VARCHAR(64) NOT NULL,
+    qualification_type VARCHAR(128) NOT NULL,
+    guide_name VARCHAR(256) NOT NULL,
+    version VARCHAR(64) NOT NULL,
+    effective_from DATE,
+    effective_to DATE,
+    source_file_name VARCHAR(256) NOT NULL DEFAULT '',
+    source_file_path VARCHAR(512) NOT NULL DEFAULT '',
+    source_url VARCHAR(1024) NOT NULL DEFAULT '',
+    schema_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+    material_checklist_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+    status VARCHAR(32) NOT NULL DEFAULT 'DRAFT',
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_qual_guide_owner_type ON qual_guide_schema(owner_enterprise_id, qualification_type);
+
+CREATE TABLE IF NOT EXISTS qual_material (
+    id VARCHAR(64) PRIMARY KEY,
+    owner_enterprise_id VARCHAR(64) NOT NULL,
+    category VARCHAR(64) NOT NULL DEFAULT 'QUALIFICATION_ARCHIVE',
+    file_name VARCHAR(256) NOT NULL,
+    file_path VARCHAR(512) NOT NULL DEFAULT '',
+    text_content TEXT NOT NULL DEFAULT '',
+    parse_status VARCHAR(32) NOT NULL DEFAULT 'READY',
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_qual_material_owner_category ON qual_material(owner_enterprise_id, category);
+
+CREATE TABLE IF NOT EXISTS qual_task (
+    id VARCHAR(64) PRIMARY KEY,
+    owner_enterprise_id VARCHAR(64) NOT NULL,
+    qualification_type VARCHAR(128) NOT NULL,
+    guide_schema_id VARCHAR(64) NOT NULL REFERENCES qual_guide_schema(id),
+    document_type VARCHAR(32) NOT NULL,
+    status VARCHAR(32) NOT NULL,
+    progress INTEGER NOT NULL DEFAULT 0,
+    progress_message VARCHAR(512) NOT NULL DEFAULT '',
+    idempotency_key VARCHAR(128) NOT NULL,
+    material_ids_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+    format_requirements_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+    worker_result_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+    failure_reason TEXT NOT NULL DEFAULT '',
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    UNIQUE(owner_enterprise_id, idempotency_key)
+);
+CREATE INDEX IF NOT EXISTS idx_qual_task_owner_created ON qual_task(owner_enterprise_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS qual_document (
+    id VARCHAR(64) PRIMARY KEY,
+    task_id VARCHAR(64) NOT NULL REFERENCES qual_task(id),
+    owner_enterprise_id VARCHAR(64) NOT NULL,
+    title VARCHAR(256) NOT NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'DRAFT',
+    content_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+    sources_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+    risk_flags_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+    current_version INTEGER NOT NULL DEFAULT 1,
+    review_comment TEXT NOT NULL DEFAULT '',
+    generated_at TIMESTAMP,
+    model VARCHAR(128) NOT NULL DEFAULT '',
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_qual_document_owner_task ON qual_document(owner_enterprise_id, task_id);
+
+CREATE TABLE IF NOT EXISTS qual_document_version (
+    id VARCHAR(64) PRIMARY KEY,
+    document_id VARCHAR(64) NOT NULL REFERENCES qual_document(id),
+    owner_enterprise_id VARCHAR(64) NOT NULL,
+    version_no INTEGER NOT NULL,
+    content_json JSONB NOT NULL,
+    diff_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+    change_note VARCHAR(512) NOT NULL DEFAULT '',
+    created_by VARCHAR(64) NOT NULL DEFAULT 'system',
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    UNIQUE(document_id, version_no)
+);
+
+CREATE TABLE IF NOT EXISTS qual_validation_rule (
+    id VARCHAR(64) PRIMARY KEY,
+    owner_enterprise_id VARCHAR(64) NOT NULL DEFAULT 'system',
+    code VARCHAR(64) NOT NULL,
+    name VARCHAR(128) NOT NULL,
+    rule_type VARCHAR(32) NOT NULL,
+    rule_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+    enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    UNIQUE(owner_enterprise_id, code)
+);
+
+CREATE TABLE IF NOT EXISTS qual_validation_report (
+    id VARCHAR(64) PRIMARY KEY,
+    task_id VARCHAR(64) NOT NULL REFERENCES qual_task(id),
+    document_id VARCHAR(64) NOT NULL REFERENCES qual_document(id),
+    owner_enterprise_id VARCHAR(64) NOT NULL,
+    summary_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+    items_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS qual_task_event (
+    id BIGSERIAL PRIMARY KEY,
+    task_id VARCHAR(64) NOT NULL REFERENCES qual_task(id),
+    owner_enterprise_id VARCHAR(64) NOT NULL,
+    event_type VARCHAR(32) NOT NULL,
+    payload_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_qual_task_event_task_id ON qual_task_event(task_id, id);
