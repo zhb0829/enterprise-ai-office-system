@@ -22,7 +22,14 @@ public final class QualDto {
     public record SaveDocumentRequest(Map<String, Object> content, String changeNote) {
     }
 
-    public record ReviewRequest(String comment) {
+    public record RollbackRequest(Integer versionNo) {
+    }
+
+    public record AdminTaskUpdateRequest(
+            String documentType,
+            Integer maxChars,
+            List<String> materialIds
+    ) {
     }
 
     public record CreateRuleRequest(

@@ -81,7 +81,13 @@ public class QualDocController {
     @PostMapping("/documents/{documentId}/edit")
     public R<?> saveDocument(@PathVariable String documentId, @RequestBody QualDto.SaveDocumentRequest request,
                              @AuthenticationPrincipal LoginUser user) {
-        return R.ok(service.saveDocument(documentId, owner(user), request));
+        return R.ok(service.saveDocument(documentId, owner(user), request, username(user)));
+    }
+
+    @PostMapping("/documents/{documentId}/rollback")
+    public R<?> rollback(@PathVariable String documentId, @RequestBody QualDto.RollbackRequest request,
+                         @AuthenticationPrincipal LoginUser user) {
+        return R.ok(service.rollbackDocument(documentId, owner(user), request.versionNo(), username(user)));
     }
 
     @GetMapping("/documents/{documentId}/versions")
@@ -89,17 +95,10 @@ public class QualDocController {
         return R.ok(service.versions(documentId, owner(user)));
     }
 
-    @PostMapping("/documents/{documentId}/review/{action}")
-    public R<?> review(@PathVariable String documentId, @PathVariable String action,
-                       @RequestBody(required = false) QualDto.ReviewRequest request,
-                       @AuthenticationPrincipal LoginUser user) {
-        return R.ok(service.review(documentId, owner(user), action, request == null ? "" : request.comment()));
-    }
-
     @GetMapping("/documents/{documentId}/export")
     public void export(@PathVariable String documentId, @AuthenticationPrincipal LoginUser user,
                        HttpServletResponse response) {
-        byte[] data = service.exportFormalDocx(documentId, owner(user));
+        byte[] data = service.exportFormalDocx(documentId, owner(user), username(user));
         response.setContentType("application/vnd.openxmlformats-officedocument.wordprocessingml.document");
         response.setHeader(HttpHeaders.CONTENT_DISPOSITION,
                 ContentDisposition.attachment().filename("qualification-draft.docx", StandardCharsets.UTF_8).build().toString());
@@ -122,5 +121,9 @@ public class QualDocController {
 
     private String owner(LoginUser user) {
         return user == null ? "demo-enterprise" : "enterprise-" + user.getId();
+    }
+
+    private String username(LoginUser user) {
+        return user == null ? "manual" : user.getUsername();
     }
 }

@@ -61,6 +61,7 @@
               <th>状态</th>
               <th>来源</th>
               <th>创建时间</th>
+              <th>操作</th>
             </tr>
           </thead>
           <tbody>
@@ -75,6 +76,52 @@
                 <span v-else class="muted">上传文件</span>
               </td>
               <td>{{ formatDate(guide.createdAt) }}</td>
+              <td>
+                <button class="ghost-button" type="button" @click="viewing = viewing?.id === guide.id ? null : guide">
+                  {{ viewing?.id === guide.id ? '收起' : '查看' }}
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section v-if="viewing" class="panel guide-detail">
+      <div class="page-head">
+        <div>
+          <h3>指南解析详情（只读）</h3>
+          <p class="page-sub">{{ viewing.qualificationType }} · {{ viewing.guideName }} · {{ viewing.version }} · {{ viewing.status }}</p>
+        </div>
+        <button class="ghost-button" type="button" @click="viewing = null">关闭</button>
+      </div>
+
+      <h4 class="detail-subtitle">章节结构（{{ sections.length }}）</h4>
+      <article v-for="(section, index) in sections" :key="section.key || index" class="section-card">
+        <h5>{{ index + 1 }}. {{ section.title || section.name || '未命名章节' }}</h5>
+        <p v-for="(block, bIndex) in section.blocks || []" :key="bIndex">{{ block.text || '（占位章节，由编制任务填充内容）' }}</p>
+        <span v-if="section.required" class="required-mark">必填</span>
+      </article>
+
+      <h4 class="detail-subtitle">材料清单（{{ checklist.length }}）</h4>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>材料名称</th>
+              <th>要求</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(item, index) in checklist" :key="index">
+              <td>{{ index + 1 }}</td>
+              <td>{{ item.name || item.materialName || '-' }}</td>
+              <td>
+                <span :class="['status-pill', { online: !item.optional }]">
+                  <span></span>{{ item.optional ? '可选' : '必需' }}
+                </span>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -84,7 +131,7 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { fetchQualGuides, uploadQualGuide } from '../../api';
 
 const guides = ref([]);
@@ -92,12 +139,16 @@ const file = ref(null);
 const showUpload = ref(false);
 const loading = ref(false);
 const errorMessage = ref('');
+const viewing = ref(null);
 const form = reactive({
   qualificationType: '',
   guideName: '',
   version: '2026-v1',
   sourceUrl: '',
 });
+
+const sections = computed(() => viewing.value?.schema?.sections || []);
+const checklist = computed(() => viewing.value?.materialChecklist || []);
 
 function formatDate(value) {
   return value ? new Date(value).toLocaleString('zh-CN') : '-';
@@ -197,6 +248,56 @@ onMounted(loadGuides);
 
 .muted {
   color: #64748b;
+}
+
+.ghost-button {
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 1px solid #cfd6e3;
+  border-radius: 8px;
+  background: #fff;
+  color: #1f4f9f;
+  font-weight: 700;
+}
+
+.guide-detail {
+  display: grid;
+  gap: 14px;
+}
+
+.detail-subtitle {
+  margin: 8px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid #e2e8f0;
+  font-size: 14px;
+  color: #17233a;
+}
+
+.section-card {
+  position: relative;
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.section-card h5 {
+  margin: 0 0 6px;
+  color: #17233a;
+}
+
+.section-card p {
+  margin: 4px 0;
+  color: #475569;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.required-mark {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  color: #94a3b8;
+  font-size: 11px;
 }
 
 @media (max-width: 900px) {

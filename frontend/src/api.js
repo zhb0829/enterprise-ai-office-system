@@ -513,6 +513,14 @@ export function fetchQualVersions(id) {
   return qualRequest(`/api/qual/documents/${encodeURIComponent(id)}/versions`);
 }
 
+export function rollbackQualDocument(id, versionNo) {
+  return qualRequest(`/api/qual/documents/${encodeURIComponent(id)}/rollback`, {
+    method: 'POST',
+    headers: jsonHeaders,
+    body: JSON.stringify({ versionNo }),
+  });
+}
+
 export function reviewQualDocument(id, action, comment = '') {
   return qualRequest(`/api/qual/documents/${encodeURIComponent(id)}/review/${action}`, {
     method: 'POST',

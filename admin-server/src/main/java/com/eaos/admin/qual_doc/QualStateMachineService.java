@@ -13,17 +13,18 @@ public class QualStateMachineService {
     private static final Map<QualDocumentStatus, EnumSet<QualDocumentStatus>> DOCUMENT_TRANSITIONS = new EnumMap<>(QualDocumentStatus.class);
 
     static {
-        TASK_TRANSITIONS.put(QualTaskStatus.CREATED, EnumSet.of(QualTaskStatus.PARSING, QualTaskStatus.FAILED));
+        TASK_TRANSITIONS.put(QualTaskStatus.CREATED, EnumSet.of(QualTaskStatus.PARSING, QualTaskStatus.ARCHIVED, QualTaskStatus.FAILED));
         TASK_TRANSITIONS.put(QualTaskStatus.PARSING, EnumSet.of(QualTaskStatus.GENERATING, QualTaskStatus.FAILED));
         TASK_TRANSITIONS.put(QualTaskStatus.GENERATING, EnumSet.of(QualTaskStatus.VALIDATING, QualTaskStatus.FAILED));
         TASK_TRANSITIONS.put(QualTaskStatus.VALIDATING, EnumSet.of(QualTaskStatus.READY_REVIEW, QualTaskStatus.FAILED));
-        TASK_TRANSITIONS.put(QualTaskStatus.READY_REVIEW, EnumSet.noneOf(QualTaskStatus.class));
-        TASK_TRANSITIONS.put(QualTaskStatus.FAILED, EnumSet.of(QualTaskStatus.PARSING));
+        TASK_TRANSITIONS.put(QualTaskStatus.READY_REVIEW, EnumSet.of(QualTaskStatus.ARCHIVED));
+        TASK_TRANSITIONS.put(QualTaskStatus.FAILED, EnumSet.of(QualTaskStatus.PARSING, QualTaskStatus.ARCHIVED));
+        TASK_TRANSITIONS.put(QualTaskStatus.ARCHIVED, EnumSet.of(QualTaskStatus.CREATED, QualTaskStatus.READY_REVIEW, QualTaskStatus.FAILED));
 
-        DOCUMENT_TRANSITIONS.put(QualDocumentStatus.DRAFT, EnumSet.of(QualDocumentStatus.IN_REVIEW));
+        DOCUMENT_TRANSITIONS.put(QualDocumentStatus.DRAFT, EnumSet.of(QualDocumentStatus.IN_REVIEW, QualDocumentStatus.LOCKED));
         DOCUMENT_TRANSITIONS.put(QualDocumentStatus.IN_REVIEW, EnumSet.of(QualDocumentStatus.APPROVED, QualDocumentStatus.DRAFT));
         DOCUMENT_TRANSITIONS.put(QualDocumentStatus.APPROVED, EnumSet.of(QualDocumentStatus.LOCKED));
-        DOCUMENT_TRANSITIONS.put(QualDocumentStatus.LOCKED, EnumSet.noneOf(QualDocumentStatus.class));
+        DOCUMENT_TRANSITIONS.put(QualDocumentStatus.LOCKED, EnumSet.of(QualDocumentStatus.APPROVED));
     }
 
     public void assertTaskTransition(QualTaskStatus from, QualTaskStatus to) {

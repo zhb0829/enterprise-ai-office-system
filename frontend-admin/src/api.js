@@ -384,3 +384,46 @@ export function saveQualValidationRule(payload) {
     body: JSON.stringify(payload),
   });
 }
+
+export function fetchAdminEnterprises() {
+  return request('/api/qual/admin/enterprises');
+}
+
+export function fetchAdminQualTasks(filters = {}) {
+  const params = new URLSearchParams();
+  Object.entries(filters).forEach(([key, value]) => { if (value) params.set(key, value); });
+  const query = params.toString() ? `?${params.toString()}` : '';
+  return request(`/api/qual/admin/tasks${query}`);
+}
+
+export function fetchAdminQualTaskDetail(taskId) {
+  return request(`/api/qual/admin/tasks/${encodeURIComponent(taskId)}/detail`);
+}
+
+export function updateAdminQualTask(taskId, payload) {
+  return request(`/api/qual/admin/tasks/${encodeURIComponent(taskId)}`, {
+    method: 'PUT',
+    headers: jsonHeaders,
+    body: JSON.stringify(payload),
+  });
+}
+
+export function archiveAdminQualTask(taskId) {
+  return request(`/api/qual/admin/tasks/${encodeURIComponent(taskId)}/archive`, { method: 'POST' });
+}
+
+export function restoreAdminQualTask(taskId) {
+  return request(`/api/qual/admin/tasks/${encodeURIComponent(taskId)}/restore`, { method: 'POST' });
+}
+
+export function retryAdminQualTask(taskId) {
+  return request(`/api/qual/admin/tasks/${encodeURIComponent(taskId)}/retry`, { method: 'POST' });
+}
+
+export function unlockAdminQualDocument(documentId) {
+  return request(`/api/qual/admin/documents/${encodeURIComponent(documentId)}/unlock`, { method: 'POST' });
+}
+
+export function fetchAdminOwnerMaterials(owner) {
+  return request(`/api/qual/admin/enterprises/${encodeURIComponent(owner)}/materials`);
+}

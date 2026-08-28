@@ -47,6 +47,7 @@ const menuItems = [
   { path: '/admin/materials', title: '素材管理', group: '内容管理' },
   { path: '/admin/policy-documents', title: '政策法规知识库', group: '知识库管理' },
   { path: '/admin/qualification-guides', title: '资质指南库', group: '知识库管理' },
+  { path: '/admin/qualification-tasks', title: '资质编制任务', group: '知识库管理' },
   { path: '/admin/qualification-rules', title: '资质编制校验规则', group: '知识库管理' },
   { path: '/admin/intelligence', title: '行业与竞品情报', group: '情报聚合' },
   { path: '/admin/opinion-sources', title: '舆情采集源治理', group: '舆情分析' },

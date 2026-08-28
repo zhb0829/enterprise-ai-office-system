@@ -6,7 +6,7 @@
         <h2>把官方要求，整理成可审核的工作底稿。</h2>
         <p class="qual-lead">
           先锁定指南版本，再引用企业资质档案生成初稿。系统保留来源、校验报告和版本变化，
-          初稿必须经人工审核后才能导出正式 DOCX。
+          初稿通过自动校验后可直接导出正式 DOCX。
         </p>
       </div>
       <div class="qual-guard">
@@ -79,34 +79,34 @@
             </button>
           </div>
 
-          <form v-if="setupStep === 1" class="qual-form" @submit.prevent="parseGuide">
-            <div class="qual-form-grid">
+          <form v-if="setupStep === 1" class="qual-form" @submit.prevent="setupStep = 2">
+            <div class="qual-guide-picker">
               <label class="qual-field">
-                <span>资质类型</span>
-                <input v-model.trim="form.qualificationType" required placeholder="例如：高新技术企业认定" />
+                <span>选择已解析指南</span>
+                <select v-model="form.guideSchemaId" required @change="syncGuide">
+                  <option value="" disabled>请选择指南版本</option>
+                  <option v-for="guide in guides" :key="guide.id" :value="guide.id">
+                    {{ guide.qualificationType }} · {{ guide.guideName }} · {{ guide.version }}
+                  </option>
+                </select>
               </label>
-              <label class="qual-field">
-                <span>指南名称</span>
-                <input v-model.trim="form.guideName" required placeholder="例如：2026 年申报指南" />
-              </label>
-              <label class="qual-field">
-                <span>指南版本</span>
-                <input v-model.trim="form.version" required placeholder="例如：2026-v1" />
-              </label>
-              <label class="qual-field">
-                <span>官方来源链接 <em>可选</em></span>
-                <input v-model.trim="form.sourceUrl" type="url" placeholder="https://..." />
-              </label>
+              <p v-if="!guides.length" class="qual-muted">
+                暂无已解析指南。官方指南由系统管理员解析后方可使用，请等待管理员发布或联系管理员。
+              </p>
             </div>
-            <label class="qual-upload">
-              <input type="file" accept=".pdf,.docx,.txt,.md" @change="guideFile = $event.target.files?.[0] || null" />
-              <span class="qual-upload-icon" aria-hidden="true">↑</span>
-              <strong>{{ guideFile?.name || '选择官方指南文件' }}</strong>
-              <small>支持原生文字版 PDF、Word、TXT、Markdown；扫描件 OCR 暂不启用</small>
-            </label>
+
+            <div v-if="currentGuide" class="qual-guide-summary">
+              <div>
+                <span class="qual-kicker">已锁定指南解析结果</span>
+                <strong>{{ currentGuide.guideName }} · {{ currentGuide.version }}</strong>
+                <small>{{ currentGuide.schema?.sections?.length || 0 }} 个章节 · {{ currentGuide.materialChecklist?.length || 0 }} 项材料要求</small>
+              </div>
+              <span class="qual-status ok">ACTIVE</span>
+            </div>
+
             <div class="qual-actions">
-              <button class="primary-button" type="submit" :disabled="!guideFile || !form.qualificationType || !form.guideName">
-                解析指南并继续
+              <button class="primary-button" type="submit" :disabled="!form.guideSchemaId">
+                下一步：确认企业档案
               </button>
             </div>
           </form>
@@ -120,18 +120,7 @@
               </div>
               <span class="qual-status ok">ACTIVE</span>
             </div>
-            <div v-else class="qual-guide-picker">
-              <label class="qual-field">
-                <span>选择已解析指南</span>
-                <select v-model="form.guideSchemaId" required @change="syncGuide">
-                  <option value="" disabled>请选择指南版本</option>
-                  <option v-for="guide in guides" :key="guide.id" :value="guide.id">
-                    {{ guide.qualificationType }} · {{ guide.guideName }} · {{ guide.version }}
-                  </option>
-                </select>
-              </label>
-              <p v-if="!guides.length" class="qual-muted">还没有已解析指南，请返回上一步上传。</p>
-            </div>
+            <p v-else class="qual-muted">未锁定指南，请返回上一步选择已解析指南。</p>
 
             <div class="qual-checklist">
               <div class="qual-subhead">
@@ -175,7 +164,7 @@
               <div>
                 <span class="qual-kicker">启动前确认</span>
                 <h4>{{ form.qualificationType }} · {{ form.documentType }}</h4>
-                <p>任务会锁定当前指南版本，并记录企业档案引用。生成结果默认为 DRAFT，需人工审核。</p>
+                <p>任务会锁定当前指南版本，并记录企业档案引用。文档通过校验后可直接导出正式 DOCX。</p>
               </div>
             </div>
             <div class="qual-form-grid">
@@ -217,7 +206,7 @@
               <button
                 class="primary-button compact-button"
                 type="button"
-                :disabled="document?.status !== 'APPROVED' || exporting"
+                :disabled="!canExport || exporting"
                 @click="exportDocument"
               >
                 {{ exporting ? '导出中…' : '导出 DOCX' }}
@@ -259,7 +248,7 @@
                   <span class="qual-kicker">可编辑初稿</span>
                   <h4>{{ activeSectionData.title }}</h4>
                 </div>
-                <span class="qual-draft-mark">DRAFT · 待人工核对</span>
+                <span class="qual-draft-mark">{{ draftMark }}</span>
               </div>
               <div v-if="activeSectionData" class="qual-blocks">
                 <article v-for="(block, index) in activeSectionData.blocks || []" :key="index" class="qual-block">
@@ -285,59 +274,118 @@
             </section>
 
             <aside class="qual-inspector">
-              <section class="qual-inspector-section">
-                <div class="qual-panel-title">
-                  <span class="qual-kicker">引用来源</span>
-                  <strong>{{ sources.length }} 条锚点</strong>
-                </div>
-                <article v-for="(source, index) in sources" :key="source.id || index" class="qual-source">
-                  <span>{{ index + 1 }}</span>
-                  <div>
-                    <strong>{{ source.docTitle || '未命名来源' }}</strong>
-                    <p>{{ source.excerpt || '暂无摘录' }}</p>
-                    <small>score {{ source.score ?? '待校验' }}</small>
+              <div class="qual-inspector-tabs" role="tablist">
+                <button
+                  v-for="tab in inspectorTabs"
+                  :key="tab.key"
+                  type="button"
+                  role="tab"
+                  :class="{ active: inspectorTab === tab.key }"
+                  :aria-selected="inspectorTab === tab.key"
+                  @click="inspectorTab = tab.key"
+                >
+                  {{ tab.label }}
+                </button>
+              </div>
+              <div class="qual-inspector-body">
+                <section v-show="inspectorTab === 'sources'" class="qual-inspector-section">
+                  <div class="qual-panel-title">
+                    <span class="qual-kicker">引用来源</span>
+                    <strong>{{ sources.length }} 条锚点</strong>
                   </div>
-                </article>
-                <div v-if="!sources.length" class="qual-inline-empty">生成后此处显示可追溯来源。</div>
-              </section>
+                  <article v-for="(source, index) in sources" :key="source.id || index" class="qual-source">
+                    <span>{{ index + 1 }}</span>
+                    <div>
+                      <strong>{{ source.docTitle || '未命名来源' }}</strong>
+                      <p>{{ source.excerpt || '暂无摘录' }}</p>
+                      <small>score {{ source.score ?? '待校验' }}</small>
+                    </div>
+                  </article>
+                  <div v-if="!sources.length" class="qual-inline-empty">生成后此处显示可追溯来源。</div>
+                </section>
 
-              <section class="qual-inspector-section">
-                <div class="qual-panel-title">
-                  <span class="qual-kicker">校验报告</span>
-                  <strong>{{ validationSummary }}</strong>
-                </div>
-                <div v-for="(item, index) in validationItems" :key="item.code || index" :class="['qual-validation', item.status === 'PASS' ? 'pass' : 'fail']">
-                  <span>{{ item.status === 'PASS' ? '✓' : '!' }}</span>
-                  <p>{{ item.message }}</p>
-                </div>
-                <div v-if="!validationItems.length" class="qual-inline-empty">任务完成后生成格式与引用校验。</div>
-              </section>
+                <section v-show="inspectorTab === 'validation'" class="qual-inspector-section">
+                  <div class="qual-panel-title">
+                    <span class="qual-kicker">校验报告</span>
+                    <strong>{{ validationSummary }}</strong>
+                  </div>
+                  <template v-if="validationItems.length">
+                    <div
+                      v-for="(item, index) in failedItems"
+                      :key="`fail-${index}`"
+                      :class="['qual-validation', 'fail']"
+                    >
+                      <span>!</span>
+                      <p>{{ item.message }}</p>
+                    </div>
+                    <button
+                      v-if="checklistSummary"
+                      :class="['qual-checklist-summary', { pass: checklistSummary.failed === 0 }]"
+                      type="button"
+                      @click="checklistExpanded = !checklistExpanded"
+                    >
+                      <span>{{ checklistSummary.failed === 0 ? '✓' : '!' }}</span>
+                      <p>
+                        材料清单 {{ checklistSummary.passed }}/{{ checklistSummary.total }} 已满足
+                        <em>{{ checklistExpanded ? '收起明细' : '展开明细' }}</em>
+                      </p>
+                    </button>
+                    <template v-if="checklistSummary && checklistExpanded">
+                      <div
+                        v-for="(item, index) in checklistItems"
+                        :key="`checklist-${index}`"
+                        :class="['qual-validation', item.status === 'PASS' ? 'pass' : 'fail']"
+                      >
+                        <span>{{ item.status === 'PASS' ? '✓' : '!' }}</span>
+                        <p>{{ item.message }}</p>
+                      </div>
+                    </template>
+                    <button v-if="passedItems.length" class="qual-pass-toggle" type="button" @click="passExpanded = !passExpanded">
+                      ✓ 通过 {{ passedItems.length }} 项 · {{ passExpanded ? '收起' : '展开' }}
+                    </button>
+                    <template v-if="passExpanded">
+                      <div
+                        v-for="(item, index) in passedItems"
+                        :key="`pass-${index}`"
+                        :class="['qual-validation', 'pass']"
+                      >
+                        <span>✓</span>
+                        <p>{{ item.message }}</p>
+                      </div>
+                    </template>
+                  </template>
+                  <div v-else class="qual-inline-empty">任务完成后生成格式与引用校验。</div>
+                </section>
 
-              <section class="qual-inspector-section">
-                <div class="qual-panel-title">
-                  <span class="qual-kicker">人工审核</span>
-                  <strong>{{ document?.status || '等待初稿' }}</strong>
-                </div>
-                <textarea v-model="reviewComment" rows="3" placeholder="填写送审或退回说明"></textarea>
-                <div class="qual-review-actions">
-                  <button class="ghost-button" type="button" :disabled="reviewing || document?.status !== 'DRAFT'" @click="reviewDocument('submit')">送审</button>
-                  <button class="ghost-button danger-button" type="button" :disabled="reviewing || !['IN_REVIEW', 'DRAFT'].includes(document?.status)" @click="reviewDocument('reject')">退回</button>
-                  <button class="primary-button" type="button" :disabled="reviewing || document?.status !== 'IN_REVIEW'" @click="reviewDocument('approve')">通过</button>
-                </div>
-              </section>
-
-              <section class="qual-inspector-section">
-                <div class="qual-panel-title">
-                  <span class="qual-kicker">版本历史</span>
-                  <strong>v{{ document?.currentVersion || 0 }}</strong>
-                </div>
-                <div v-for="version in versions.slice(0, 4)" :key="version.id" class="qual-version">
-                  <strong>v{{ version.version }}</strong>
-                  <span>{{ version.changeNote || '无变更说明' }}</span>
-                  <small>{{ formatDate(version.createdAt) }}</small>
-                </div>
-                <div v-if="!versions.length" class="qual-inline-empty">保存后生成版本快照。</div>
-              </section>
+                <section v-show="inspectorTab === 'versions'" class="qual-inspector-section">
+                  <div class="qual-panel-title">
+                    <span class="qual-kicker">版本历史</span>
+                    <strong>v{{ document?.currentVersion || 0 }}</strong>
+                  </div>
+                  <div class="qual-version-list">
+                    <div v-for="version in versions" :key="version.id" class="qual-version">
+                      <div class="qual-version-head">
+                        <strong>v{{ version.version }}</strong>
+                        <span class="qual-version-author">{{ version.createdBy || 'manual' }}</span>
+                        <div class="qual-version-actions">
+                          <button class="qual-mini-button" type="button" @click="openCompare(version)">对比</button>
+                          <button
+                            class="qual-mini-button"
+                            type="button"
+                            :disabled="rollingBack || document?.status === 'LOCKED' || version.version >= (document?.currentVersion || 0)"
+                            @click="rollbackVersion(version)"
+                          >
+                            回滚
+                          </button>
+                        </div>
+                      </div>
+                      <span class="qual-version-note">{{ version.changeNote || '无变更说明' }}</span>
+                      <small class="qual-version-time">{{ formatDate(version.createdAt) }}</small>
+                    </div>
+                  </div>
+                  <div v-if="!versions.length" class="qual-inline-empty">保存后生成版本快照。</div>
+                </section>
+              </div>
             </aside>
           </div>
         </section>
@@ -350,6 +398,44 @@
         </section>
       </section>
     </section>
+
+    <div v-if="comparing" class="qual-modal-mask" @click.self="comparing = null">
+      <div class="qual-modal" role="dialog" aria-label="版本对比">
+        <header class="qual-modal-head">
+          <div>
+            <h4>版本对比</h4>
+            <p>v{{ comparing.version }}（{{ formatDate(comparing.createdAt) }}） → v{{ document?.currentVersion }}（当前）</p>
+          </div>
+          <button class="qual-mini-button" type="button" @click="comparing = null">关闭</button>
+        </header>
+        <div class="qual-compare-grid">
+          <section
+            v-for="pane in comparePanes"
+            :key="pane.side"
+            class="qual-compare-pane"
+            :class="pane.side"
+          >
+            <h5>{{ pane.title }}</h5>
+            <div v-for="(row, rowIndex) in compareRows" :key="rowIndex" class="qual-compare-section">
+              <h6>{{ row.section }}</h6>
+              <p
+                v-for="(block, blockIndex) in row.blocks"
+                :key="blockIndex"
+                :class="['qual-compare-block', block[pane.key]]"
+              >
+                <template v-if="block[pane.key] === 'same'">{{ block.text }}</template>
+                <template v-else-if="block[pane.key] === 'hidden'"><i class="qual-compare-empty">此版本无此段</i></template>
+                <template v-else>
+                  <em class="qual-compare-op">{{ block[pane.key] === 'added' ? '新增' : block[pane.key] === 'removed' ? '删除' : '修改' }}</em>
+                  <span v-if="block[pane.key] === 'modified'" class="qual-compare-old">{{ block.text }}</span>
+                  <span>{{ block[pane.key] === 'modified' ? block.newText : block.text }}</span>
+                </template>
+              </p>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
   </main>
 </template>
 
@@ -362,17 +448,17 @@ import {
   fetchQualGuides,
   fetchQualMaterials,
   fetchQualReports,
+  fetchQualTask,
   fetchQualTasks,
   fetchQualVersions,
-  reviewQualDocument,
+  rollbackQualDocument,
   saveQualDocument,
   subscribeQualTask,
-  uploadQualGuide,
   uploadQualMaterial,
 } from '../api';
 
 const steps = [
-  { id: 1, label: '上传官方指南' },
+  { id: 1, label: '选择已解析指南' },
   { id: 2, label: '确认企业档案' },
   { id: 3, label: '启动编制' },
 ];
@@ -388,19 +474,18 @@ const reports = ref([]);
 const versions = ref([]);
 const activeSection = ref(0);
 const selectedMaterialIds = ref([]);
-const guideFile = ref(null);
 const materialFile = ref(null);
 const uploadingMaterial = ref(false);
 const creatingTask = ref(false);
 const saving = ref(false);
-const reviewing = ref(false);
 const exporting = ref(false);
 const notice = ref('');
 const noticeType = ref('success');
 const changeNote = ref('');
-const reviewComment = ref('');
 let eventSource = null;
+let subscribedTaskId = null;
 let noticeTimer;
+let pollTimer;
 
 const form = reactive({
   qualificationType: '',
@@ -415,12 +500,65 @@ const form = reactive({
 const sections = computed(() => document.value?.content?.sections || []);
 const activeSectionData = computed(() => sections.value[activeSection.value]);
 const sources = computed(() => document.value?.sources || []);
+const canExport = computed(() => {
+  if (!document.value) return false;
+  return ['APPROVED', 'DRAFT'].includes(document.value.status);
+});
+const draftMark = computed(() => {
+  if (document.value?.status === 'APPROVED') return 'APPROVED · 可导出';
+  return 'DRAFT · 可直接导出';
+});
+const comparing = ref(null);
+const rollingBack = ref(false);
+const compareRows = computed(() => {
+  if (!comparing.value || !document.value) return [];
+  const beforeSections = comparing.value.content?.sections || [];
+  const afterSections = document.value?.content?.sections || [];
+  const rows = [];
+  const count = Math.max(beforeSections.length, afterSections.length);
+  for (let i = 0; i < count; i += 1) {
+    const beforeSection = beforeSections[i];
+    const afterSection = afterSections[i];
+    const beforeTexts = (beforeSection?.blocks || []).filter((b) => b.type !== 'table').map((b) => b.text || '');
+    const afterTexts = (afterSection?.blocks || []).filter((b) => b.type !== 'table').map((b) => b.text || '');
+    const blocks = [];
+    const pairs = Math.min(beforeTexts.length, afterTexts.length);
+    for (let j = 0; j < pairs; j += 1) {
+      if (beforeTexts[j] === afterTexts[j]) blocks.push({ left: 'same', right: 'same', text: beforeTexts[j] });
+      else blocks.push({ left: 'modified', right: 'modified', text: beforeTexts[j], newText: afterTexts[j] });
+    }
+    for (let j = pairs; j < beforeTexts.length; j += 1) blocks.push({ left: 'removed', right: 'hidden', text: beforeTexts[j] });
+    for (let j = pairs; j < afterTexts.length; j += 1) blocks.push({ left: 'hidden', right: 'added', text: afterTexts[j] });
+    rows.push({ section: afterSection?.title || beforeSection?.title || '未命名章节', blocks });
+  }
+  return rows;
+});
+const comparePanes = [
+  { side: 'old', key: 'left', title: '选中版本' },
+  { side: 'current', key: 'right', title: '当前版本' },
+];
 const validationItems = computed(() => reports.value[0]?.items || []);
 const validationSummary = computed(() => {
   const summary = reports.value[0]?.summary;
   if (!summary) return '待生成';
   return summary.passed ? `通过 ${summary.total}` : `失败 ${summary.failed}/${summary.total}`;
 });
+const inspectorTab = ref('validation');
+const passExpanded = ref(false);
+const checklistExpanded = ref(false);
+const checklistItems = computed(() => validationItems.value.filter((item) => item.code === 'MATERIAL_CHECKLIST'));
+const failedItems = computed(() => validationItems.value.filter((item) => item.status !== 'PASS' && item.code !== 'MATERIAL_CHECKLIST'));
+const passedItems = computed(() => validationItems.value.filter((item) => item.status === 'PASS' && item.code !== 'MATERIAL_CHECKLIST'));
+const checklistSummary = computed(() => {
+  if (!checklistItems.value.length) return null;
+  const passed = checklistItems.value.filter((item) => item.status === 'PASS').length;
+  return { passed, failed: checklistItems.value.length - passed, total: checklistItems.value.length };
+});
+const inspectorTabs = computed(() => [
+  { key: 'sources', label: '来源' },
+  { key: 'validation', label: '校验' },
+  { key: 'versions', label: '版本' },
+]);
 
 function statusLabel(status) {
   return {
@@ -428,8 +566,9 @@ function statusLabel(status) {
     PARSING: '解析中',
     GENERATING: '生成中',
     VALIDATING: '校验中',
-    READY_REVIEW: '待审核',
+    READY_REVIEW: '待导出',
     FAILED: '失败',
+    ARCHIVED: '已归档',
   }[status] || status || '未知';
 }
 
@@ -449,18 +588,54 @@ function showNotice(message, type = 'success') {
   noticeTimer = setTimeout(() => (notice.value = ''), 4500);
 }
 
-async function loadAll() {
+async function loadAll(silent = false) {
   try {
     const [guideData, materialData, taskData] = await Promise.all([fetchQualGuides(), fetchQualMaterials(), fetchQualTasks()]);
     guides.value = Array.isArray(guideData) ? guideData : [];
     materials.value = Array.isArray(materialData) ? materialData : [];
-    tasks.value = Array.isArray(taskData) ? taskData : [];
+    tasks.value = (Array.isArray(taskData) ? taskData : []).filter((item) => item.status !== 'ARCHIVED');
     if (selectedTask.value) {
       const refreshed = tasks.value.find((item) => item.id === selectedTask.value.id);
       if (refreshed) await selectTask(refreshed.id, false);
+      else return handleTaskRemoved();
     }
   } catch (error) {
-    showNotice(error.message, 'error');
+    if (!silent) showNotice(error.message, 'error');
+  }
+}
+
+function handleTaskRemoved() {
+  showNotice('该任务已被管理员移除', 'error');
+  startNewTask();
+}
+
+function startPolling() {
+  stopPolling();
+  pollTimer = setInterval(pollChanges, 15000);
+}
+
+function stopPolling() {
+  clearInterval(pollTimer);
+  pollTimer = null;
+}
+
+async function pollChanges() {
+  try {
+    const taskData = await fetchQualTasks();
+    tasks.value = (Array.isArray(taskData) ? taskData : []).filter((item) => item.status !== 'ARCHIVED');
+    if (!selectedTask.value) return;
+    const refreshed = tasks.value.find((item) => item.id === selectedTask.value.id);
+    if (!refreshed) {
+      handleTaskRemoved();
+      return;
+    }
+    const changed = ['status', 'progress', 'documentStatus'].some((key) => refreshed[key] !== selectedTask.value[key]);
+    if (!changed) return;
+    const documentChanged = refreshed.documentStatus !== selectedTask.value.documentStatus && refreshed.documentId;
+    selectedTask.value = refreshed;
+    if (documentChanged) document.value = await fetchQualDocument(refreshed.documentId);
+  } catch {
+    /* 轮询失败静默，等待下一轮 */
   }
 }
 
@@ -475,7 +650,6 @@ function startNewTask() {
   versions.value = [];
   activeSection.value = 0;
   selectedMaterialIds.value = [];
-  guideFile.value = null;
   materialFile.value = null;
   Object.assign(form, {
     qualificationType: '',
@@ -486,23 +660,6 @@ function startNewTask() {
     documentType: '资质申报材料初稿',
     maxChars: 0,
   });
-}
-
-async function parseGuide() {
-  try {
-    currentGuide.value = await uploadQualGuide(guideFile.value, {
-      qualificationType: form.qualificationType,
-      guideName: form.guideName,
-      version: form.version,
-      sourceUrl: form.sourceUrl,
-    });
-    form.guideSchemaId = currentGuide.value.id;
-    await loadAll();
-    showNotice('指南已解析并保存为 ACTIVE 版本。');
-    setupStep.value = 2;
-  } catch (error) {
-    showNotice(error.message, 'error');
-  }
 }
 
 async function uploadMaterialFile() {
@@ -548,30 +705,40 @@ async function createTask() {
 
 async function selectTask(taskId, switchView = true) {
   try {
-    const task = await fetchQualTask(taskId);
-    selectedTask.value = task;
+    await refreshTaskData(taskId);
     if (switchView) view.value = 'workbench';
-    if (task.documentId) {
-      document.value = await fetchQualDocument(task.documentId);
-      reports.value = await fetchQualReports(task.id);
-      versions.value = await fetchQualVersions(task.documentId);
-      activeSection.value = Math.min(activeSection.value, Math.max(sections.value.length - 1, 0));
-    }
-    subscribeToTask(task.id);
+    subscribeToTask(taskId);
   } catch (error) {
     showNotice(error.message, 'error');
   }
 }
 
+async function refreshTaskData(taskId) {
+  const task = await fetchQualTask(taskId);
+  selectedTask.value = task;
+  if (task.documentId) {
+    document.value = await fetchQualDocument(task.documentId);
+    reports.value = await fetchQualReports(task.id);
+    versions.value = await fetchQualVersions(task.documentId);
+    activeSection.value = Math.min(activeSection.value, Math.max(sections.value.length - 1, 0));
+  }
+}
+
 function subscribeToTask(taskId) {
+  if (subscribedTaskId === taskId && eventSource) return;
   stopEvents();
+  subscribedTaskId = taskId;
   eventSource = subscribeQualTask(
     taskId,
     async (type, payload) => {
       if (type === 'progress') {
+        if (payload.status === 'ARCHIVED') {
+          handleTaskRemoved();
+          return;
+        }
         selectedTask.value = { ...selectedTask.value, ...payload };
       } else if (type === 'document' || type === 'partial') {
-        await selectTask(taskId, false);
+        await refreshTaskData(taskId);
       } else if (type === 'failed') {
         selectedTask.value = { ...selectedTask.value, status: 'FAILED', failureReason: payload.message };
         showNotice(payload.message || '任务失败', 'error');
@@ -584,6 +751,7 @@ function subscribeToTask(taskId) {
 function stopEvents() {
   eventSource?.close();
   eventSource = null;
+  subscribedTaskId = null;
 }
 
 async function saveDocument() {
@@ -601,20 +769,6 @@ async function saveDocument() {
   }
 }
 
-async function reviewDocument(action) {
-  if (!document.value) return;
-  reviewing.value = true;
-  try {
-    document.value = await reviewQualDocument(document.value.id, action, reviewComment.value);
-    reviewComment.value = '';
-    showNotice(action === 'approve' ? '文档已通过审核，可导出正式版。' : action === 'submit' ? '文档已送审。' : '文档已退回修改。');
-  } catch (error) {
-    showNotice(error.message, 'error');
-  } finally {
-    reviewing.value = false;
-  }
-}
-
 async function exportDocument() {
   if (!document.value) return;
   exporting.value = true;
@@ -629,8 +783,37 @@ async function exportDocument() {
   }
 }
 
-onMounted(loadAll);
-onBeforeUnmount(stopEvents);
+function openCompare(version) {
+  comparing.value = version;
+}
+
+async function rollbackVersion(version) {
+  if (!document.value) return;
+  const confirmed = window.confirm(
+    `确认回滚？将以 v${version.version} 的内容生成新版本 v${document.value.currentVersion + 1}，当前内容仍保留在版本历史中。`,
+  );
+  if (!confirmed) return;
+  rollingBack.value = true;
+  try {
+    document.value = await rollbackQualDocument(document.value.id, version.version);
+    versions.value = await fetchQualVersions(document.value.id);
+    comparing.value = null;
+    showNotice(`已回滚至 v${version.version}，生成新版本 v${document.value.currentVersion}。`);
+  } catch (error) {
+    showNotice(error.message, 'error');
+  } finally {
+    rollingBack.value = false;
+  }
+}
+
+onMounted(() => {
+  startPolling();
+  loadAll();
+});
+onBeforeUnmount(() => {
+  stopPolling();
+  stopEvents();
+});
 </script>
 
 <style scoped>
@@ -957,6 +1140,19 @@ onBeforeUnmount(stopEvents);
   box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
 }
 
+.qual-guide-picker {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid rgba(37, 67, 63, 0.14);
+  border-radius: 8px;
+  background: #fbfdfc;
+}
+
+.qual-guide-picker .qual-field {
+  max-width: 520px;
+}
+
 .qual-upload {
   display: grid;
   place-items: center;
@@ -1204,7 +1400,9 @@ onBeforeUnmount(stopEvents);
   display: grid;
   grid-template-columns: 190px minmax(0, 1fr) 290px;
   gap: 14px;
-  align-items: start;
+  align-items: stretch;
+  height: calc(100vh - 450px);
+  min-height: 440px;
 }
 
 .qual-outline,
@@ -1218,6 +1416,7 @@ onBeforeUnmount(stopEvents);
 
 .qual-outline {
   padding: 14px 10px;
+  overflow-y: auto;
 }
 
 .qual-panel-title {
@@ -1256,6 +1455,9 @@ onBeforeUnmount(stopEvents);
 }
 
 .qual-editor-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   padding: 16px;
 }
 
@@ -1280,6 +1482,9 @@ onBeforeUnmount(stopEvents);
   display: grid;
   gap: 12px;
   padding: 16px 0;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .qual-block {
@@ -1321,6 +1526,7 @@ onBeforeUnmount(stopEvents);
   gap: 10px;
   padding-top: 14px;
   border-top: 1px solid var(--line);
+  flex: 0 0 auto;
 }
 
 .qual-note-input {
@@ -1332,8 +1538,78 @@ onBeforeUnmount(stopEvents);
 }
 
 .qual-inspector {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.qual-inspector-tabs {
+  display: flex;
+  flex: 0 0 auto;
+  border-bottom: 1px solid var(--line);
+}
+
+.qual-inspector-tabs button {
+  flex: 1;
+  padding: 11px 4px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--ink-muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.qual-inspector-tabs button.active {
+  border-bottom-color: var(--primary);
+  color: var(--ink);
+}
+
+.qual-inspector-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.qual-checklist-summary,
+.qual-pass-toggle {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  width: 100%;
+  margin: 6px 0;
+  padding: 7px 9px;
+  border: 0;
+  border-radius: 6px;
+  background: #eef4f3;
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.qual-checklist-summary > span {
   display: grid;
-  gap: 0;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ffe3df;
+  color: #a52e21;
+  font-weight: 900;
+}
+
+.qual-checklist-summary.pass > span {
+  background: #dff5eb;
+  color: #176847;
+}
+
+.qual-checklist-summary em {
+  margin-left: 5px;
+  color: var(--primary-strong);
+  font-style: normal;
 }
 
 .qual-inspector-section {
@@ -1426,43 +1702,195 @@ onBeforeUnmount(stopEvents);
   line-height: 1.5;
 }
 
-.qual-review-actions {
+.qual-version-list {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
-}
-
-.qual-review-actions button {
-  width: auto;
-  min-width: 0;
-  padding: 8px 5px;
-  font-size: 11px;
-}
-
-.danger-button {
-  color: #a52e21;
+  gap: 0;
 }
 
 .qual-version {
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr);
-  gap: 3px 7px;
+  gap: 3px;
   padding: 8px 0;
   border-bottom: 1px solid rgba(37, 67, 63, 0.08);
   font-size: 11px;
 }
 
-.qual-version strong {
-  grid-row: span 2;
+.qual-version-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.qual-version-head strong {
   color: var(--primary);
 }
 
-.qual-version span {
-  color: var(--ink);
+.qual-version-author {
+  flex: 1;
+  overflow: hidden;
+  color: var(--ink-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.qual-version small {
+.qual-version-note {
+  color: var(--ink);
+  line-height: 1.5;
+}
+
+.qual-version-time {
   color: var(--ink-muted);
+}
+
+.qual-version-actions {
+  display: flex;
+  gap: 5px;
+}
+
+.qual-mini-button {
+  min-height: 24px;
+  padding: 3px 8px;
+  border: 1px solid rgba(15, 118, 110, 0.3);
+  border-radius: 5px;
+  background: #fff;
+  color: var(--primary-strong);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.qual-mini-button:disabled {
+  border-color: var(--line);
+  color: #b0c4c0;
+  cursor: not-allowed;
+}
+
+.qual-modal-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 32px;
+  background: rgba(16, 34, 31, 0.45);
+}
+
+.qual-modal {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 14px;
+  width: min(1180px, 96vw);
+  max-height: 88vh;
+  padding: 20px;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 24px 70px rgba(10, 30, 27, 0.35);
+}
+
+.qual-modal-head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.qual-modal-head h4 {
+  margin: 0;
+}
+
+.qual-modal-head p {
+  margin: 4px 0 0;
+  color: var(--ink-muted);
+  font-size: 12px;
+}
+
+.qual-compare-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.qual-compare-pane {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfdfc;
+}
+
+.qual-compare-pane h5 {
+  margin: 0 0 10px;
+  font-size: 13px;
+}
+
+.qual-compare-section {
+  margin-bottom: 14px;
+}
+
+.qual-compare-section h6 {
+  margin: 0 0 6px;
+  color: var(--primary-strong);
+  font-size: 12px;
+}
+
+.qual-compare-block {
+  margin: 4px 0;
+  padding: 7px 9px;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.qual-compare-block.same {
+  color: var(--ink-muted);
+}
+
+.qual-compare-block.added {
+  background: #e8f8ee;
+  color: #14663c;
+}
+
+.qual-compare-block.removed {
+  background: #fdecea;
+  color: #9b2c20;
+  text-decoration: line-through;
+}
+
+.qual-compare-block.modified {
+  background: #fff7df;
+  color: #7c5b0d;
+}
+
+.qual-compare-block.hidden {
+  background: #f3f6f5;
+  color: #a9bcb8;
+}
+
+.qual-compare-op {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.08);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.qual-compare-old {
+  display: block;
+  margin-bottom: 4px;
+  padding-bottom: 4px;
+  border-bottom: 1px dashed rgba(124, 91, 13, 0.4);
+  opacity: 0.75;
+}
+
+.qual-compare-empty {
+  font-style: normal;
+  font-size: 11px;
 }
 
 .qual-empty-main {
@@ -1496,20 +1924,21 @@ onBeforeUnmount(stopEvents);
 @media (max-width: 1180px) {
   .qual-editor-layout {
     grid-template-columns: 170px minmax(0, 1fr);
+    height: auto;
   }
 
   .qual-inspector {
     grid-column: 1 / -1;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    max-height: none;
   }
 
-  .qual-inspector-section {
-    border-right: 1px solid var(--line);
-    border-bottom: 0;
+  .qual-inspector-body {
+    max-height: 420px;
   }
 
-  .qual-inspector-section:last-child {
-    border-right: 0;
+  .qual-outline,
+  .qual-blocks {
+    overflow: visible;
   }
 }
 

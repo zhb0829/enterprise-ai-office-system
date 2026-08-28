@@ -27,6 +27,9 @@ frontend-admin/node_modules/
 logs/
 deploy/nginx.pid
 
+# Runtime file storage
+qual-storage/
+
 # OS
 Thumbs.db
 .DS_Store

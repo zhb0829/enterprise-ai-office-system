@@ -556,6 +556,7 @@ CREATE TABLE IF NOT EXISTS qual_task (
     UNIQUE(owner_enterprise_id, idempotency_key)
 );
 CREATE INDEX IF NOT EXISTS idx_qual_task_owner_created ON qual_task(owner_enterprise_id, created_at DESC);
+ALTER TABLE qual_task ADD COLUMN IF NOT EXISTS pre_archive_status VARCHAR(32) NOT NULL DEFAULT '';
 
 CREATE TABLE IF NOT EXISTS qual_document (
     id VARCHAR(64) PRIMARY KEY,
