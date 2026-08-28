@@ -8,7 +8,7 @@ from fastapi.staticfiles import StaticFiles
 
 from .config import settings
 from .db import Base, SessionLocal, engine
-from .routers import drafts, exports, intelligence, materials, policy, policy_aliases, templates
+from .routers import drafts, exports, intelligence, materials, policy, policy_aliases, qualification, templates
 from .services.template_loader import load_seed_templates, load_styles
 from .opinion import models_ai  # noqa: F401  登记 AI 记录表供 create_all
 from .opinion.routers import internal_router as opinion_internal_router
@@ -55,6 +55,7 @@ app.include_router(exports.router, prefix="/api/exports", tags=["exports"])
 app.include_router(policy.router, prefix="/api/policy", tags=["policy"])
 app.include_router(policy_aliases.router, prefix="/api/chat", tags=["policy"])
 app.include_router(policy_aliases.router, prefix="/api/compliance", tags=["compliance"])
+app.include_router(qualification.router, tags=["qualification-internal"])
 app.include_router(intelligence.router, prefix="/api", tags=["intelligence"])
 app.include_router(intelligence.internal_router, tags=["internal-intelligence"])
 app.include_router(opinion_internal_router, tags=["internal-opinion"])

@@ -40,6 +40,8 @@ class Settings(BaseSettings):
     upload_dir: str = "uploads"
     pdf_chinese_font: str = "Microsoft YaHei"
     cors_origins: str = "http://localhost:5173"
+    ai_internal_token: str = "eaos-internal-token-change-me"
+    qual_java_base_url: str = "http://localhost:8080"
 
     # 情报聚合 / Celery。权限由 Java 网关统一负责。
     redis_url: str = "redis://localhost:6379/0"

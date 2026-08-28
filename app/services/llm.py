@@ -48,7 +48,10 @@ class LLMClient:
     def chat_json(self, messages: list[dict], model: str | None = None, temperature: float | None = None) -> dict:
         """要求模型返回 JSON 并解析（容错剥离 ```json 代码块）。"""
         text = self.chat(messages, model=model, temperature=temperature)
-        return parse_json_text(text)
+        try:
+            return parse_json_text(text)
+        except (json.JSONDecodeError, LLMError) as exc:
+            raise LLMError(f"模型 JSON 输出解析失败: {exc}") from exc
 
     def chat_stream(self, messages: list[dict], model: str | None = None, temperature: float | None = None):
         """流式生成，逐块 yield 文本片段（SSE 实时输出用）。"""
