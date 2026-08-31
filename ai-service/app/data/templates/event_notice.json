@@ -1,0 +1,22 @@
+{
+  "name": "event_notice",
+  "title": "活动通知",
+  "category": "通知",
+  "output_format": "markdown",
+  "tone_guidelines": "信息清晰、要素齐全；时间、地点、参与方式一目了然；语气可随发布渠道调整。",
+  "sections": [
+    { "key": "headline", "name": "标题", "required": true, "hint": "活动名称 + 通知" },
+    { "key": "background", "name": "活动背景", "required": false, "hint": "为什么举办该活动" },
+    { "key": "time_place", "name": "时间地点", "required": true, "hint": "活动时间与地点" },
+    { "key": "agenda", "name": "活动议程", "required": false, "hint": "流程与环节安排" },
+    { "key": "participation", "name": "参与方式", "required": true, "hint": "如何报名/参与" },
+    { "key": "contact", "name": "联系人", "required": false, "hint": "咨询联系人及方式" }
+  ],
+  "placeholders": [
+    { "key": "event", "name": "活动", "required": true, "source": "eventDesc", "hint": "活动是什么" },
+    { "key": "活动时间", "name": "活动时间", "required": true, "source": "keyFacts:活动时间", "hint": "何时举行" },
+    { "key": "活动地点", "name": "活动地点", "required": true, "source": "keyFacts:活动地点", "hint": "在何处举行" },
+    { "key": "出席嘉宾", "name": "出席嘉宾", "required": false, "source": "people", "hint": "出席的人物及头衔" },
+    { "key": "受众", "name": "参与对象", "required": false, "source": "audience", "hint": "面向人群" }
+  ]
+}
