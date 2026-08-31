@@ -8,6 +8,7 @@ from fastapi.staticfiles import StaticFiles
 
 from .config import settings
 from .db import Base, SessionLocal, engine
+from .observability import configure_logging, install_observability
 from .routers import drafts, exports, intelligence, materials, policy, policy_aliases, qualification, templates
 from .services.template_loader import load_seed_templates, load_styles
 from .opinion import models_ai  # noqa: F401  登记 AI 记录表供 create_all
@@ -68,6 +69,10 @@ app.include_router(meeting_ai_router, prefix="/api/meeting/ai", tags=["meeting-a
 # 静态文件：导出文件与上传素材下载
 app.mount("/static/exports", StaticFiles(directory=str(settings.export_path)), name="exports")
 app.mount("/static/uploads", StaticFiles(directory=str(settings.upload_path)), name="uploads")
+
+# 可观测性：traceId 中间件 + /metrics（Q13）
+configure_logging()
+install_observability(app)
 
 
 @app.get("/api/health")

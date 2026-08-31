@@ -14,35 +14,35 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class OpinionReportScheduler {
 
-    private final OpinionMonitorMapper monitorMapper;
-    private final OpinionReportService reportService;
-    private final OpinionServiceProperties properties;
+  private final OpinionMonitorMapper monitorMapper;
+  private final OpinionReportService reportService;
+  private final OpinionServiceProperties properties;
 
-    @Scheduled(cron = "${OPINION_DAILY_REPORT_CRON:0 10 7 * * *}")
-    public void generateDailyReports() {
-        if (!properties.isAutoReportEnabled()) {
-            return;
-        }
-        monitorMapper.selectList(Wrappers.<OpinionMonitor>lambdaQuery()
-                        .eq(OpinionMonitor::getStatus, "enabled"))
-                .forEach(monitor -> generate(monitor, "daily"));
+  @Scheduled(cron = "${OPINION_DAILY_REPORT_CRON:0 10 7 * * *}")
+  public void generateDailyReports() {
+    if (!properties.isAutoReportEnabled()) {
+      return;
     }
+    monitorMapper
+        .selectList(Wrappers.<OpinionMonitor>lambdaQuery().eq(OpinionMonitor::getStatus, "enabled"))
+        .forEach(monitor -> generate(monitor, "daily"));
+  }
 
-    @Scheduled(cron = "${OPINION_WEEKLY_REPORT_CRON:0 20 7 * * MON}")
-    public void generateWeeklyReports() {
-        if (!properties.isAutoReportEnabled()) {
-            return;
-        }
-        monitorMapper.selectList(Wrappers.<OpinionMonitor>lambdaQuery()
-                        .eq(OpinionMonitor::getStatus, "enabled"))
-                .forEach(monitor -> generate(monitor, "weekly"));
+  @Scheduled(cron = "${OPINION_WEEKLY_REPORT_CRON:0 20 7 * * MON}")
+  public void generateWeeklyReports() {
+    if (!properties.isAutoReportEnabled()) {
+      return;
     }
+    monitorMapper
+        .selectList(Wrappers.<OpinionMonitor>lambdaQuery().eq(OpinionMonitor::getStatus, "enabled"))
+        .forEach(monitor -> generate(monitor, "weekly"));
+  }
 
-    private void generate(OpinionMonitor monitor, String period) {
-        try {
-            reportService.generate(monitor.getId(), period);
-        } catch (Exception e) {
-            log.warn("auto {} report failed monitorId={}: {}", period, monitor.getId(), e.getMessage());
-        }
+  private void generate(OpinionMonitor monitor, String period) {
+    try {
+      reportService.generate(monitor.getId(), period);
+    } catch (Exception e) {
+      log.warn("auto {} report failed monitorId={}: {}", period, monitor.getId(), e.getMessage());
     }
+  }
 }

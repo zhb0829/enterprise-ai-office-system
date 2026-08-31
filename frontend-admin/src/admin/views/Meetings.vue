@@ -273,21 +273,6 @@ function sizeText(value) {
   return `${Math.ceil(bytes / 1024)} KB`;
 }
 
-function blankMeeting() {
-  return {
-    id: null,
-    name: '',
-    category: '行业会议',
-    startTime: '',
-    endTime: '',
-    location: '',
-    organizer: '',
-    keywords: '',
-    competitors: '',
-    description: '',
-  };
-}
-
 async function loadMeetings() {
   loading.value = true;
   errorMessage.value = '';

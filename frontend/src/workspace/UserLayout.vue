@@ -23,6 +23,7 @@
         <router-link class="module-nav-item" active-class="active" to="/workspace/meeting">会议信息</router-link>
       </nav>
       <div class="notification-wrap">
+        <button class="ghost-button logout-button" type="button" @click="handleLogout">退出登录</button>
         <button
           class="notification-button"
           type="button"
@@ -63,15 +64,22 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import {
-  fetchMeetingNotifications,
-  fetchMeetingUnreadCount,
-  markAllMeetingNotificationsRead,
-  markMeetingNotificationRead,
+  fetchNotifications,
+  fetchUnreadCount,
+  markAllNotificationsRead,
+  markNotificationRead,
+  logout,
 } from '../api';
 
 const route = useRoute();
 const router = useRouter();
 const isOpinionRoute = computed(() => route.path.startsWith('/workspace/opinion'));
+
+async function handleLogout() {
+  await logout();
+  router.replace('/login');
+}
+
 const notificationOpen = ref(false);
 const unreadCount = ref(0);
 const notifications = ref([]);
@@ -83,7 +91,7 @@ function formatTime(value) {
 
 async function refreshUnread() {
   try {
-    unreadCount.value = Number((await fetchMeetingUnreadCount())?.count || 0);
+    unreadCount.value = Number((await fetchUnreadCount())?.count || 0);
   } catch {
     unreadCount.value = 0;
   }
@@ -93,7 +101,7 @@ async function toggleNotifications() {
   notificationOpen.value = !notificationOpen.value;
   if (!notificationOpen.value) return;
   try {
-    notifications.value = (await fetchMeetingNotifications(1, 12))?.items || [];
+    notifications.value = (await fetchNotifications(1, 12))?.items || [];
   } catch {
     notifications.value = [];
   }
@@ -101,15 +109,18 @@ async function toggleNotifications() {
 
 async function openNotification(item) {
   if (!item.isRead) {
-    await markMeetingNotificationRead(item.id).catch(() => {});
+    await markNotificationRead(item.id).catch(() => {});
   }
   notificationOpen.value = false;
   await refreshUnread();
-  if (item.refId) router.push({ path: '/workspace/meeting', query: { id: item.refId } });
+  // 统一消息中心：按类型跳转到对应模块
+  if (item.type === 'opinion_alert') router.push('/workspace/opinion-alerts');
+  else if (item.type === 'qual_task') router.push('/workspace/qualification');
+  else if (item.refId) router.push({ path: '/workspace/meeting', query: { id: item.refId } });
 }
 
 async function readAll() {
-  await markAllMeetingNotificationsRead().catch(() => {});
+  await markAllNotificationsRead().catch(() => {});
   notifications.value = notifications.value.map((item) => ({ ...item, isRead: true }));
   unreadCount.value = 0;
 }
@@ -125,9 +136,15 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+.logout-button {
+  margin-right: 10px;
+}
+
 .notification-wrap {
   position: relative;
   flex: 0 0 auto;
+  display: flex;
+  align-items: center;
 }
 
 .notification-button {

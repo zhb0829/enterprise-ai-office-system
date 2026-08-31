@@ -23,8 +23,11 @@
     <div class="layout-main">
       <header class="layout-topbar">
         <h1>{{ currentTitle }}</h1>
-        <div class="status-pill" :class="{ online: apiReady }">
-          <span></span>{{ apiReady ? '后端已连接' : '演示模式' }}
+        <div class="topbar-right">
+          <div class="status-pill" :class="{ online: apiReady }">
+            <span></span>{{ apiReady ? '后端已连接' : '演示模式' }}
+          </div>
+          <button class="ghost-button" type="button" @click="handleLogout">退出登录</button>
         </div>
       </header>
       <main class="layout-content">
@@ -36,10 +39,11 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue';
-import { useRoute } from 'vue-router';
-import { fetchStyles, fetchTemplates } from '../api';
+import { useRoute, useRouter } from 'vue-router';
+import { fetchStyles, fetchTemplates, getToken, logout } from '../api';
 
 const route = useRoute();
+const router = useRouter();
 const apiReady = ref(false);
 
 const menuItems = [
@@ -54,9 +58,11 @@ const menuItems = [
   { path: '/admin/opinion-alert-rules', title: '告警规则', group: '舆情分析' },
   { path: '/admin/opinion-cases', title: '历史应对案例', group: '舆情分析' },
   { path: '/admin/meetings', title: '会议资料整理', group: '会议知识' },
+  { path: '/admin/users', title: '用户管理', group: '系统管理' },
+  { path: '/admin/notification-channels', title: '通知渠道', group: '系统管理' },
 ];
 
-const groups = ['内容管理', '知识库管理', '情报聚合', '舆情分析', '会议知识'];
+const groups = ['内容管理', '知识库管理', '情报聚合', '舆情分析', '会议知识', '系统管理'];
 
 const currentTitle = computed(() => route.meta.title || '后台管理');
 
@@ -69,10 +75,16 @@ async function checkApi() {
   }
 }
 
+async function handleLogout() {
+  await logout();
+  router.replace('/admin/login');
+}
+
 onMounted(() => {
+  if (!getToken()) {
+    router.replace('/admin/login');
+    return;
+  }
   checkApi();
-  window.addEventListener('eaos-unauthorized', () => {
-    localStorage.removeItem('eaos-token');
-  });
 });
 </script>

@@ -1,37 +1,22 @@
 package com.eaos.admin.qual_doc;
 
-import org.springframework.beans.factory.annotation.Value;
+import com.eaos.admin.storage.FileStorage;
+import java.io.IOException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
-import java.util.UUID;
-
+/** 资质材料上传存储，落盘路径由统一 FileStorage 抽象管理。 */
 @Service
 public class QualStorageService {
 
-    private final Path root;
+  private final FileStorage fileStorage;
 
-    public QualStorageService(@Value("${eaos.qual.storage-dir:qual-storage}") String storageDir) {
-        this.root = Path.of(storageDir).toAbsolutePath().normalize();
-    }
+  public QualStorageService(FileStorage fileStorage) {
+    this.fileStorage = fileStorage;
+  }
 
-    public String save(String folder, MultipartFile file) throws IOException {
-        String original = file.getOriginalFilename() == null ? "upload" : file.getOriginalFilename();
-        String name = original.replaceAll("[\\\\/:*?\"<>|\\p{Cntrl}]", "_").replace("..", "_");
-        Path directory = root.resolve(folder).normalize();
-        if (!directory.startsWith(root)) {
-            throw new IOException("非法存储路径");
-        }
-        Files.createDirectories(directory);
-        Path target = directory.resolve(UUID.randomUUID() + "_" + name).normalize();
-        if (!target.startsWith(directory)) {
-            throw new IOException("非法文件名");
-        }
-        Files.copy(file.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
-        return target.toString();
-    }
+  public String save(String folder, MultipartFile file) throws IOException {
+    String original = file.getOriginalFilename() == null ? "upload" : file.getOriginalFilename();
+    return fileStorage.store(folder, original, file.getInputStream()).path();
+  }
 }

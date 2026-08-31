@@ -9,6 +9,7 @@ import org.apache.ibatis.annotations.Select;
 @Mapper
 public interface ConferenceReportMapper extends BaseMapper<ConferenceReport> {
 
-    @Select("SELECT COALESCE(MAX(version), 0) FROM conference_report WHERE conference_id = #{conferenceId}")
-    int maxVersion(@Param("conferenceId") Long conferenceId);
+  @Select(
+      "SELECT COALESCE(MAX(version), 0) FROM conference_report WHERE conference_id = #{conferenceId}")
+  int maxVersion(@Param("conferenceId") Long conferenceId);
 }

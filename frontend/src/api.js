@@ -1,17 +1,78 @@
 const jsonHeaders = { 'Content-Type': 'application/json' };
 
 const TOKEN_KEY = 'eaos-token';
+const REFRESH_KEY = 'eaos-refresh-token';
+
+export function getToken() {
+  return localStorage.getItem(TOKEN_KEY);
+}
+
+export function getRefreshToken() {
+  return localStorage.getItem(REFRESH_KEY);
+}
+
+export function setTokens(accessToken, refreshToken) {
+  localStorage.setItem(TOKEN_KEY, accessToken);
+  if (refreshToken) {
+    localStorage.setItem(REFRESH_KEY, refreshToken);
+  }
+}
+
+export function clearTokens() {
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(REFRESH_KEY);
+}
 
 function authHeaders(headers = {}) {
-  const token = localStorage.getItem(TOKEN_KEY);
+  const token = getToken();
   return token ? { ...headers, Authorization: `Bearer ${token}` } : headers;
 }
 
-async function request(path, options = {}) {
+let refreshingPromise = null;
+
+async function tryRefresh() {
+  const refreshToken = getRefreshToken();
+  if (!refreshToken) {
+    return false;
+  }
+  if (!refreshingPromise) {
+    refreshingPromise = (async () => {
+      try {
+        const response = await fetch('/api/auth/refresh', {
+          method: 'POST',
+          headers: jsonHeaders,
+          body: JSON.stringify({ refreshToken }),
+        });
+        const data = await response.json().catch(() => null);
+        const payload = data?.code === 0 ? data.data : null;
+        if (!response.ok || !payload?.token) {
+          return false;
+        }
+        setTokens(payload.token, payload.refreshToken);
+        return true;
+      } catch {
+        return false;
+      } finally {
+        refreshingPromise = null;
+      }
+    })();
+  }
+  return refreshingPromise;
+}
+
+function handleUnauthorized() {
+  clearTokens();
+  window.dispatchEvent(new Event('eaos-unauthorized'));
+}
+
+async function request(path, options = {}, retried = false) {
   const response = await fetch(path, { ...options, headers: authHeaders(options.headers) });
-  if (response.status === 401) {
-    localStorage.removeItem(TOKEN_KEY);
-    window.dispatchEvent(new Event('eaos-unauthorized'));
+  if (response.status === 401 && !retried && !path.startsWith('/api/auth/')) {
+    const refreshed = await tryRefresh();
+    if (refreshed) {
+      return request(path, options, true);
+    }
+    handleUnauthorized();
   }
   const data = await response.json().catch(() => null);
   if (!response.ok) {
@@ -21,17 +82,45 @@ async function request(path, options = {}) {
   return data;
 }
 
-export function getToken() {
-  return localStorage.getItem(TOKEN_KEY);
+function unwrapEnvelope(data) {
+  return data?.code === 0 && Object.prototype.hasOwnProperty.call(data, 'data')
+    ? data.data
+    : data;
 }
 
-export function login(username, password) {
-  return request('/api/auth/login', {
+export async function login(username, password) {
+  const data = await request('/api/auth/login', {
     method: 'POST',
     headers: jsonHeaders,
     body: JSON.stringify({ username, password }),
   });
+  const payload = unwrapEnvelope(data);
+  if (payload?.token) {
+    setTokens(payload.token, payload.refreshToken);
+  }
+  return payload;
 }
+
+export async function logout() {
+  const refreshToken = getRefreshToken();
+  if (refreshToken) {
+    await fetch('/api/auth/logout', {
+      method: 'POST',
+      headers: jsonHeaders,
+      body: JSON.stringify({ refreshToken }),
+    }).catch(() => null);
+  }
+  clearTokens();
+}
+
+export async function changePassword(oldPassword, newPassword) {
+  return unwrapEnvelope(await request('/api/auth/change-password', {
+    method: 'POST',
+    headers: jsonHeaders,
+    body: JSON.stringify({ oldPassword, newPassword }),
+  }));
+}
+
 
 export function fetchTemplates() {
   return request('/api/templates');
@@ -639,7 +728,10 @@ export async function downloadQualDocument(id) {
 }
 
 export function subscribeQualTask(taskId, onEvent, onError) {
-  const source = new EventSource(`/api/qual/tasks/${encodeURIComponent(taskId)}/events`);
+  // EventSource 无法携带 Authorization 头，改为 access_token 查询参数（后端 JwtAuthenticationFilter 支持）
+  const token = getToken();
+  const suffix = token ? `?access_token=${encodeURIComponent(token)}` : '';
+  const source = new EventSource(`/api/qual/tasks/${encodeURIComponent(taskId)}/events${suffix}`);
   ['progress', 'partial', 'document', 'failed'].forEach((type) => {
     source.addEventListener(type, (event) => {
       try {
@@ -654,3 +746,24 @@ export function subscribeQualTask(taskId, onEvent, onError) {
   };
   return source;
 }
+
+// ---- 统一消息中心（站内信，覆盖会议/舆情/资质等全部类型） ----
+export function fetchNotifications(page = 1, pageSize = 20, type = '') {
+  const query = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+  if (type) query.set('type', type);
+  return request(`/api/notifications?${query.toString()}`).then(unwrapEnvelope);
+}
+
+export function fetchUnreadCount() {
+  return request('/api/notifications/unread-count').then(unwrapEnvelope);
+}
+
+export function markNotificationRead(id) {
+  return request(`/api/notifications/${id}/read`, { method: 'POST' }).then(unwrapEnvelope);
+}
+
+export function markAllNotificationsRead(type = '') {
+  const suffix = type ? `?type=${encodeURIComponent(type)}` : '';
+  return request(`/api/notifications/read-all${suffix}`, { method: 'POST' }).then(unwrapEnvelope);
+}
+

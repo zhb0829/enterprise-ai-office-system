@@ -1,0 +1,19 @@
+apiVersion: 1
+
+# 运维告警（Q18）：Grafana 邮件通知。SMTP 账号部署时通过环境变量提供（挂起项）。
+contactPoints:
+  - orgId: 1
+    name: eaos-email
+    receivers:
+      - uid: eaos-email-receiver
+        type: email
+        settings:
+          addresses: ${GRAFANA_ALERT_EMAILS}
+        disableResolveMessage: false
+
+policies:
+  - orgId: 1
+    receiver: eaos-email
+
+deleteRules:
+  orgId: 1

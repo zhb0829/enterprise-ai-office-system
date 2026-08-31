@@ -9,11 +9,11 @@ spring:
     username: ${DB_USER:eaos}
     password: ${DB_PASSWORD:eaos_dev_password}
     driver-class-name: org.postgresql.Driver
-  sql:
-    init:
-      mode: always
-      schema-locations: classpath:schema.sql
-      continue-on-error: true
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 0
+    locations: classpath:db/migration
   jackson:
     time-zone: GMT+8
     date-format: yyyy-MM-dd HH:mm:ss
@@ -42,24 +42,32 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,prometheus
+  metrics:
+    tags:
+      application: ${spring.application.name}
 
 eaos:
-  security:
-    # 开发阶段默认关闭认证（设为 true 或环境变量 SECURITY_ENABLED=true 开启）
-    enabled: ${SECURITY_ENABLED:false}
   jwt:
-    # 生产环境必须通过 JWT_SECRET 环境变量替换（HS256 要求 >= 32 字节）
-    secret: ${JWT_SECRET:eaos-dev-secret-key-change-me-in-production-0123456789}
-    expire-minutes: 1440
+    # 生产环境必须通过 JWT_SECRET 环境变量替换（HS256 要求 >= 32 字节），默认值拒绝启动
+    secret: ${JWT_SECRET:}
+    # access token 有效期 2 小时
+    expire-minutes: ${JWT_EXPIRE_MINUTES:120}
+    # refresh token 有效期 7 天（服务端哈希存储，可吊销）
+    refresh-expire-days: ${JWT_REFRESH_EXPIRE_DAYS:7}
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174}
+  storage:
+    # 统一文件存储根目录（FileStorage 抽象，替换散落的 qual-storage/meeting-storage）
+    root: ${EAOS_STORAGE_ROOT:storage}
   ai:
-    # 独立 Python agent 服务（E:\project\enterprise-ai-office-system-new）内网地址
+    # 独立 Python agent 服务（monorepo ai-service/）内网地址
     base-url: ${AI_BASE_URL:http://localhost:8000}
     internal-prefix: /internal
-    internal-token: ${AI_INTERNAL_TOKEN:eaos-internal-token-change-me}
+    internal-token: ${AI_INTERNAL_TOKEN:}
   opinion:
     # Python Worker 调用本服务 /internal/opinion/** 使用的服务间令牌
-    internal-token: ${OPINION_INTERNAL_TOKEN:eaos-opinion-internal-dev-token}
+    internal-token: ${OPINION_INTERNAL_TOKEN:}
     max-items-per-ingest: 200
     max-analysis-jobs-per-collect: 200
     max-analysis-retries: ${OPINION_MAX_ANALYSIS_RETRIES:3}
@@ -68,12 +76,13 @@ eaos:
     auto-report-enabled: ${OPINION_AUTO_REPORT_ENABLED:true}
     webhook-url: ${OPINION_WEBHOOK_URL:}
   qual:
-    storage-dir: ${QUAL_STORAGE_DIR:qual-storage}
     citation-min-score: ${QUAL_CITATION_MIN_SCORE:0.72}
   meeting:
-    storage-dir: ${MEETING_STORAGE_DIR:meeting-storage}
-    internal-token: ${MEETING_INTERNAL_TOKEN:eaos-meeting-internal-dev-token}
+    internal-token: ${MEETING_INTERNAL_TOKEN:}
 
 logging:
+  pattern:
+    # traceId 由 TraceIdFilter 生成/透传，Loki 可按该字段检索（Q13）
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%X{traceId:-}] %logger{40} - %msg%n"
   level:
     com.eaos.admin: info

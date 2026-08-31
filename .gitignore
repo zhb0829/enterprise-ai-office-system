@@ -27,9 +27,12 @@ frontend-admin/node_modules/
 logs/
 deploy/nginx.pid
 
-# Runtime file storage
+# Runtime file storage（FileStorage 根目录与各服务散落目录）
+storage/
 qual-storage/
 admin-server/meeting-storage/
+ai-service/uploads/
+ai-service/exports/
 
 # OS
 Thumbs.db

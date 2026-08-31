@@ -12,11 +12,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class AiController {
 
-    private final AiService aiService;
+  private final AiService aiService;
 
-    /** 网关转发示例：Java 统一入口 -> Python agent 服务内网接口 */
-    @GetMapping("/health")
-    public R<String> aiHealth() {
-        return R.ok(aiService.health());
-    }
+  /** 网关转发示例：Java 统一入口 -> Python agent 服务内网接口 */
+  @GetMapping("/health")
+  public R<String> aiHealth() {
+    return R.ok(aiService.health());
+  }
 }

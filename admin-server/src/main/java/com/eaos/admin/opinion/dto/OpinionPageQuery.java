@@ -6,17 +6,17 @@ import lombok.Data;
 @Data
 public class OpinionPageQuery {
 
-    private Long userId;
+  private Long userId;
 
-    private Long monitorId;
+  private Long monitorId;
 
-    private Long sourceId;
+  private Long sourceId;
 
-    private String sentiment;
+  private String sentiment;
 
-    private String keyword;
+  private String keyword;
 
-    private Integer page = 1;
+  private Integer page = 1;
 
-    private Integer pageSize = 20;
+  private Integer pageSize = 20;
 }

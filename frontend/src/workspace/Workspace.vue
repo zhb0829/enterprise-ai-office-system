@@ -15,6 +15,11 @@
       </div>
     </section>
 
+    <section v-if="loadFailed" class="compose-panel load-failed-banner" aria-label="数据加载失败">
+      <p>后端数据加载失败，当前页面无法获取模板、文风与素材。请检查服务状态后重试。</p>
+      <button class="ghost-button" type="button" @click="loadBootstrapData">重试加载</button>
+    </section>
+
     <section class="workspace" aria-label="公告撰写工作区">
     <section id="compose-panel" class="compose-panel motion-card" aria-label="创建草稿">
       <div class="section-title compose-panel-heading">
@@ -379,6 +384,7 @@ const tabs = [
 
 const workspaceRoot = ref(null);
 const apiReady = ref(false);
+const loadFailed = ref(false);
 const submitting = ref(false);
 const revising = ref(false);
 const exporting = ref(false);
@@ -399,12 +405,14 @@ const streamStage = ref('');
 const editing = ref(false);
 const editText = ref('');
 const savingEdit = ref(false);
-const templates = ref(demoTemplates);
-const styles = ref(demoStyles);
-const materials = ref(demoMaterials);
-const currentDraft = ref(demoDraft);
-const revisionSuggestions = ref(demoSuggestions);
-const versionTree = ref(demoVersions);
+// 演示数据仅在开发环境启用（Q19）：生产环境接口失败时显示错误态 + 重试
+const IS_DEV = import.meta.env.DEV;
+const templates = ref(IS_DEV ? demoTemplates : []);
+const styles = ref(IS_DEV ? demoStyles : []);
+const materials = ref(IS_DEV ? demoMaterials : []);
+const currentDraft = ref(IS_DEV ? demoDraft : { fact_checks: [] });
+const revisionSuggestions = ref(IS_DEV ? demoSuggestions : []);
+const versionTree = ref(IS_DEV ? demoVersions : null);
 
 const form = reactive({
   title: '关于智能办公平台试运行的通知',
@@ -503,7 +511,9 @@ const stageLabel = computed(() => {
 });
 
 const factChecks = computed(() => {
-  return currentDraft.value.fact_checks?.length ? currentDraft.value.fact_checks : demoDraft.fact_checks;
+  return currentDraft.value.fact_checks?.length
+    ? currentDraft.value.fact_checks
+    : (IS_DEV ? demoDraft.fact_checks : []);
 });
 
 const statusActions = computed(() => {
@@ -622,16 +632,19 @@ function resetForm() {
 async function loadBootstrapData() {
   try {
     const [templateRows, stylePayload, materialRows] = await Promise.all([fetchTemplates(), fetchStyles(), fetchMaterials()]);
-    templates.value = templateRows.length ? templateRows : demoTemplates;
-    styles.value = stylePayload.styles?.length ? stylePayload.styles : demoStyles;
-    materials.value = materialRows.length ? materialRows : demoMaterials;
+    templates.value = templateRows.length ? templateRows : (IS_DEV ? demoTemplates : []);
+    styles.value = stylePayload.styles?.length ? stylePayload.styles : (IS_DEV ? demoStyles : []);
+    materials.value = materialRows.length ? materialRows : (IS_DEV ? demoMaterials : []);
     if (!templates.value.some((t) => t.name === form.template)) form.template = templates.value[0]?.name || form.template;
     if (!styles.value.some((s) => s.name === form.style)) form.style = styles.value[0]?.name || form.style;
     if (!Array.isArray(form.styles) || !form.styles.length) form.styles = [form.style];
     if (!form.styles.includes(form.style)) form.styles.unshift(form.style);
     apiReady.value = true;
+    loadFailed.value = false;
   } catch {
     apiReady.value = false;
+    // 生产环境展示错误态（配合重试按钮），开发环境仍回落演示数据
+    loadFailed.value = !IS_DEV;
   }
 }
 
@@ -697,13 +710,15 @@ async function applyGeneratedDraft(result) {
     };
     streamText.value = '';
   }
-  revisionSuggestions.value = result.revisionSuggestions?.length ? result.revisionSuggestions : demoSuggestions;
+  revisionSuggestions.value = result.revisionSuggestions?.length ? result.revisionSuggestions : (IS_DEV ? demoSuggestions : []);
   try {
     currentDraft.value = await fetchDraft(result.versionId);
     versionTree.value = await fetchVersions(result.versionId);
     exportHistory.value = await fetchExportHistory(result.versionId);
   } catch {
-    versionTree.value = { ...demoVersions, id: result.versionId, title: form.title || '未命名草稿' };
+    versionTree.value = IS_DEV
+      ? { ...demoVersions, id: result.versionId, title: form.title || '未命名草稿' }
+      : { id: result.versionId, title: form.title || '未命名草稿' };
   }
   activeTab.value = 'content';
   apiReady.value = true;
@@ -832,7 +847,7 @@ async function loadDraft(versionId) {
     versionTree.value = await fetchVersions(versionId);
     exportHistory.value = await fetchExportHistory(versionId);
   } catch {
-    versionTree.value = { ...demoVersions, id: versionId };
+    versionTree.value = IS_DEV ? { ...demoVersions, id: versionId } : { id: versionId };
   }
   activeTab.value = 'content';
   apiReady.value = true;
@@ -967,3 +982,16 @@ onBeforeUnmount(() => {
   if (typeof teardownMotion === 'function') teardownMotion();
 });
 </script>
+
+<style scoped>
+.load-failed-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border: 1px solid #fca5a5;
+  background: #fef2f2;
+  color: #991b1b;
+}
+.load-failed-banner p { margin: 0; }
+</style>

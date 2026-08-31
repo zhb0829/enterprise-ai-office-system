@@ -66,7 +66,6 @@ const message = ref('');
 const trigger = reactive({ negativeCount: 3, negativeRatio: 0.3, growthRate: 0.5, sourceCount: 2, spreadSpeed: 3, windowHours: 24 });
 const form = reactive({ monitorId: '', name: '', riskLevel: '关注', cooldownMinutes: 60 });
 
-function formatTime() { return ''; }
 const riskClass = (value) => ({ 危机: 'danger', 预警: 'warn', 关注: 'ok' }[value] || 'warn');
 function monitorName(id) { return monitors.value.find((m) => m.id === id)?.name || id; }
 function triggerLabel(value) {

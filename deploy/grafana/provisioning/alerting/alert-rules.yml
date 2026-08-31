@@ -1,0 +1,83 @@
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: eaos-core-alerts
+    folder: EAOS
+    interval: 1m
+    rules:
+      - uid: eaos-service-down
+        title: 服务下线
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              expr: up{job=~"admin-server|ai-service"} == 0
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+        for: 2m
+        annotations:
+          summary: '实例 {{ $labels.instance }} 已连续 2 分钟不可达'
+
+      - uid: eaos-5xx-rate
+        title: 5xx 错误率过高
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              expr: sum(rate(eaos_http_requests_total{status=~"5.."}[5m])) / sum(rate(eaos_http_requests_total[5m]))
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              conditions:
+                - evaluator: { type: gt, params: [0.05] }
+        for: 5m
+        annotations:
+          summary: 'AI 服务 5xx 占比超过 5%（近 5 分钟）'
+
+      - uid: eaos-llm-p95
+        title: LLM 调用 P95 耗时过高
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 900, to: 0 }
+            datasourceUid: prometheus
+            model:
+              expr: histogram_quantile(0.95, sum(rate(eaos_llm_call_seconds_bucket[10m])) by (le))
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              conditions:
+                - evaluator: { type: gt, params: [60] }
+        for: 5m
+        annotations:
+          summary: 'LLM 调用 P95 延迟超过 60s'
+
+      - uid: eaos-disk-high
+        title: 磁盘使用率过高
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              expr: (1 - node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"} / node_filesystem_size_bytes{fstype!~"tmpfs|overlay"}) > 0.8
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+        for: 10m
+        annotations:
+          summary: '磁盘使用率超过 80%（文件存储/数据库 volume 有撑爆风险）'

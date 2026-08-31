@@ -13,16 +13,23 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class UserDetailsServiceImpl implements UserDetailsService {
 
-    private final SysUserMapper sysUserMapper;
+  private final SysUserMapper sysUserMapper;
 
-    @Override
-    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        SysUser user = sysUserMapper.selectOne(
-                new LambdaQueryWrapper<SysUser>().eq(SysUser::getUsername, username));
-        if (user == null) {
-            throw new UsernameNotFoundException("用户不存在：" + username);
-        }
-        return new LoginUser(user.getId(), user.getUsername(), user.getPassword(),
-                user.getNickname(), user.getRole(), user.getEnabled());
+  @Override
+  public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+    SysUser user =
+        sysUserMapper.selectOne(
+            new LambdaQueryWrapper<SysUser>().eq(SysUser::getUsername, username));
+    if (user == null) {
+      throw new UsernameNotFoundException("用户不存在：" + username);
     }
+    return new LoginUser(
+        user.getId(),
+        user.getUsername(),
+        user.getPassword(),
+        user.getNickname(),
+        user.getRole(),
+        user.getTenantId(),
+        user.getEnabled());
+  }
 }

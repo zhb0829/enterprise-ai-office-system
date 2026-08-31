@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router';
+import { getToken } from '../api';
 
 const UserLayout = () => import('../workspace/UserLayout.vue');
 const Home = () => import('../workspace/Home.vue');
@@ -8,6 +9,8 @@ const Qualification = () => import('../workspace/Qualification.vue');
 const Intelligence = () => import('../workspace/Intelligence.vue');
 const OpinionHub = () => import('../workspace/OpinionHub.vue');
 const Meeting = () => import('../workspace/Meeting.vue');
+const Login = () => import('../workspace/Login.vue');
+const ChangePassword = () => import('../workspace/ChangePassword.vue');
 
 const router = createRouter({
   history: createWebHistory(),
@@ -15,6 +18,18 @@ const router = createRouter({
     {
       path: '/',
       redirect: '/workspace',
+    },
+    {
+      path: '/login',
+      name: 'login',
+      component: Login,
+      meta: { title: '登录', public: true },
+    },
+    {
+      path: '/change-password',
+      name: 'change-password',
+      component: ChangePassword,
+      meta: { title: '修改密码' },
     },
     {
       path: '/workspace',
@@ -32,6 +47,17 @@ const router = createRouter({
       ],
     },
   ],
+});
+
+// 路由守卫（Q10）：未登录访问任何页面跳登录页
+router.beforeEach((to) => {
+  if (to.meta.public) {
+    return getToken() ? '/workspace' : true;
+  }
+  if (!getToken()) {
+    return { path: '/login', query: { redirect: to.fullPath } };
+  }
+  return true;
 });
 
 export default router;

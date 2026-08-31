@@ -6,6 +6,5 @@ import lombok.Data;
 @Data
 public class AnalysisFailureRequest {
 
-    @Size(max = 4000)
-    private String error = "";
+  @Size(max = 4000) private String error = "";
 }

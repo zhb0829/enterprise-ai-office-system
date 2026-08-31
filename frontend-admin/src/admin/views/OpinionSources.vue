@@ -84,7 +84,7 @@
 <script setup>
 import { onMounted, reactive, ref } from 'vue';
 import {
-  auditOpinionSource, createOpinionSource, deleteOpinionSource, fetchOpinionCollectTasks,
+  auditOpinionSource, createOpinionSource, fetchOpinionCollectTasks,
   fetchOpinionSources, runOpinionSource, toggleOpinionSource,
 } from '../../api';
 

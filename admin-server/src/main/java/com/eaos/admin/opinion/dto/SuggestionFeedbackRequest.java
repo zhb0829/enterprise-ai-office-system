@@ -7,9 +7,7 @@ import lombok.Data;
 @Data
 public class SuggestionFeedbackRequest {
 
-    @NotBlank
-    private String status;
+  @NotBlank private String status;
 
-    @Size(max = 2000)
-    private String feedback = "";
+  @Size(max = 2000) private String feedback = "";
 }

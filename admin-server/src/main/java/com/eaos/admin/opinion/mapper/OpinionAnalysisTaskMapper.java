@@ -2,16 +2,16 @@ package com.eaos.admin.opinion.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.eaos.admin.opinion.entity.OpinionAnalysisTask;
+import java.time.LocalDateTime;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
-import java.time.LocalDateTime;
-
 @Mapper
 public interface OpinionAnalysisTaskMapper extends BaseMapper<OpinionAnalysisTask> {
 
-    @Select("""
+  @Select(
+      """
             WITH recovered AS (
                 UPDATE opinion_analysis_task
                    SET status = 'queued', worker = '', claimed_at = NULL,
@@ -38,7 +38,8 @@ public interface OpinionAnalysisTaskMapper extends BaseMapper<OpinionAnalysisTas
             )
             SELECT * FROM claimed
             """)
-    OpinionAnalysisTask claimNext(@Param("worker") String worker,
-                                  @Param("staleBefore") LocalDateTime staleBefore,
-                                  @Param("maxRetries") int maxRetries);
+  OpinionAnalysisTask claimNext(
+      @Param("worker") String worker,
+      @Param("staleBefore") LocalDateTime staleBefore,
+      @Param("maxRetries") int maxRetries);
 }

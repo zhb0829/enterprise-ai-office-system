@@ -3,47 +3,46 @@ package com.eaos.admin.meeting.entity;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import lombok.Data;
-
 import java.time.LocalDateTime;
+import lombok.Data;
 
 @Data
 @TableName("conference")
 public class Conference {
 
-    @TableId(type = IdType.AUTO)
-    private Long id;
+  @TableId(type = IdType.AUTO)
+  private Long id;
 
-    private String name;
+  private String name;
 
-    private String category;
+  private String category;
 
-    private LocalDateTime startTime;
+  private LocalDateTime startTime;
 
-    private LocalDateTime endTime;
+  private LocalDateTime endTime;
 
-    private String location;
+  private String location;
 
-    private String organizer;
+  private String organizer;
 
-    private String description;
+  private String description;
 
-    /** 采集过滤关键词，逗号分隔 */
-    private String keywords;
+  /** 采集过滤关键词，逗号分隔 */
+  private String keywords;
 
-    /** 竞品名单，逗号分隔 */
-    private String competitors;
+  /** 竞品名单，逗号分隔 */
+  private String competitors;
 
-    /** draft / processing / completed */
-    private String status;
+  /** draft / processing / completed */
+  private String status;
 
-    private Boolean archived;
+  private Boolean archived;
 
-    private String lastError;
+  private String lastError;
 
-    private String createdBy;
+  private String createdBy;
 
-    private LocalDateTime createdAt;
+  private LocalDateTime createdAt;
 
-    private LocalDateTime updatedAt;
+  private LocalDateTime updatedAt;
 }

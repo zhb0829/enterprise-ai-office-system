@@ -8,6 +8,6 @@ import org.apache.ibatis.annotations.Select;
 
 @Mapper
 public interface OpinionMonitorMapper extends BaseMapper<OpinionMonitor> {
-    @Select("SELECT * FROM opinion_monitor WHERE id = #{id} FOR UPDATE")
-    OpinionMonitor selectByIdForUpdate(@Param("id") Long id);
+  @Select("SELECT * FROM opinion_monitor WHERE id = #{id} FOR UPDATE")
+  OpinionMonitor selectByIdForUpdate(@Param("id") Long id);
 }

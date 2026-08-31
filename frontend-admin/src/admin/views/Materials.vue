@@ -10,6 +10,10 @@
         <input type="file" :disabled="uploading" @change="handleUpload" />
       </label>
     </div>
+    <p v-if="loadFailed" class="page-sub load-failed">
+      素材数据加载失败。
+      <button class="ghost-button" type="button" @click="loadMaterials">重试</button>
+    </p>
 
     <section class="panel">
       <div class="table-wrap">
@@ -54,7 +58,10 @@ import { onMounted, ref } from 'vue';
 import { deleteMaterial, fetchMaterial, fetchMaterials, uploadMaterial } from '../../api';
 import { demoMaterials } from '../../demoData';
 
-const materials = ref(demoMaterials);
+// 演示数据仅在开发环境启用（Q19），生产显示空列表 + 重试
+const IS_DEV = import.meta.env.DEV;
+const materials = ref(IS_DEV ? demoMaterials : []);
+const loadFailed = ref(false);
 const uploading = ref(false);
 const previewItem = ref(null);
 const previewText = ref('');
@@ -62,9 +69,10 @@ const previewText = ref('');
 async function loadMaterials() {
   try {
     const rows = await fetchMaterials();
-    materials.value = rows.length ? rows : demoMaterials;
+    materials.value = rows.length ? rows : (IS_DEV ? demoMaterials : []);
+    loadFailed.value = false;
   } catch {
-    // 保留演示数据
+    loadFailed.value = !IS_DEV;
   }
 }
 

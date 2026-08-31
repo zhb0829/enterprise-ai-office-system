@@ -5,47 +5,46 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.eaos.admin.handler.PostgresJsonTypeHandler;
-import lombok.Data;
-import org.apache.ibatis.type.JdbcType;
-
 import java.time.LocalDateTime;
 import java.util.Map;
+import lombok.Data;
+import org.apache.ibatis.type.JdbcType;
 
 @Data
 @TableName(value = "opinion_alert_event", autoResultMap = true)
 public class OpinionAlertEvent {
 
-    @TableId(type = IdType.AUTO)
-    private Long id;
+  @TableId(type = IdType.AUTO)
+  private Long id;
 
-    private Long monitorId;
+  private Long monitorId;
 
-    private Long ruleId;
+  private Long ruleId;
 
-    private Long eventId;
+  private Long eventId;
 
-    /** 关注 / 预警 / 危机 */
-    private String riskLevel;
+  /** 关注 / 预警 / 危机 */
+  private String riskLevel;
 
-    /** triggered / acknowledged / processing / resolved / closed */
-    private String state;
+  /** triggered / acknowledged / processing / resolved / closed */
+  private String state;
 
-    @TableField(jdbcType = JdbcType.OTHER, typeHandler = PostgresJsonTypeHandler.class)
-    private Map<String, Object> triggerStats;
+  @TableField(jdbcType = JdbcType.OTHER, typeHandler = PostgresJsonTypeHandler.class)
+  private Map<String, Object> triggerStats;
 
-    private Integer triggerCount;
+  private Integer triggerCount;
 
-    private LocalDateTime firstTriggeredAt;
+  private LocalDateTime firstTriggeredAt;
 
-    private LocalDateTime lastTriggeredAt;
+  private LocalDateTime lastTriggeredAt;
 
-    private LocalDateTime resolvedAt;
+  private LocalDateTime resolvedAt;
 
-    private String owner;
+  private String owner;
 
-    private String handleNote;
+  private String handleNote;
 
-    private LocalDateTime createdAt;
+  private LocalDateTime createdAt;
 
-    private LocalDateTime updatedAt;
+  private LocalDateTime updatedAt;
 }

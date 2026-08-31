@@ -5,48 +5,47 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.eaos.admin.handler.PostgresJsonTypeHandler;
-import lombok.Data;
-import org.apache.ibatis.type.JdbcType;
-
 import java.time.LocalDateTime;
 import java.util.List;
+import lombok.Data;
+import org.apache.ibatis.type.JdbcType;
 
 @Data
 @TableName(value = "opinion_article", autoResultMap = true)
 public class OpinionArticle {
 
-    @TableId(type = IdType.AUTO)
-    private Long id;
+  @TableId(type = IdType.AUTO)
+  private Long id;
 
-    private Long sourceId;
+  private Long sourceId;
 
-    private Long monitorId;
+  private Long monitorId;
 
-    private String title;
+  private String title;
 
-    private String content;
+  private String content;
 
-    private String url;
+  private String url;
 
-    private String urlHash;
+  private String urlHash;
 
-    private String contentHash;
+  private String contentHash;
 
-    private String author;
+  private String author;
 
-    private LocalDateTime publishTime;
+  private LocalDateTime publishTime;
 
-    private LocalDateTime collectedAt;
+  private LocalDateTime collectedAt;
 
-    @TableField(jdbcType = JdbcType.OTHER, typeHandler = PostgresJsonTypeHandler.class)
-    private List<String> matchedKeywords;
+  @TableField(jdbcType = JdbcType.OTHER, typeHandler = PostgresJsonTypeHandler.class)
+  private List<String> matchedKeywords;
 
-    /** analysis_pending / analyzing / analyzed / analysis_failed */
-    private String status;
+  /** analysis_pending / analyzing / analyzed / analysis_failed */
+  private String status;
 
-    private String objectKey;
+  private String objectKey;
 
-    private LocalDateTime createdAt;
+  private LocalDateTime createdAt;
 
-    private LocalDateTime updatedAt;
+  private LocalDateTime updatedAt;
 }

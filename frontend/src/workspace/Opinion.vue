@@ -132,13 +132,6 @@ const form = reactive({
 
 const split = (value) => String(value || '').split(/[,，]/).map((item) => item.trim()).filter(Boolean);
 const riskClass = (value) => ({ 危机: 'danger', 预警: 'warn', 关注: 'ok' }[value] || 'warn');
-const formatTime = (value) => {
-  if (!value) return '-';
-  const raw = String(value).trim();
-  const hasTz = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(raw);
-  const date = new Date(hasTz ? raw : `${raw.replace(' ', 'T')}Z`);
-  return Number.isNaN(date.getTime()) ? raw : date.toLocaleString();
-};
 
 async function loadMonitors() {
   monitors.value = await fetchOpinionMonitors();

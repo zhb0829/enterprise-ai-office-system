@@ -1,46 +1,42 @@
 package com.eaos.admin.opinion.dto;
 
 import jakarta.validation.constraints.NotNull;
-import lombok.Data;
-
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import lombok.Data;
 
 @Data
 public class AnalysisResultRequest {
 
-    @NotNull
-    private Long taskId;
+  @NotNull private Long taskId;
 
-    @NotNull
-    private Long articleId;
+  @NotNull private Long articleId;
 
-    private Long monitorId;
+  private Long monitorId;
 
-    /** positive / neutral / negative */
-    @NotNull
-    private String sentiment;
+  /** positive / neutral / negative */
+  @NotNull private String sentiment;
 
-    private BigDecimal confidence = BigDecimal.ZERO;
+  private BigDecimal confidence = BigDecimal.ZERO;
 
-    private List<String> emotionTags = new ArrayList<>();
+  private List<String> emotionTags = new ArrayList<>();
 
-    private String reason = "";
+  private String reason = "";
 
-    private List<String> evidenceIds = new ArrayList<>();
+  private List<String> evidenceIds = new ArrayList<>();
 
-    private List<String> riskFactors = new ArrayList<>();
+  private List<String> riskFactors = new ArrayList<>();
 
-    private Integer riskScore = 0;
+  private Integer riskScore = 0;
 
-    private String topic = "";
+  private String topic = "";
 
-    private List<String> keywords = new ArrayList<>();
+  private List<String> keywords = new ArrayList<>();
 
-    private String model = "";
+  private String model = "";
 
-    private String promptVersion = "";
+  private String promptVersion = "";
 
-    private String aiRunId = "";
+  private String aiRunId = "";
 }

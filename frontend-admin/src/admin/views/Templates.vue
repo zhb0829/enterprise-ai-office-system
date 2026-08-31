@@ -10,6 +10,10 @@
         <button class="primary-button" type="button" @click="openStyleCreate">新增文风</button>
       </div>
     </div>
+    <p v-if="loadFailed" class="page-sub load-failed">
+      模板数据加载失败。
+      <button class="ghost-button" type="button" @click="loadTemplates">重试</button>
+    </p>
 
     <div class="grid two">
       <section class="panel">
@@ -116,9 +120,12 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import { createTemplate, fetchStyles, fetchTemplates, saveStyles, toggleTemplate } from '../../api';
 import { demoTemplates, demoStyles } from '../../demoData';
 
-const templates = ref(demoTemplates);
-const styles = ref(demoStyles);
+// 演示数据仅在开发环境启用（Q19），生产显示空列表 + 重试
+const IS_DEV = import.meta.env.DEV;
+const templates = ref(IS_DEV ? demoTemplates : []);
+const styles = ref(IS_DEV ? demoStyles : []);
 const channelStyleMap = ref({});
+const loadFailed = ref(false);
 
 const showCreate = ref(false);
 const saving = ref(false);
@@ -244,16 +251,17 @@ async function toggle(t) {
 async function loadTemplates() {
   try {
     const [rows, stylePayload] = await Promise.all([fetchTemplates(), fetchStyles()]);
-    templates.value = rows.length ? rows : demoTemplates;
+    templates.value = rows.length ? rows : (IS_DEV ? demoTemplates : []);
     if (stylePayload?.styles?.length) {
       styles.value = stylePayload.styles;
       channelStyleMap.value = stylePayload.channel_style_map || {};
     } else {
-      styles.value = demoStyles;
+      styles.value = IS_DEV ? demoStyles : [];
       channelStyleMap.value = {};
     }
+    loadFailed.value = false;
   } catch {
-    // 保留演示数据
+    loadFailed.value = !IS_DEV;
   }
 }
 

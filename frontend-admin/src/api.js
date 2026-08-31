@@ -1,44 +1,121 @@
 const jsonHeaders = { 'Content-Type': 'application/json' };
 
 const TOKEN_KEY = 'eaos-token';
+const REFRESH_KEY = 'eaos-refresh-token';
+
+export function getToken() {
+  return localStorage.getItem(TOKEN_KEY);
+}
+
+export function getRefreshToken() {
+  return localStorage.getItem(REFRESH_KEY);
+}
+
+export function setTokens(accessToken, refreshToken) {
+  localStorage.setItem(TOKEN_KEY, accessToken);
+  if (refreshToken) {
+    localStorage.setItem(REFRESH_KEY, refreshToken);
+  }
+}
+
+export function clearTokens() {
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(REFRESH_KEY);
+}
 
 function authHeaders(headers = {}) {
-  const token = localStorage.getItem(TOKEN_KEY);
+  const token = getToken();
   return token ? { ...headers, Authorization: `Bearer ${token}` } : headers;
 }
 
-async function request(path, options = {}) {
+let refreshingPromise = null;
+
+async function tryRefresh() {
+  const refreshToken = getRefreshToken();
+  if (!refreshToken) {
+    return false;
+  }
+  if (!refreshingPromise) {
+    refreshingPromise = (async () => {
+      try {
+        const response = await fetch('/api/auth/refresh', {
+          method: 'POST',
+          headers: jsonHeaders,
+          body: JSON.stringify({ refreshToken }),
+        });
+        const data = await response.json().catch(() => null);
+        const payload = data?.code === 0 ? data.data : null;
+        if (!response.ok || !payload?.token) {
+          return false;
+        }
+        setTokens(payload.token, payload.refreshToken);
+        return true;
+      } catch {
+        return false;
+      } finally {
+        refreshingPromise = null;
+      }
+    })();
+  }
+  return refreshingPromise;
+}
+
+async function request(path, options = {}, retried = false) {
   const response = await fetch(path, { ...options, headers: authHeaders(options.headers) });
   const data = await response.json().catch(() => null);
   const message = data?.detail?.message || data?.detail || data?.message || `请求失败：${response.status}`;
+  if (response.status === 401 && !retried && !path.startsWith('/api/auth/')) {
+    const refreshed = await tryRefresh();
+    if (refreshed) {
+      return request(path, options, true);
+    }
+  }
   const isAuthenticationFailure = response.status === 401 || (
     response.status === 403
     && typeof message === 'string'
     && /无权限|未认证|登录|token|jwt/i.test(message)
   );
   if (isAuthenticationFailure) {
-    localStorage.removeItem(TOKEN_KEY);
+    clearTokens();
     window.dispatchEvent(new Event('eaos-unauthorized'));
+    throw new Error('登录状态已失效或没有访问权限，请重新登录。');
   }
   if (!response.ok) {
-    if (isAuthenticationFailure) {
-      throw new Error('登录状态已失效或没有访问权限，请重新登录后再上传。');
-    }
     throw new Error(typeof message === 'string' ? message : JSON.stringify(message));
   }
   // 管理端 API 使用统一 R<T> 信封；Python 网关接口则直接返回业务数据。
   return data?.code === 0 && Object.prototype.hasOwnProperty.call(data, 'data') ? data.data : data;
 }
 
-export function getToken() {
-  return localStorage.getItem(TOKEN_KEY);
-}
-
-export function login(username, password) {
-  return request('/api/auth/login', {
+export async function login(username, password) {
+  const payload = await request('/api/auth/login', {
     method: 'POST',
     headers: jsonHeaders,
     body: JSON.stringify({ username, password }),
+  });
+  if (payload?.token) {
+    setTokens(payload.token, payload.refreshToken);
+  }
+  return payload;
+}
+
+export async function logout() {
+  const refreshToken = getRefreshToken();
+  if (refreshToken) {
+    await fetch('/api/auth/logout', {
+      method: 'POST',
+      headers: jsonHeaders,
+      body: JSON.stringify({ refreshToken }),
+    }).catch(() => null);
+  }
+  clearTokens();
+}
+
+export async function changePassword(oldPassword, newPassword) {
+  return request('/api/auth/change-password', {
+    method: 'POST',
+    headers: jsonHeaders,
+    body: JSON.stringify({ oldPassword, newPassword }),
   });
 }
 
@@ -494,4 +571,46 @@ export function retryAdminMeetingTask(id, taskId) {
   return request(`/api/meeting/conferences/${encodeURIComponent(id)}/tasks/${encodeURIComponent(taskId)}/retry`, {
     method: 'POST',
   });
+}
+
+// ---- 用户管理（管理端） ----
+export function fetchUsers(page = 1, pageSize = 20, keyword = '') {
+  const query = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+  if (keyword) query.set('keyword', keyword);
+  return request(`/api/admin/users?${query.toString()}`);
+}
+
+export function createUserRequest(payload) {
+  return request('/api/admin/users', { method: 'POST', headers: jsonHeaders, body: JSON.stringify(payload) });
+}
+
+export function updateUser(id, payload) {
+  return request(`/api/admin/users/${id}`, { method: 'PUT', headers: jsonHeaders, body: JSON.stringify(payload) });
+}
+
+export function deleteUser(id) {
+  return request(`/api/admin/users/${id}`, { method: 'DELETE' });
+}
+
+export function resetUserPassword(id, newPassword) {
+  return request(`/api/admin/users/${id}/reset-password`, {
+    method: 'POST', headers: jsonHeaders, body: JSON.stringify({ newPassword }),
+  });
+}
+
+// ---- 通知渠道（管理端） ----
+export function fetchNotificationChannels() {
+  return request('/api/admin/notification-channels');
+}
+
+export function createNotificationChannel(payload) {
+  return request('/api/admin/notification-channels', { method: 'POST', headers: jsonHeaders, body: JSON.stringify(payload) });
+}
+
+export function updateNotificationChannel(id, payload) {
+  return request(`/api/admin/notification-channels/${id}`, { method: 'PUT', headers: jsonHeaders, body: JSON.stringify(payload) });
+}
+
+export function deleteNotificationChannel(id) {
+  return request(`/api/admin/notification-channels/${id}`, { method: 'DELETE' });
 }

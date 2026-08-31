@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router';
+import { getToken } from '../api';
 
 const AdminLayout = () => import('../admin/Layout.vue');
 const Templates = () => import('../admin/views/Templates.vue');
@@ -12,6 +13,10 @@ const OpinionSources = () => import('../admin/views/OpinionSources.vue');
 const OpinionAlertRules = () => import('../admin/views/OpinionAlertRules.vue');
 const OpinionCases = () => import('../admin/views/OpinionCases.vue');
 const Meetings = () => import('../admin/views/Meetings.vue');
+const Login = () => import('../admin/Login.vue');
+const ChangePassword = () => import('../admin/ChangePassword.vue');
+const Users = () => import('../admin/views/Users.vue');
+const NotificationChannels = () => import('../admin/views/NotificationChannels.vue');
 
 const router = createRouter({
   history: createWebHistory(),
@@ -19,6 +24,18 @@ const router = createRouter({
     {
       path: '/',
       redirect: '/admin/templates',
+    },
+    {
+      path: '/admin/login',
+      name: 'admin-login',
+      component: Login,
+      meta: { title: '登录', public: true },
+    },
+    {
+      path: '/admin/change-password',
+      name: 'admin-change-password',
+      component: ChangePassword,
+      meta: { title: '修改密码' },
     },
     {
       path: '/admin',
@@ -36,9 +53,22 @@ const router = createRouter({
         { path: 'opinion-alert-rules', name: 'admin-opinion-alert-rules', component: OpinionAlertRules, meta: { title: '告警规则', group: '舆情分析' } },
         { path: 'opinion-cases', name: 'admin-opinion-cases', component: OpinionCases, meta: { title: '历史应对案例', group: '舆情分析' } },
         { path: 'meetings', name: 'admin-meetings', component: Meetings, meta: { title: '会议公开信息整理', group: '会议知识' } },
+        { path: 'users', name: 'admin-users', component: Users, meta: { title: '用户管理', group: '系统管理' } },
+        { path: 'notification-channels', name: 'admin-notification-channels', component: NotificationChannels, meta: { title: '通知渠道', group: '系统管理' } },
       ],
     },
   ],
+});
+
+// 路由守卫（Q10）：未登录访问任何页面跳登录页
+router.beforeEach((to) => {
+  if (to.meta.public) {
+    return getToken() ? '/admin/templates' : true;
+  }
+  if (!getToken()) {
+    return { path: '/admin/login', query: { redirect: to.fullPath } };
+  }
+  return true;
 });
 
 export default router;

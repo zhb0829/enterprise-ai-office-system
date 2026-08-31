@@ -8,6 +8,8 @@ import org.apache.ibatis.annotations.Select;
 
 @Mapper
 public interface OpinionReportMapper extends BaseMapper<OpinionReport> {
-    @Select("SELECT * FROM opinion_report WHERE monitor_id = #{monitorId} AND period = #{period} ORDER BY version DESC LIMIT 1 FOR UPDATE")
-    OpinionReport selectLatestForUpdate(@Param("monitorId") Long monitorId, @Param("period") String period);
+  @Select(
+      "SELECT * FROM opinion_report WHERE monitor_id = #{monitorId} AND period = #{period} ORDER BY version DESC LIMIT 1 FOR UPDATE")
+  OpinionReport selectLatestForUpdate(
+      @Param("monitorId") Long monitorId, @Param("period") String period);
 }
