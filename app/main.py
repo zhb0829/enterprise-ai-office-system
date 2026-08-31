@@ -12,6 +12,9 @@ from .routers import drafts, exports, intelligence, materials, policy, policy_al
 from .services.template_loader import load_seed_templates, load_styles
 from .opinion import models_ai  # noqa: F401  登记 AI 记录表供 create_all
 from .opinion.routers import internal_router as opinion_internal_router
+from .meeting import models_ai as meeting_models_ai  # noqa: F401
+from .meeting.routers import ai_router as meeting_ai_router
+from .meeting.routers import internal_router as meeting_internal_router
 
 # 统一 UTF-8：确保 Windows 控制台/日志输出中文不乱码（PEP 540 之前的 locale 编码问题）
 if hasattr(sys.stdout, "reconfigure"):
@@ -59,6 +62,8 @@ app.include_router(qualification.router, tags=["qualification-internal"])
 app.include_router(intelligence.router, prefix="/api", tags=["intelligence"])
 app.include_router(intelligence.internal_router, tags=["internal-intelligence"])
 app.include_router(opinion_internal_router, tags=["internal-opinion"])
+app.include_router(meeting_internal_router, tags=["internal-meeting"])
+app.include_router(meeting_ai_router, prefix="/api/meeting/ai", tags=["meeting-ai"])
 
 # 静态文件：导出文件与上传素材下载
 app.mount("/static/exports", StaticFiles(directory=str(settings.export_path)), name="exports")

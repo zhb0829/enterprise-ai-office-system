@@ -38,7 +38,7 @@ class Settings(BaseSettings):
     app_env: str = "dev"
     export_dir: str = "exports"
     upload_dir: str = "uploads"
-    pdf_chinese_font: str = "Microsoft YaHei"
+    pdf_chinese_font: str = "C:/Windows/Fonts/msyh.ttc"
     cors_origins: str = "http://localhost:5173"
     ai_internal_token: str = "eaos-internal-token-change-me"
     qual_java_base_url: str = "http://localhost:8080"
@@ -60,6 +60,20 @@ class Settings(BaseSettings):
     opinion_analysis_budget_per_job: int = 50
     opinion_asr_service_url: str = ""
 
+    # 会议公开信息整理（P2）：Java 保存业务数据，Python 只运行解析与 AI 流程。
+    meeting_java_base_url: str = "http://localhost:8080"
+    meeting_java_token: str = "eaos-meeting-internal-dev-token"
+    meeting_internal_token: str = "eaos-meeting-internal-dev-token"
+    meeting_rss_urls: str = ""
+    meeting_report_model: str = "deepseek-chat"
+    meeting_card_model: str = "deepseek-chat"
+    meeting_vision_model: str = ""
+    meeting_vision_api_key: str = ""
+    meeting_vision_base_url: str = ""
+    meeting_asr_api_key: str = ""
+    meeting_asr_base_url: str = "https://api.openai.com/v1"
+    meeting_asr_model: str = "whisper-1"
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
@@ -75,6 +89,10 @@ class Settings(BaseSettings):
         p = BASE_DIR / self.upload_dir
         p.mkdir(parents=True, exist_ok=True)
         return p
+
+    @property
+    def meeting_rss_url_list(self) -> list[str]:
+        return [url.strip() for url in self.meeting_rss_urls.split(",") if url.strip()]
 
 
 @lru_cache

@@ -72,7 +72,24 @@ def test_export_filename_includes_draft_id(tmp_path, monkeypatch):
     assert (tmp_path / filename).read_text(encoding="utf-8") == "# 内容"
 
 
-def test_pdf_export_requires_pandoc(tmp_path, monkeypatch):
-    monkeypatch.setattr("backend.app.services.export.shutil.which", lambda name: None)
-    with pytest.raises(UnsupportedExportFormat, match="pandoc"):
+def test_pdf_export_generates_pdf(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        "backend.app.services.export.settings",
+        SimpleNamespace(export_path=tmp_path, pdf_chinese_font="C:/Windows/Fonts/msyh.ttc"),
+    )
+    out = tmp_path / "out.pdf"
+    _md_to_pdf("# 通知标题\n\n- 时间：2026年9月18日\n\n正文内容", out)
+
+    assert out.stat().st_size > 0
+
+
+def test_pdf_export_without_chinese_font_raises(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        "backend.app.services.export.settings",
+        SimpleNamespace(export_path=tmp_path, pdf_chinese_font="不存在的字体.ttf"),
+    )
+    monkeypatch.setattr(
+        "backend.app.services.export._CJK_FONT_CANDIDATES", (),
+    )
+    with pytest.raises(UnsupportedExportFormat, match="中文字体"):
         _md_to_pdf("# 内容", tmp_path / "out.pdf")

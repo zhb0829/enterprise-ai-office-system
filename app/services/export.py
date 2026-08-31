@@ -1,12 +1,10 @@
-"""导出服务：草稿导出为 Markdown / DOCX。
+"""导出服务：草稿导出为 Markdown / DOCX / PDF。
 
-PDF 导出依赖本机 pandoc + xelatex，中文字体可通过 PDF_CHINESE_FONT 配置。
+PDF 导出使用 reportlab（纯 Python），中文字体自动探测本机字体，
+可通过 PDF_CHINESE_FONT 指定首选字体文件路径。
 """
 import logging
 import re
-import shutil
-import subprocess
-import tempfile
 from pathlib import Path
 
 from sqlalchemy.orm import Session
@@ -98,26 +96,106 @@ def _md_to_docx(md: str, path: str) -> None:
 
 
 def _md_to_pdf(md: str, path: Path) -> None:
-    pandoc = shutil.which("pandoc")
-    if not pandoc:
-        raise UnsupportedExportFormat("PDF 导出需要安装 pandoc，并配置可用的 xelatex 与中文字体")
+    """将 Markdown 草稿转换为 PDF（reportlab，支持中文）。"""
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import ParagraphStyle
+    from reportlab.lib.units import mm
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+    from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
 
-    with tempfile.TemporaryDirectory() as tmp:
-        md_path = Path(tmp) / "draft.md"
-        md_path.write_text(md, encoding="utf-8")
-        cmd = [
-            pandoc,
-            str(md_path),
-            "-o",
-            str(path),
-            "--pdf-engine=xelatex",
-            "-V",
-            f"CJKmainfont={settings.pdf_chinese_font}",
-        ]
+    font_name = _register_chinese_font(pdfmetrics, TTFont)
+    if not font_name:
+        raise UnsupportedExportFormat("未找到可用中文字体，PDF 导出失败；可通过 PDF_CHINESE_FONT 指定字体文件路径")
+
+    body = ParagraphStyle(
+        "Body", fontName=font_name, fontSize=10.5, leading=18, spaceAfter=6, firstLineIndent=0
+    )
+    heading = ParagraphStyle(
+        "Heading", parent=body, fontSize=15, leading=22, spaceBefore=10, spaceAfter=8
+    )
+    subheading = ParagraphStyle(
+        "SubHeading", parent=body, fontSize=13, leading=20, spaceBefore=8, spaceAfter=6
+    )
+    subsubheading = ParagraphStyle(
+        "SubSubHeading", parent=body, fontSize=11.5, leading=18, spaceBefore=6, spaceAfter=5
+    )
+    quote = ParagraphStyle(
+        "Quote", parent=body, leftIndent=8 * mm, textColor="#444444"
+    )
+    bullet = ParagraphStyle("Bullet", parent=body, leftIndent=6 * mm, bulletIndent=2 * mm)
+    numbered = ParagraphStyle("Numbered", parent=body, leftIndent=6 * mm)
+
+    def esc(text: str) -> str:
+        return (
+            text.replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+        )
+
+    doc = SimpleDocTemplate(
+        str(path),
+        pagesize=A4,
+        leftMargin=25 * mm,
+        rightMargin=25 * mm,
+        topMargin=22 * mm,
+        bottomMargin=22 * mm,
+        title="",
+    )
+    story: list = []
+    in_code = False
+    for line in md.splitlines():
+        s = line.rstrip()
+        if s.startswith("```"):
+            in_code = not in_code
+            continue
+        if not s:
+            story.append(Spacer(1, 6))
+            continue
+        text = esc(s if in_code else _clean_md(s))
+        if s.startswith("### "):
+            story.append(Paragraph(text[4:], subsubheading))
+        elif s.startswith("## "):
+            story.append(Paragraph(text[3:], subheading))
+        elif s.startswith("# "):
+            story.append(Paragraph(text[2:], heading))
+        elif s.startswith("- "):
+            story.append(Paragraph(text[2:], bullet, bulletText="•"))
+        elif re.match(r"^\d+\.\s+", s):
+            story.append(Paragraph(text, numbered))
+        elif s.startswith("> "):
+            story.append(Paragraph(text[2:], quote))
+        else:
+            story.append(Paragraph(text, body))
+    doc.build(story)
+
+
+# reportlab 对 .ttc 字体集合仅取第一个子字体，常规中文字体均可用
+_CJK_FONT_CANDIDATES = (
+    "C:/Windows/Fonts/msyh.ttc",
+    "C:/Windows/Fonts/simhei.ttf",
+    "C:/Windows/Fonts/simsun.ttc",
+    "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+    "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
+)
+
+
+def _register_chinese_font(pdfmetrics, ttfont_cls) -> str:
+    """注册本机中文字体，返回字体名；找不到返回空串。"""
+    configured = settings.pdf_chinese_font
+    candidates: list[Path] = []
+    if Path(configured).suffix.lower() in (".ttf", ".ttc", ".otf"):
+        candidates.append(Path(configured))
+    candidates.extend(Path(p) for p in _CJK_FONT_CANDIDATES)
+    for candidate in candidates:
+        if not candidate:
+            continue
+        if not candidate.is_file():
+            continue
+        name = f"EaosCJK-{candidate.stem}"
         try:
-            subprocess.run(cmd, check=True, capture_output=True, text=True, encoding="utf-8")
-        except FileNotFoundError as exc:
-            raise UnsupportedExportFormat("PDF 导出需要安装 pandoc 与 xelatex") from exc
-        except subprocess.CalledProcessError as exc:
-            message = (exc.stderr or exc.stdout or str(exc)).strip()
-            raise UnsupportedExportFormat(f"PDF 导出失败，请检查 pandoc/xelatex/中文字体配置: {message}") from exc
+            pdfmetrics.registerFont(ttfont_cls(name, str(candidate), subfontIndex=0))
+            return name
+        except Exception as exc:  # 字体文件损坏或不兼容时继续尝试下一个
+            logger.warning("注册中文字体失败: %s (%s)", candidate, exc)
+    return ""
