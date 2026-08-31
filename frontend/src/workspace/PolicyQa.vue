@@ -3,10 +3,7 @@
     <section class="policy-header">
       <div>
         <p class="eyebrow">行业政策法规智能问答</p>
-        <h2>先找到依据，再理解要求。</h2>
-        <p class="policy-lead">
-          只基于公开文件与已入库材料检索。每条回答都保留原文出处，检索不到明确依据时不会生成结论。
-        </p>
+        <h2>先找到依据<span class="inline-image" aria-hidden="true"></span>再理解要求</h2>
       </div>
       <div class="policy-signal" aria-label="当前能力状态">
         <span class="signal-dot"></span>
@@ -314,6 +311,7 @@ function openCitation(citation) {
   font-size: clamp(2rem, 4vw, 4.8rem);
   line-height: 1.06;
   letter-spacing: 0;
+  text-wrap: balance;
 }
 
 .policy-lead {

@@ -8,47 +8,10 @@
           <span class="inline-image" aria-hidden="true"></span>
           变成可审、可改、可导出的正式稿件
         </h2>
-        <p class="hero-summary">
-          当前用户端先聚焦企业公告与新闻稿撰写，后续将扩展政策法规问答、行业动态聚合、资质指南编制与会议公开信息整理。
-        </p>
       </div>
       <div class="hero-actions" aria-label="主要操作">
         <a class="primary-button hero-button" href="#compose-panel">开始撰写</a>
         <a class="ghost-button hero-link" href="#draft-panel">查看草稿</a>
-      </div>
-    </section>
-
-    <section class="module-bento" aria-labelledby="module-bento-title">
-      <div class="module-bento-head">
-        <div>
-          <h2 id="module-bento-title">企业办公智能能力矩阵</h2>
-          <p>每个能力后续独立页面承载，当前先开放公告与新闻稿智能撰写。</p>
-        </div>
-      </div>
-      <div class="module-grid" aria-label="功能模块">
-        <article
-          v-for="module in featureModules"
-          :key="module.title"
-          :class="['module-card', { current: module.current }]"
-        >
-          <span>{{ module.status }}</span>
-          <h3>{{ module.title }}</h3>
-          <p>{{ module.description }}</p>
-        </article>
-      </div>
-      <div class="module-marquee" aria-hidden="true">
-        <div>
-          <span>政策问答</span>
-          <span>动态聚合</span>
-          <span>资质指南</span>
-          <span>会议信息</span>
-        </div>
-        <div>
-          <span>政策问答</span>
-          <span>动态聚合</span>
-          <span>资质指南</span>
-          <span>会议信息</span>
-        </div>
       </div>
     </section>
 
@@ -412,36 +375,6 @@ const tabs = [
   { key: 'suggestions', label: '修改建议' },
   { key: 'factcheck', label: '核查报告' },
   { key: 'versions', label: '版本历史' },
-];
-
-const featureModules = [
-  {
-    title: '公告与新闻稿智能撰写',
-    description: '按模板、文风、素材和核查结果生成可编辑草稿。',
-    status: '当前开放',
-    current: true,
-  },
-  {
-    title: '行业政策法规智能问答',
-    description: '围绕政策条文、监管口径和业务场景提供可追溯问答。',
-    status: '规划中',
-  },
-  {
-    title: '行业动态与竞品信息智能聚合',
-    description: '聚合公开资讯、竞品动态和趋势摘要，形成研判素材。',
-    status: '当前开放',
-    current: true,
-  },
-  {
-    title: '企业资质与服务指南智能编制',
-    description: '沉淀资质说明、办事流程和服务手册，支持快速成稿。',
-    status: '规划中',
-  },
-  {
-    title: '会议公开信息整理',
-    description: '整理会议公开资料、纪要要点和对外发布信息。',
-    status: '规划中',
-  },
 ];
 
 const workspaceRoot = ref(null);
@@ -987,24 +920,12 @@ function initWorkspaceMotion() {
   if (!root || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
   const ctx = gsap.context(() => {
-    gsap.from('.workspace-hero .eyebrow, .workspace-hero h2, .hero-summary, .hero-actions', {
+    gsap.from('.workspace-hero .eyebrow, .workspace-hero h2, .hero-actions', {
       y: 28,
       opacity: 0,
       duration: 0.9,
       ease: 'power3.out',
       stagger: 0.08,
-    });
-
-    gsap.from('.module-card', {
-      scrollTrigger: {
-        trigger: '.module-bento',
-        start: 'top 78%',
-      },
-      y: 34,
-      opacity: 0,
-      duration: 0.7,
-      ease: 'power3.out',
-      stagger: 0.06,
     });
 
     gsap.from('.motion-card', {

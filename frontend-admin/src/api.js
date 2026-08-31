@@ -427,3 +427,71 @@ export function unlockAdminQualDocument(documentId) {
 export function fetchAdminOwnerMaterials(owner) {
   return request(`/api/qual/admin/enterprises/${encodeURIComponent(owner)}/materials`);
 }
+
+// ===== P2 会议公开信息整理 =====
+export function fetchAdminMeetings(filters = {}) {
+  const params = new URLSearchParams({
+    page: String(filters.page || 1),
+    pageSize: String(filters.pageSize || 100),
+  });
+  if (filters.status) params.set('status', filters.status);
+  if (filters.keyword) params.set('keyword', filters.keyword);
+  if (filters.archived !== undefined && filters.archived !== '') params.set('archived', String(filters.archived));
+  return request(`/api/meeting/conferences?${params.toString()}`);
+}
+
+export function fetchAdminMeetingDetail(id) {
+  return request(`/api/meeting/conferences/${encodeURIComponent(id)}`);
+}
+
+export function createAdminMeeting(payload) {
+  return request('/api/meeting/conferences', { method: 'POST', headers: jsonHeaders, body: JSON.stringify(payload) });
+}
+
+export function updateAdminMeeting(id, payload) {
+  return request(`/api/meeting/conferences/${encodeURIComponent(id)}`, {
+    method: 'PUT', headers: jsonHeaders, body: JSON.stringify(payload),
+  });
+}
+
+export function deleteAdminMeeting(id) {
+  return request(`/api/meeting/conferences/${encodeURIComponent(id)}`, { method: 'DELETE' });
+}
+
+export function archiveAdminMeeting(id, archived = true) {
+  return request(`/api/meeting/conferences/${encodeURIComponent(id)}/archive?archived=${archived}`, { method: 'POST' });
+}
+
+export function addAdminMeetingLink(id, payload) {
+  return request(`/api/meeting/conferences/${encodeURIComponent(id)}/materials/link`, {
+    method: 'POST', headers: jsonHeaders, body: JSON.stringify(payload),
+  });
+}
+
+export function addAdminMeetingTranscript(id, payload) {
+  return request(`/api/meeting/conferences/${encodeURIComponent(id)}/materials/transcript`, {
+    method: 'POST', headers: jsonHeaders, body: JSON.stringify(payload),
+  });
+}
+
+export function uploadAdminMeetingMaterial(id, file) {
+  const form = new FormData();
+  form.append('file', file);
+  return request(`/api/meeting/conferences/${encodeURIComponent(id)}/materials/upload`, { method: 'POST', body: form });
+}
+
+export function deleteAdminMeetingMaterial(id, materialId) {
+  return request(`/api/meeting/conferences/${encodeURIComponent(id)}/materials/${encodeURIComponent(materialId)}`, {
+    method: 'DELETE',
+  });
+}
+
+export function organizeAdminMeeting(id) {
+  return request(`/api/meeting/conferences/${encodeURIComponent(id)}/organize`, { method: 'POST' });
+}
+
+export function retryAdminMeetingTask(id, taskId) {
+  return request(`/api/meeting/conferences/${encodeURIComponent(id)}/tasks/${encodeURIComponent(taskId)}/retry`, {
+    method: 'POST',
+  });
+}

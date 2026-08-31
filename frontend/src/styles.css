@@ -1660,3 +1660,219 @@ button:disabled,
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ===== 门户首页（Home） ===== */
+.home-page {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 clamp(18px, 4vw, 48px) 72px;
+}
+
+.home-hero {
+  padding: clamp(48px, 7vw, 96px) 0 clamp(36px, 5vw, 64px);
+}
+
+.home-hero-inner {
+  max-width: 720px;
+}
+
+.home-greeting {
+  margin: 0 0 16px;
+  font-size: clamp(36px, 4.6vw, 56px);
+  font-weight: 800;
+  line-height: 1.12;
+  letter-spacing: 0.01em;
+  background: linear-gradient(118deg, #14b8a6 0%, #0f766e 46%, #0b4f4a 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: #0f766e;
+}
+
+@supports not ((-webkit-background-clip: text) or (background-clip: text)) {
+  .home-greeting {
+    color: #0f766e;
+  }
+}
+
+.home-title {
+  margin: 0 0 14px;
+  font-size: clamp(28px, 3.4vw, 42px);
+  line-height: 1.22;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+.home-subtitle {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+.home-section-head {
+  margin: 0 0 20px;
+}
+
+.home-section-head h2 {
+  margin: 0 0 4px;
+  font-size: 20px;
+  color: var(--ink);
+}
+
+.home-section-head p {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: 14px;
+}
+
+.home-modules {
+  padding: clamp(12px, 2vw, 24px) 0;
+}
+
+.home-module-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.home-module-card {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  padding: 22px 22px 24px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: inherit;
+  text-decoration: none;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.home-module-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(15, 118, 110, 0.32);
+  box-shadow: 0 14px 34px rgba(15, 118, 110, 0.16);
+}
+
+.home-module-icon {
+  color: var(--primary);
+  margin-bottom: 4px;
+}
+
+.home-module-card h3 {
+  margin: 0;
+  font-size: 16px;
+  color: var(--ink);
+}
+
+.home-module-card p {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.home-activity {
+  padding: clamp(24px, 3vw, 40px) 0 0;
+}
+
+.home-activity-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.home-activity-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  border: 0;
+  border-bottom: 1px solid rgba(37, 67, 63, 0.08);
+  background: var(--surface);
+  text-align: left;
+  transition: background 0.15s ease;
+}
+
+.home-activity-list li:last-child .home-activity-item {
+  border-bottom: 0;
+}
+
+.home-activity-item:hover {
+  background: var(--surface-soft);
+}
+
+.home-activity-tag {
+  flex: 0 0 auto;
+  display: inline-grid;
+  place-items: center;
+  min-width: 48px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(15, 118, 110, 0.1);
+  color: var(--primary-strong);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.home-activity-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-activity-time {
+  flex: 0 0 auto;
+  color: var(--ink-muted);
+  font-size: 12px;
+}
+
+.home-activity-empty {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  padding: 48px 20px;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.home-activity-empty p {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: 14px;
+}
+
+@media (max-width: 980px) {
+  .home-module-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .home-module-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .home-activity-item {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .home-activity-title {
+    flex-basis: 100%;
+    white-space: normal;
+  }
+}

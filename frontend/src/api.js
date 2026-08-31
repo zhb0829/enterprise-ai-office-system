@@ -275,6 +275,98 @@ function unwrap(response) {
   return response;
 }
 
+// ===== P2 会议公开信息整理 =====
+export function fetchMeetings(filters = {}) {
+  const params = new URLSearchParams({
+    page: String(filters.page || 1),
+    pageSize: String(filters.pageSize || 20),
+  });
+  if (filters.status) params.set('status', filters.status);
+  if (filters.keyword) params.set('keyword', filters.keyword);
+  return request(`/api/meeting/conferences?${params.toString()}`).then(unwrap);
+}
+
+export function fetchMeetingDetail(id) {
+  return request(`/api/meeting/conferences/${encodeURIComponent(id)}`).then(unwrap);
+}
+
+export function createMeeting(payload) {
+  return request('/api/meeting/conferences', {
+    method: 'POST',
+    headers: jsonHeaders,
+    body: JSON.stringify(payload),
+  }).then(unwrap);
+}
+
+export function addMeetingLink(id, payload) {
+  return request(`/api/meeting/conferences/${encodeURIComponent(id)}/materials/link`, {
+    method: 'POST',
+    headers: jsonHeaders,
+    body: JSON.stringify(payload),
+  }).then(unwrap);
+}
+
+export function addMeetingTranscript(id, payload) {
+  return request(`/api/meeting/conferences/${encodeURIComponent(id)}/materials/transcript`, {
+    method: 'POST',
+    headers: jsonHeaders,
+    body: JSON.stringify(payload),
+  }).then(unwrap);
+}
+
+export function uploadMeetingMaterial(id, file) {
+  const body = new FormData();
+  body.append('file', file);
+  return request(`/api/meeting/conferences/${encodeURIComponent(id)}/materials/upload`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body,
+  }).then(unwrap);
+}
+
+export function deleteMeetingMaterial(id, materialId) {
+  return request(`/api/meeting/conferences/${encodeURIComponent(id)}/materials/${encodeURIComponent(materialId)}`, {
+    method: 'DELETE',
+  }).then(unwrap);
+}
+
+export function organizeMeeting(id) {
+  return request(`/api/meeting/conferences/${encodeURIComponent(id)}/organize`, { method: 'POST' }).then(unwrap);
+}
+
+export async function downloadMeetingReport(conferenceId, reportId, filename = '会议纪要.docx') {
+  const response = await fetch(
+    `/api/meeting/conferences/${encodeURIComponent(conferenceId)}/reports/${encodeURIComponent(reportId)}/export`,
+    { headers: authHeaders() },
+  );
+  if (!response.ok) {
+    const data = await response.json().catch(() => null);
+    throw new Error(data?.message || data?.detail || `导出失败：${response.status}`);
+  }
+  const url = URL.createObjectURL(await response.blob());
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+export function fetchMeetingNotifications(page = 1, pageSize = 20) {
+  return request(`/api/meeting/notifications?page=${page}&pageSize=${pageSize}`).then(unwrap);
+}
+
+export function fetchMeetingUnreadCount() {
+  return request('/api/meeting/notifications/unread-count').then(unwrap);
+}
+
+export function markMeetingNotificationRead(id) {
+  return request(`/api/meeting/notifications/${encodeURIComponent(id)}/read`, { method: 'POST' }).then(unwrap);
+}
+
+export function markAllMeetingNotificationsRead() {
+  return request('/api/meeting/notifications/read-all', { method: 'POST' }).then(unwrap);
+}
+
 export function fetchOpinionMonitors() {
   return request('/api/opinion/monitors').then(unwrap);
 }

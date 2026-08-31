@@ -621,3 +621,138 @@ CREATE TABLE IF NOT EXISTS qual_task_event (
     created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_qual_task_event_task_id ON qual_task_event(task_id, id);
+
+-- ============================================================================
+-- P2 会议公开信息整理
+-- 业务表唯一事实来源：本文件。Python 侧仅通过 SQLAlchemy 读写任务协作所需字段，
+-- 禁止修改以下表结构。
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS conference (
+    id          BIGSERIAL PRIMARY KEY,
+    name        VARCHAR(256) NOT NULL,
+    category    VARCHAR(32)  NOT NULL DEFAULT '行业会议',
+    start_time  TIMESTAMP,
+    end_time    TIMESTAMP,
+    location    VARCHAR(256) NOT NULL DEFAULT '',
+    organizer   VARCHAR(256) NOT NULL DEFAULT '',
+    description TEXT         NOT NULL DEFAULT '',
+    keywords    VARCHAR(512) NOT NULL DEFAULT '',
+    competitors VARCHAR(512) NOT NULL DEFAULT '',
+    status      VARCHAR(16)  NOT NULL DEFAULT 'draft',
+    archived    BOOLEAN      NOT NULL DEFAULT FALSE,
+    last_error  TEXT         NOT NULL DEFAULT '',
+    created_by  VARCHAR(64)  NOT NULL DEFAULT '',
+    created_at  TIMESTAMP    NOT NULL DEFAULT NOW(),
+    updated_at  TIMESTAMP    NOT NULL DEFAULT NOW()
+);
+
+COMMENT ON TABLE conference IS '公开会议主表（status: draft/processing/completed；archived 归档后只读且不参与关联推荐召回）';
+CREATE INDEX IF NOT EXISTS idx_conference_status ON conference(status, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS conference_material (
+    id             BIGSERIAL PRIMARY KEY,
+    conference_id  BIGINT       NOT NULL REFERENCES conference(id),
+    material_type  VARCHAR(16)  NOT NULL,
+    title          VARCHAR(256) NOT NULL DEFAULT '',
+    source_url     VARCHAR(2048) NOT NULL DEFAULT '',
+    file_path      VARCHAR(512) NOT NULL DEFAULT '',
+    file_sha256    VARCHAR(64)  NOT NULL DEFAULT '',
+    mime_type      VARCHAR(128) NOT NULL DEFAULT '',
+    size_bytes     BIGINT       NOT NULL DEFAULT 0,
+    parse_status   VARCHAR(16)  NOT NULL DEFAULT 'pending',
+    parse_result   JSONB        NOT NULL DEFAULT '{}'::jsonb,
+    created_at     TIMESTAMP    NOT NULL DEFAULT NOW()
+);
+
+COMMENT ON TABLE conference_material IS '会议资料（material_type: link/file/transcript/image/audio；file_sha256 与 source_url 用于去重）';
+CREATE INDEX IF NOT EXISTS idx_conference_material_conf ON conference_material(conference_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_conference_material_hash ON conference_material(conference_id, file_sha256);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_conference_material_url
+    ON conference_material(conference_id, source_url) WHERE source_url <> '';
+CREATE UNIQUE INDEX IF NOT EXISTS uq_conference_material_hash
+    ON conference_material(conference_id, file_sha256) WHERE file_sha256 <> '';
+
+CREATE TABLE IF NOT EXISTS conference_report (
+    id                  BIGSERIAL PRIMARY KEY,
+    conference_id       BIGINT       NOT NULL REFERENCES conference(id),
+    version             INTEGER      NOT NULL DEFAULT 1,
+    content             TEXT         NOT NULL DEFAULT '',
+    trigger_reason      VARCHAR(256) NOT NULL DEFAULT '',
+    generated_by_model  VARCHAR(128) NOT NULL DEFAULT '',
+    related_policies    JSONB        NOT NULL DEFAULT '[]'::jsonb,
+    related_conferences JSONB        NOT NULL DEFAULT '[]'::jsonb,
+    related_competitors JSONB        NOT NULL DEFAULT '[]'::jsonb,
+    created_at          TIMESTAMP    NOT NULL DEFAULT NOW()
+);
+
+COMMENT ON TABLE conference_report IS '会议纪要（不可覆盖，重新整理产生新版本；关联推荐结果存 jsonb）';
+CREATE UNIQUE INDEX IF NOT EXISTS uq_conference_report_version
+    ON conference_report(conference_id, version);
+
+-- 既有库增量列（幂等）
+ALTER TABLE conference ADD COLUMN IF NOT EXISTS competitors VARCHAR(512) NOT NULL DEFAULT '';
+ALTER TABLE conference_report ADD COLUMN IF NOT EXISTS related_competitors JSONB NOT NULL DEFAULT '[]'::jsonb;
+
+CREATE TABLE IF NOT EXISTS knowledge_card (
+    id             BIGSERIAL PRIMARY KEY,
+    conference_id  BIGINT       NOT NULL REFERENCES conference(id),
+    report_id      BIGINT       NOT NULL REFERENCES conference_report(id),
+    card_type      VARCHAR(16)  NOT NULL,
+    title          VARCHAR(256) NOT NULL,
+    content        TEXT         NOT NULL DEFAULT '',
+    actor          VARCHAR(256) NOT NULL DEFAULT '',
+    expected_time  VARCHAR(128) NOT NULL DEFAULT '',
+    source_ref     JSONB        NOT NULL DEFAULT '[]'::jsonb,
+    created_at     TIMESTAMP    NOT NULL DEFAULT NOW()
+);
+
+COMMENT ON TABLE knowledge_card IS '知识卡片（card_type: 核心观点/决策事项/行动项/专家观点/关键数据；source_ref 必填，无来源支撑的内容降级"待确认"）';
+CREATE INDEX IF NOT EXISTS idx_knowledge_card_conf ON knowledge_card(conference_id, card_type);
+
+CREATE TABLE IF NOT EXISTS conference_task (
+    id             BIGSERIAL PRIMARY KEY,
+    conference_id  BIGINT       NOT NULL REFERENCES conference(id),
+    task_type      VARCHAR(32)  NOT NULL DEFAULT 'reorganize',
+    status         VARCHAR(16)  NOT NULL DEFAULT 'pending',
+    progress       JSONB        NOT NULL DEFAULT '[]'::jsonb,
+    error          TEXT         NOT NULL DEFAULT '',
+    retry_count    INTEGER      NOT NULL DEFAULT 0,
+    started_at     TIMESTAMP,
+    finished_at    TIMESTAMP,
+    created_at     TIMESTAMP    NOT NULL DEFAULT NOW()
+);
+
+COMMENT ON TABLE conference_task IS '会议整理任务（单任务记录，内部五步，progress 存各步骤状态；步骤级重试 2 次）';
+CREATE INDEX IF NOT EXISTS idx_conference_task_conf ON conference_task(conference_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_conference_task_status ON conference_task(status, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS conference_media (
+    id            BIGSERIAL PRIMARY KEY,
+    conference_id BIGINT       NOT NULL REFERENCES conference(id),
+    title         VARCHAR(512) NOT NULL DEFAULT '',
+    source_url    VARCHAR(2048) NOT NULL DEFAULT '',
+    source_name   VARCHAR(256) NOT NULL DEFAULT '',
+    published_at  TIMESTAMP,
+    summary       TEXT         NOT NULL DEFAULT '',
+    content_path  VARCHAR(512) NOT NULL DEFAULT '',
+    collected_at  TIMESTAMP    NOT NULL DEFAULT NOW()
+);
+
+COMMENT ON TABLE conference_media IS '会议相关媒体报道（仅存标题/来源/时间/摘要，无情感字段）';
+CREATE INDEX IF NOT EXISTS idx_conference_media_conf ON conference_media(conference_id, collected_at DESC);
+
+CREATE TABLE IF NOT EXISTS user_notification (
+    id         BIGSERIAL PRIMARY KEY,
+    user_id    BIGINT       NOT NULL,
+    type       VARCHAR(32)  NOT NULL DEFAULT 'meeting',
+    title      VARCHAR(256) NOT NULL DEFAULT '',
+    content    TEXT         NOT NULL DEFAULT '',
+    ref_type   VARCHAR(32)  NOT NULL DEFAULT '',
+    ref_id     BIGINT,
+    is_read    BOOLEAN      NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP    NOT NULL DEFAULT NOW()
+);
+
+COMMENT ON TABLE user_notification IS '用户级站内通知（通用表；会议模块在任务成功/失败时通知会议创建者）';
+CREATE INDEX IF NOT EXISTS idx_user_notification_user ON user_notification(user_id, is_read, created_at DESC);

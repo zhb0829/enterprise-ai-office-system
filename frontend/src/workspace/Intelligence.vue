@@ -3,8 +3,7 @@
     <header class="intelligence-head">
       <div>
         <p class="eyebrow">行业动态与竞品信息</p>
-        <h2 id="intelligence-title">行业情报</h2>
-        <p class="intelligence-lead">从已接入的公开来源中查看最新动态、主题聚类与已生成简报，帮助快速形成研判素材。</p>
+        <h2 id="intelligence-title">把公开动态<span class="inline-image" aria-hidden="true"></span>聚合成可用的研判素材</h2>
       </div>
       <div class="intelligence-status" role="status" aria-live="polite">
         <span aria-hidden="true"></span>
@@ -422,8 +421,9 @@ onMounted(loadDashboard);
 .intelligence-head h2 {
   margin: 0;
   color: #112927;
-  font-size: clamp(2rem, 4vw, 3.6rem);
-  line-height: 1.08;
+  font-size: clamp(2rem, 4.6vw, 4.4rem);
+  line-height: 1.06;
+  text-wrap: balance;
 }
 
 .intelligence-lead {

@@ -35,7 +35,7 @@ public class GatewayProxyController {
     private static final List<String> PROXY_PREFIXES =
             List.of("/api/templates", "/api/drafts", "/api/materials", "/api/exports",
                     "/api/policy", "/api/chat", "/api/compliance", "/api/intelligence/items",
-                    "/api/intelligence/clusters", "/api/intelligence/summarize");
+                    "/api/intelligence/clusters", "/api/intelligence/summarize", "/api/meeting/ai");
 
     private final AiServiceProperties aiServiceProperties;
 
@@ -44,7 +44,8 @@ public class GatewayProxyController {
             "/api/policy/**", "/api/chat/**", "/api/compliance/**",
             "/api/intelligence/items", "/api/intelligence/items/**",
             "/api/intelligence/clusters", "/api/intelligence/clusters/**",
-            "/api/intelligence/summarize", "/api/intelligence/summarize/**"
+            "/api/intelligence/summarize", "/api/intelligence/summarize/**",
+            "/api/meeting/ai/**"
     })
     public void proxy(HttpServletRequest request, HttpServletResponse response) throws IOException {
         String path = request.getRequestURI();

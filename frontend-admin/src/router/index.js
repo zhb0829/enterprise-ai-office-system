@@ -11,6 +11,7 @@ const Intelligence = () => import('../admin/views/Intelligence.vue');
 const OpinionSources = () => import('../admin/views/OpinionSources.vue');
 const OpinionAlertRules = () => import('../admin/views/OpinionAlertRules.vue');
 const OpinionCases = () => import('../admin/views/OpinionCases.vue');
+const Meetings = () => import('../admin/views/Meetings.vue');
 
 const router = createRouter({
   history: createWebHistory(),
@@ -34,6 +35,7 @@ const router = createRouter({
         { path: 'opinion-sources', name: 'admin-opinion-sources', component: OpinionSources, meta: { title: '舆情采集源治理', group: '舆情分析' } },
         { path: 'opinion-alert-rules', name: 'admin-opinion-alert-rules', component: OpinionAlertRules, meta: { title: '告警规则', group: '舆情分析' } },
         { path: 'opinion-cases', name: 'admin-opinion-cases', component: OpinionCases, meta: { title: '历史应对案例', group: '舆情分析' } },
+        { path: 'meetings', name: 'admin-meetings', component: Meetings, meta: { title: '会议公开信息整理', group: '会议知识' } },
       ],
     },
   ],

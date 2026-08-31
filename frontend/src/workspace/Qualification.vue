@@ -3,11 +3,7 @@
     <section class="qual-hero">
       <div>
         <p class="eyebrow">资质与服务指南智能编制</p>
-        <h2>把官方要求，整理成可审核的工作底稿。</h2>
-        <p class="qual-lead">
-          先锁定指南版本，再引用企业资质档案生成初稿。系统保留来源、校验报告和版本变化，
-          初稿通过自动校验后可直接导出正式 DOCX。
-        </p>
+        <h2>把官方要求<span class="inline-image" aria-hidden="true"></span>整理成可审核的申报底稿</h2>
       </div>
       <div class="qual-guard">
         <span class="qual-guard-dot"></span>
@@ -838,6 +834,7 @@ onBeforeUnmount(() => {
   margin: 0;
   font-size: clamp(2rem, 4.2vw, 4.8rem);
   line-height: 1.06;
+  text-wrap: balance;
 }
 
 .qual-lead {

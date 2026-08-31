@@ -22,8 +22,8 @@ spring:
   servlet:
     multipart:
       enabled: true
-      max-file-size: 20MB
-      max-request-size: 25MB
+      max-file-size: 500MB
+      max-request-size: 510MB
 
 mybatis-plus:
   configuration:
@@ -70,6 +70,9 @@ eaos:
   qual:
     storage-dir: ${QUAL_STORAGE_DIR:qual-storage}
     citation-min-score: ${QUAL_CITATION_MIN_SCORE:0.72}
+  meeting:
+    storage-dir: ${MEETING_STORAGE_DIR:meeting-storage}
+    internal-token: ${MEETING_INTERNAL_TOKEN:eaos-meeting-internal-dev-token}
 
 logging:
   level:

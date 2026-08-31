@@ -3,8 +3,7 @@
     <header class="opinion-hub-head">
       <div class="opinion-hub-copy">
         <p class="eyebrow">企业实时舆情工作台</p>
-        <h2 id="opinion-hub-title">舆情中心</h2>
-        <p>在同一个工作区完成舆情分析、风险告警处置和日报周报管理，减少页面跳转，保持监控上下文连续。</p>
+        <h2 id="opinion-hub-title">让每条舆情<span class="inline-image" aria-hidden="true"></span>都有可追溯的处置闭环</h2>
       </div>
       <div class="opinion-hub-status" role="status" aria-live="polite">
         <span aria-hidden="true"></span>
@@ -88,8 +87,9 @@ function switchTab(key) {
 .opinion-hub-copy h2 {
   margin: 0;
   color: #112927;
-  font-size: clamp(2rem, 4vw, 3.25rem);
-  line-height: 1.08;
+  font-size: clamp(2rem, 4.4vw, 4.2rem);
+  line-height: 1.06;
+  text-wrap: balance;
 }
 
 .opinion-hub-copy > p:last-child {

@@ -53,9 +53,10 @@ const menuItems = [
   { path: '/admin/opinion-sources', title: '舆情采集源治理', group: '舆情分析' },
   { path: '/admin/opinion-alert-rules', title: '告警规则', group: '舆情分析' },
   { path: '/admin/opinion-cases', title: '历史应对案例', group: '舆情分析' },
+  { path: '/admin/meetings', title: '会议资料整理', group: '会议知识' },
 ];
 
-const groups = ['内容管理', '知识库管理', '情报聚合', '舆情分析'];
+const groups = ['内容管理', '知识库管理', '情报聚合', '舆情分析', '会议知识'];
 
 const currentTitle = computed(() => route.meta.title || '后台管理');
 

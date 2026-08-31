@@ -29,6 +29,7 @@ deploy/nginx.pid
 
 # Runtime file storage
 qual-storage/
+admin-server/meeting-storage/
 
 # OS
 Thumbs.db
