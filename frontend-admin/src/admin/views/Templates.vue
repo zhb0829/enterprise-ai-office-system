@@ -118,12 +118,9 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue';
 import { createTemplate, fetchStyles, fetchTemplates, saveStyles, toggleTemplate } from '../../api';
-import { demoTemplates, demoStyles } from '../../demoData';
 
-// 演示数据仅在开发环境启用（Q19），生产显示空列表 + 重试
-const IS_DEV = import.meta.env.DEV;
-const templates = ref(IS_DEV ? demoTemplates : []);
-const styles = ref(IS_DEV ? demoStyles : []);
+const templates = ref([]);
+const styles = ref([]);
 const channelStyleMap = ref({});
 const loadFailed = ref(false);
 
@@ -251,17 +248,17 @@ async function toggle(t) {
 async function loadTemplates() {
   try {
     const [rows, stylePayload] = await Promise.all([fetchTemplates(), fetchStyles()]);
-    templates.value = rows.length ? rows : (IS_DEV ? demoTemplates : []);
+    templates.value = rows;
     if (stylePayload?.styles?.length) {
       styles.value = stylePayload.styles;
       channelStyleMap.value = stylePayload.channel_style_map || {};
     } else {
-      styles.value = IS_DEV ? demoStyles : [];
+      styles.value = [];
       channelStyleMap.value = {};
     }
     loadFailed.value = false;
   } catch {
-    loadFailed.value = !IS_DEV;
+    loadFailed.value = true;
   }
 }
 

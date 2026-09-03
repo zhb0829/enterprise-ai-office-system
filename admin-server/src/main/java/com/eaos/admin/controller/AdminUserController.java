@@ -116,6 +116,7 @@ public class AdminUserController {
   @DeleteMapping("/{id}")
   @Transactional
   public R<Void> delete(@PathVariable Long id) {
+    requireAdmin();
     Long operatorId = SecurityUtils.currentUserId();
     if (operatorId != null && operatorId.equals(id)) {
       throw new IllegalArgumentException("不能删除当前登录账号");

@@ -2,9 +2,16 @@
 from functools import lru_cache
 from pathlib import Path
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BASE_DIR = Path(__file__).resolve().parent.parent  # backend/
+_NON_PRODUCTION_ENVS = {"dev", "development", "test", "testing"}
+_DEFAULT_INTERNAL_TOKENS = {
+    "eaos-internal-token-change-me",
+    "eaos-opinion-internal-dev-token",
+    "eaos-meeting-internal-dev-token",
+}
 
 
 class Settings(BaseSettings):
@@ -73,6 +80,32 @@ class Settings(BaseSettings):
     meeting_asr_api_key: str = ""
     meeting_asr_base_url: str = "https://api.openai.com/v1"
     meeting_asr_model: str = "whisper-1"
+
+    @model_validator(mode="after")
+    def reject_insecure_production_tokens(self) -> "Settings":
+        if self.app_env.strip().lower() in _NON_PRODUCTION_ENVS:
+            return self
+
+        internal_tokens = {
+            "AI_INTERNAL_TOKEN": self.ai_internal_token,
+            "OPINION_JAVA_TOKEN": self.opinion_java_token,
+            "OPINION_INTERNAL_TOKEN": self.opinion_internal_token,
+            "MEETING_JAVA_TOKEN": self.meeting_java_token,
+            "MEETING_INTERNAL_TOKEN": self.meeting_internal_token,
+        }
+        invalid_names = [
+            name
+            for name, token in internal_tokens.items()
+            if len(token.strip()) < 16
+            or token.strip().lower() in _DEFAULT_INTERNAL_TOKENS
+            or "change-me" in token.strip().lower()
+        ]
+        if invalid_names:
+            raise ValueError(
+                "生产环境必须为服务间令牌配置至少 16 个字符的非默认随机值: "
+                + ", ".join(invalid_names)
+            )
+        return self
 
     @property
     def cors_origin_list(self) -> list[str]:

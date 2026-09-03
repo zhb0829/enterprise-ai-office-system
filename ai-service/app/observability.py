@@ -9,18 +9,32 @@ import time
 import uuid
 from contextvars import ContextVar
 
+import prometheus_client
 from prometheus_client import Counter, Histogram, make_asgi_app
 
 trace_id_var: ContextVar[str] = ContextVar("trace_id", default="")
 
-REQUEST_COUNT = Counter(
-    "eaos_http_requests_total", "HTTP requests", ["method", "path", "status"]
+
+def _metric(factory, *args, **kwargs):
+    """幂等注册：模块被重复导入（如 pytest 收集）时不抛 DuplicateTimeseries。"""
+    try:
+        return factory(*args, **kwargs)
+    except ValueError:
+        name = kwargs.get("name") or (args[0] if args else "")
+        collector = prometheus_client.REGISTRY._names_to_collectors.get(name)
+        if collector is None:
+            raise
+        return collector
+
+
+REQUEST_COUNT = _metric(
+    Counter, "eaos_http_requests_total", "HTTP requests", ["method", "path", "status"]
 )
-REQUEST_LATENCY = Histogram(
-    "eaos_http_request_seconds", "HTTP request latency", ["method", "path"]
+REQUEST_LATENCY = _metric(
+    Histogram, "eaos_http_request_seconds", "HTTP request latency", ["method", "path"]
 )
-LLM_CALLS = Counter("eaos_llm_calls_total", "LLM calls", ["model", "result"])
-LLM_LATENCY = Histogram("eaos_llm_call_seconds", "LLM call latency", ["model"])
+LLM_CALLS = _metric(Counter, "eaos_llm_calls_total", "LLM calls", ["model", "result"])
+LLM_LATENCY = _metric(Histogram, "eaos_llm_call_seconds", "LLM call latency", ["model"])
 
 
 class TraceIdLogFilter(logging.Filter):

@@ -33,6 +33,7 @@ qual-storage/
 admin-server/meeting-storage/
 ai-service/uploads/
 ai-service/exports/
+ai-service/.pytest-tmp/
 
 # OS
 Thumbs.db

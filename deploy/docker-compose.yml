@@ -22,7 +22,7 @@ services:
     networks: [eaos]
 
   admin-server:
-    image: ${ACR_REGISTRY}/eaos/admin-server:${EAOS_IMAGE_TAG:-latest}
+    image: ${ACR_REGISTRY}/admin-server:${EAOS_IMAGE_TAG:-latest}
     build: ../admin-server
     container_name: eaos-admin-server
     restart: unless-stopped
@@ -47,7 +47,7 @@ services:
     networks: [eaos]
 
   ai-service:
-    image: ${ACR_REGISTRY}/eaos/ai-service:${EAOS_IMAGE_TAG:-latest}
+    image: ${ACR_REGISTRY}/ai-service:${EAOS_IMAGE_TAG:-latest}
     build: ../ai-service
     container_name: eaos-ai-service
     restart: unless-stopped
@@ -80,21 +80,21 @@ services:
     networks: [eaos]
 
   frontend:
-    image: ${ACR_REGISTRY}/eaos/frontend:${EAOS_IMAGE_TAG:-latest}
+    image: ${ACR_REGISTRY}/frontend:${EAOS_IMAGE_TAG:-latest}
     build: ../frontend
     container_name: eaos-frontend
     restart: unless-stopped
     networks: [eaos]
 
   frontend-admin:
-    image: ${ACR_REGISTRY}/eaos/frontend-admin:${EAOS_IMAGE_TAG:-latest}
+    image: ${ACR_REGISTRY}/frontend-admin:${EAOS_IMAGE_TAG:-latest}
     build: ../frontend-admin
     container_name: eaos-frontend-admin
     restart: unless-stopped
     networks: [eaos]
 
   gateway:
-    image: ${ACR_REGISTRY}/eaos/gateway:${EAOS_IMAGE_TAG:-latest}
+    image: ${ACR_REGISTRY}/gateway:${EAOS_IMAGE_TAG:-latest}
     build: ./gateway
     container_name: eaos-gateway
     restart: unless-stopped

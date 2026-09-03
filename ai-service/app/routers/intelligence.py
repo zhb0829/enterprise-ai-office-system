@@ -22,6 +22,7 @@ from ..services.intelligence import (
 )
 from ..services.celery_app import collect_source_task
 from ..config import settings
+from ..security import require_internal_token
 
 router = APIRouter()
 internal_router = APIRouter()
@@ -112,17 +113,31 @@ def retry_collection(task_id: int, background_tasks: BackgroundTasks, db: Sessio
     return task
 
 
-@internal_router.post("/internal/intelligence/sources/{source_id}/run", response_model=CollectionTaskOut, status_code=202)
+@internal_router.post(
+    "/internal/intelligence/sources/{source_id}/run",
+    response_model=CollectionTaskOut,
+    status_code=202,
+    dependencies=[Depends(require_internal_token)],
+)
 def internal_trigger_collection(source_id: int, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     return trigger_collection(source_id, background_tasks, db)
 
 
-@internal_router.post("/internal/intelligence/tasks/{task_id}/retry", response_model=CollectionTaskOut, status_code=202)
+@internal_router.post(
+    "/internal/intelligence/tasks/{task_id}/retry",
+    response_model=CollectionTaskOut,
+    status_code=202,
+    dependencies=[Depends(require_internal_token)],
+)
 def internal_retry_collection(task_id: int, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     return retry_collection(task_id, background_tasks, db)
 
 
-@internal_router.post("/internal/intelligence/reports/generate", response_model=IntelligenceReportOut)
+@internal_router.post(
+    "/internal/intelligence/reports/generate",
+    response_model=IntelligenceReportOut,
+    dependencies=[Depends(require_internal_token)],
+)
 def internal_generate_report(period: str = "daily", db: Session = Depends(get_db)):
     rebuild_clusters(db)
     return generate_report(db, period)

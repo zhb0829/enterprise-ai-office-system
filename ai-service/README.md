@@ -2,8 +2,8 @@
 
 面向企业的 AI 智能办公平台，当前完成 **P0 公告与新闻稿智能撰写**，并新增 **P0 行业政策法规智能问答 MVP**：公开政策文件解析、条款级切分、混合检索、引用溯源、条款解读与合规初步比对。
 
-本项目为 **Python AI/agent 服务**。Java 后台管理系统已独立迁移至
-`E:\project\enterprise-ai-office-system-admin`，不再位于本项目目录中。
+本目录是单仓中的 **Python AI/agent 服务**；Java 网关位于同仓
+`../admin-server`。
 
 ## 仓库结构
 
@@ -30,26 +30,32 @@
 
 ## 启动
 
-一键启动（部署编排，含 DB + Python 及独立后台管理系统）：
+开发环境先在仓库根目录执行 `docker-compose up -d` 启动 PostgreSQL，再运行：
 
-```cmd
-E:\project\eaos-deploy\start.bat
-E:\project\eaos-deploy\stop.bat
+```powershell
+cd E:\project\enterprise-ai-office-system-admin\ai-service
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --port 8000
 ```
 
-手动启动见各子目录 README。
+生产环境使用仓库根目录的 `deploy/docker-compose.yml`，复制 `deploy/.env.example` 为 `.env` 后填入密钥。
 
 ## 配置
 
-- 统一外部配置：`E:\project\eaos-deploy\.env`（DB / 端口 / JWT / LLM Key，不入库）
-- 认证开关：`SECURITY_ENABLED=true`（Java 网关）开启 JWT；默认关闭（开发）
-- 生产环境：替换 `JWT_SECRET`、`LLM_API_KEY`、DB 密码
+- 本地配置：`ai-service/.env`（不入库）；生产编排配置：`deploy/.env`。
+- Java 网关认证始终启用；Python 的 `/internal/**` 端点始终要求 `X-Internal-Token`。
+- 生产环境必须设置 `AI_INTERNAL_TOKEN`、`OPINION_JAVA_TOKEN`、`OPINION_INTERNAL_TOKEN`、`MEETING_JAVA_TOKEN`、`MEETING_INTERNAL_TOKEN` 为至少 16 个字符的非默认随机值，否则服务拒绝启动。
+
+## 测试基线
+
+- 解释器：`Python 3.13.9`
+- 虚拟环境：仅使用本目录的 `.venv`
+- 依赖：`SQLAlchemy 2.0.52`
 
 ## 测试
 
 ```powershell
-cd E:\project\enterprise-ai-office-system-new
-.\.venv\Scripts\python.exe -m pytest tests -q --basetemp=C:\Temp\opencode\pytest-basetemp
+cd E:\project\enterprise-ai-office-system-admin\ai-service
+.\.venv\Scripts\python.exe -m pytest tests -q
 ```
 
 政策问答接口：

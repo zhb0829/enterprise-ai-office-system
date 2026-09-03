@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import logging
+import hmac
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 
@@ -24,7 +25,7 @@ internal_router = APIRouter()
 async def require_internal_token(request: Request) -> None:
     provided = request.headers.get("X-Internal-Token", "")
     expected = settings.opinion_internal_token or ""
-    if not provided or provided != expected:
+    if not provided or not expected or not hmac.compare_digest(provided, expected):
         raise HTTPException(status_code=403, detail="invalid internal token")
 
 

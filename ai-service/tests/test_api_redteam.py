@@ -27,6 +27,7 @@ def sqlite_session_factory(tmp_path, monkeypatch):
 
     monkeypatch.setattr(app_db, "engine", engine)
     monkeypatch.setattr(app_db, "SessionLocal", session_factory)
+    monkeypatch.setattr(app_main, "engine", engine)
     monkeypatch.setattr(app_main, "SessionLocal", session_factory)
     monkeypatch.setattr(app_main, "load_seed_templates", lambda db: 0)
 

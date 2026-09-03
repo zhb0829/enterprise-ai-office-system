@@ -13,6 +13,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.LocalDateTime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -26,11 +28,11 @@ import org.testcontainers.containers.PostgreSQLContainer;
 /**
  * 认证链路集成测试（Q12）：真实 PostgreSQL + Flyway 迁移， 覆盖 登录 → access token 访问 → refresh 轮换 → 旧 token 吊销 → 登出。
  *
- * <p>数据库双模式： - 默认：Testcontainers 启动 pgvector/pg16（CI 环境） - 本地 Windows 可设置 EAOS_TEST_DB_URL
- * 指向外部测试库以绕过 docker-java 非 ASCII 路径问题
+ * <p>数据库双模式： - 默认：Testcontainers 启动 pgvector/pg16（CI 环境） - 设置 EAOS_TEST_DB_URL 时连接外部测试库。
  */
 @SpringBootTest
 @AutoConfigureMockMvc
+@DisabledOnOs(value = OS.WINDOWS, disabledReason = "Windows 上的 Docker/Testcontainers 环境不作为此集成测试运行位")
 class AuthFlowIntegrationTest {
 
   private static final String EXTERNAL_URL = System.getenv("EAOS_TEST_DB_URL");

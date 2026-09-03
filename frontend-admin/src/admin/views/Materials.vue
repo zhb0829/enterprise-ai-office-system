@@ -56,11 +56,8 @@
 <script setup>
 import { onMounted, ref } from 'vue';
 import { deleteMaterial, fetchMaterial, fetchMaterials, uploadMaterial } from '../../api';
-import { demoMaterials } from '../../demoData';
 
-// 演示数据仅在开发环境启用（Q19），生产显示空列表 + 重试
-const IS_DEV = import.meta.env.DEV;
-const materials = ref(IS_DEV ? demoMaterials : []);
+const materials = ref([]);
 const loadFailed = ref(false);
 const uploading = ref(false);
 const previewItem = ref(null);
@@ -69,10 +66,10 @@ const previewText = ref('');
 async function loadMaterials() {
   try {
     const rows = await fetchMaterials();
-    materials.value = rows.length ? rows : (IS_DEV ? demoMaterials : []);
+    materials.value = rows;
     loadFailed.value = false;
   } catch {
-    loadFailed.value = !IS_DEV;
+    loadFailed.value = true;
   }
 }
 
