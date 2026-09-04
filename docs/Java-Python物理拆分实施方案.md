@@ -1,6 +1,6 @@
 # 企业 AI 智能办公系统 Java/Python 物理拆分实施方案
 
-> 状态：已确认并开始实施
+> 状态：Java/Python 分支拆分与仓库收尾已完成，情报聚合表 owner 收尾中
 > 
 > 更新日期：2026-09-04
 > 
@@ -12,7 +12,7 @@
 
 生产环境采用两个独立项目，而不是把 Java 和 Python 作为同一项目的源码模块：
 
-1. Java 和 Python 使用独立 Git 仓库。
+1. Java 和 Python 共用同一 GitHub 远程仓库（`zhb0829/enterprise-ai-office-system`），以独立分支维护：`main` 承载 Java/前端，`python` 承载 Python AI 服务；两边互不引用对方分支源码，各自独立依赖、独立测试、独立镜像和独立回滚。
 2. 两边使用独立依赖、独立测试、独立镜像、独立版本号和独立发布流程。
 3. Java 对外提供统一 API；Python 只提供内网 AI 能力。
 4. 两边通过版本化 HTTP API 和异步任务协议协作，不直接引用对方源码。
@@ -175,7 +175,7 @@ Python 负责：
 - LLM 调用记录
 - AI 解析中间结果
 
-情报聚合表需要在迁移前最终确认。若 Java 页面和管理接口拥有来源配置、任务面板和报告生命周期，则 Java 负责权威业务表；Python 只负责采集、聚类和摘要结果，通过内部 API 回写。
+情报聚合表已裁定为 Java 权威：`source_config`、`collected_article`、`article_cluster`、`intelligence_report`、`collection_task_log` 由 Java Flyway `V1__baseline.sql` 建表与维护（来源配置、任务面板、报告生命周期位于 Java 侧）。Python 不保留这些表的 Alembic 迁移与 ORM 模型，采集、聚类和摘要结果改为通过 Java 新增的 internal API 回写。
 
 ### 迁移顺序
 
@@ -250,7 +250,7 @@ EMBEDDING_MODEL=text-embedding-3-small
 
 ### 仓库和镜像
 
-Java/前端仓库构建：
+main 分支（Java/前端）构建：
 
 ```text
 admin-server:<git-sha>
@@ -259,13 +259,13 @@ frontend-admin:<git-sha>
 gateway:<git-sha>
 ```
 
-Python 仓库构建：
+python 分支（Python AI）构建：
 
 ```text
 ai-service:<git-sha>
 ```
 
-两个仓库独立 CI/CD、独立版本号、独立回滚。生产 Compose 只引用已发布镜像，不从 Java 仓库的相对路径构建 Python。
+main 与 python 分支各自独立 CI/CD、独立版本号、独立回滚。生产 Compose 只引用已发布镜像，不从 Java 仓库的相对路径构建 Python。
 
 ### 推荐发布顺序
 
@@ -318,19 +318,20 @@ ai-service:<git-sha>
 - [x] 生产 Compose 移除 `build: ../ai-service`，改为只使用 Python 镜像。
 - [x] 更新 Java、Python 和生产部署文档。
 - [x] 独立 Python 测试通过：`74 passed`。
+- [x] 建立单仓库双分支：`main`(Java)/`python`(Python)，删除冗余 `admin`、`archive/*` 远程分支。
+- [x] 合并并推送独立 Python 项目的全部未提交同步变更（`d266322` → `origin/python`）。
+- [x] Java 仓库提交移除 `ai-service` 源码与文档/CI/Compose 改动并推送（`2065052` → `origin/main`）；删除本地残留 `ai-service/.venv`。
+- [x] 修复内部鉴权测试令牌注入（新增 `tests/conftest.py`），无需外部环境变量即可 `74 passed`。
 
 待完成：
 
-- [ ] 为 Java/Python 建立独立远程仓库和正式仓库名称。
+- [ ] 情报聚合重叠表 Java 权威化：Java 新增 internal 回写 API，Python 删除重复 Alembic/模型并改为 HTTP 回写。
 - [ ] 完成 OpenAPI/JSON Schema 契约文件和契约测试。
 - [ ] 完成所有数据库表的 owner 登记。
-- [ ] 删除非 owner 项目的重复 Flyway/Alembic 迁移。
 - [ ] 将跨项目直接数据库读取改成内部 API。
 - [ ] 明确静态文件下载的权限链路。
 - [ ] 配置生产 Secret、镜像仓库和正式域名。
 - [ ] 在 Linux + Docker 环境执行完整部署验收。
-- [ ] 合并独立 Python 项目中当前未提交的同步变更并推送远程。
-- [ ] 验证稳定后删除 Java 仓库中残留的本地 Python 运行目录。
 
 ## 十一、验收清单
 
