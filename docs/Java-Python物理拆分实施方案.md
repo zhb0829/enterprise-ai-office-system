@@ -322,10 +322,10 @@ main 与 python 分支各自独立 CI/CD、独立版本号、独立回滚。生�
 - [x] 合并并推送独立 Python 项目的全部未提交同步变更（`d266322` → `origin/python`）。
 - [x] Java 仓库提交移除 `ai-service` 源码与文档/CI/Compose 改动并推送（`2065052` → `origin/main`）；删除本地残留 `ai-service/.venv`。
 - [x] 修复内部鉴权测试令牌注入（新增 `tests/conftest.py`），无需外部环境变量即可 `74 passed`。
+- [x] 情报聚合重叠表 owner 落地为 Java 权威：Java 新增 `/internal/intelligence/**` 回写/查询 API（`183086b`）；Python 删除重叠表 Alembic/ORM 并改为 HTTP 回写（`6db1f7a`）。
 
 待完成：
 
-- [ ] 情报聚合重叠表 Java 权威化：Java 新增 internal 回写 API，Python 删除重复 Alembic/模型并改为 HTTP 回写。
 - [ ] 完成 OpenAPI/JSON Schema 契约文件和契约测试。
 - [ ] 完成所有数据库表的 owner 登记。
 - [ ] 将跨项目直接数据库读取改成内部 API。
