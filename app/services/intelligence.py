@@ -1,5 +1,8 @@
-"""行业动态与竞品情报聚合：采集、去重、聚类和简报生成。
+"""行业动态与竞品情报聚合：采集、去重、聚类和简报生成（Java 权威数据面）。
 
+Java 拥有 source_config / collected_article / article_cluster / intelligence_report /
+collection_task_log 等全部情报表。本模块只保留采集器与 AI 能力：抓取、simhash、
+向量聚类与 LLM 摘要均为本地计算，读写一律经 ``IntelligenceJavaClient`` 完成。
 采集器只访问已配置的公开来源。LLM、Embedding、Playwright 均为可选能力，
 未配置时使用规则化降级，保证任务状态和数据链路仍然可验收。
 """
@@ -7,30 +10,24 @@ from __future__ import annotations
 
 import hashlib
 import html
-import json
 import logging
 import re
-from collections import Counter
 from datetime import datetime, timedelta, timezone
 from html.parser import HTMLParser
-from urllib.parse import urljoin, urlsplit, urlunsplit
+from urllib.parse import urlsplit, urlunsplit
 
 import httpx
-from sqlalchemy import or_
-from sqlalchemy.orm import Session
 
 from ..config import settings
-from ..models import (
-    ArticleCluster,
-    CollectedArticle,
-    CollectionTaskLog,
-    IntelligenceReport,
-    SourceConfig,
-)
 from .llm import LLMClient, LLMError
-from .materials import embed_texts, _cosine
+from .materials import _cosine
+from .intelligence_client import IntelligenceJavaClient, IntelligenceJavaError, java_client  # noqa: F401
 
 logger = logging.getLogger(__name__)
+
+
+class CollectionRunError(RuntimeError):
+    """采集执行失败（任务与来源状态已回写 Java，调用方按需重试）。"""
 
 
 class ArticleHTMLParser(HTMLParser):
@@ -73,21 +70,26 @@ def utcnow() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
-def is_source_due(source: SourceConfig, now: datetime | None = None) -> bool:
+def _iso(value: datetime | None) -> str | None:
+    return value.isoformat() if value else None
+
+
+# ---------- 纯算法工具（不依赖 DB） ----------
+
+
+def is_source_due(source: dict, now: datetime | None = None) -> bool:
     """判断定时扫描时是否应为来源创建采集任务；手动来源不参与 Beat。"""
-    interval_hours = {"hourly": 1, "daily": 24, "weekly": 24 * 7}.get(source.frequency)
+    interval_hours = {"hourly": 1, "daily": 24, "weekly": 24 * 7}.get(str(source.get("frequency")))
     if interval_hours is None:
         return False
-    if source.last_run_at is None:
+    last_run = source.get("lastRunAt")
+    if not last_run:
         return True
-    return (now or utcnow()) - source.last_run_at >= timedelta(hours=interval_hours)
-
-
-def has_active_task(db: Session, source_id: int) -> bool:
-    return db.query(CollectionTaskLog.id).filter(
-        CollectionTaskLog.source_id == source_id,
-        CollectionTaskLog.status.in_(("queued", "running")),
-    ).first() is not None
+    try:
+        last = datetime.fromisoformat(str(last_run))
+    except ValueError:
+        return True
+    return (now or utcnow()) - last >= timedelta(hours=interval_hours)
 
 
 def normalize_url(value: str) -> str:
@@ -117,7 +119,7 @@ def simhash(value: str, bits: int = 64) -> int:
             weights[index] += 1 if number & (1 << index) else -1
     result = 0
     for index, weight in enumerate(weights):
-        if weight >= 0:
+        if weight > 0:
             result |= 1 << index
     return result
 
@@ -131,11 +133,15 @@ def article_hash(title: str, content: str, url: str = "") -> str:
     return hashlib.sha256((normalized or normalize_url(url)).encode("utf-8")).hexdigest()
 
 
+# ---------- 采集（网络抓取，输入/输出均为 dict） ----------
+
+
 def _extract_html(raw: str, url: str) -> tuple[str, str]:
     try:
         import trafilatura
 
-        title = trafilatura.extract_metadata(raw).title if trafilatura.extract_metadata(raw) else ""
+        metadata = trafilatura.extract_metadata(raw)
+        title = metadata.title if metadata else ""
         text = trafilatura.extract(raw, include_comments=False, include_tables=True) or ""
         if text.strip():
             return title or "", text.strip()
@@ -155,10 +161,10 @@ def _fetch_html(url: str) -> tuple[str, str, str]:
         return response.text, content_type, str(response.url)
 
 
-def _collect_rss(source: SourceConfig) -> list[dict]:
+def _collect_rss(source: dict) -> list[dict]:
     import feedparser
 
-    raw, _, final_url = _fetch_html(source.url)
+    raw, _, final_url = _fetch_html(source["url"])
     parsed = feedparser.parse(raw)
     items = []
     for entry in parsed.entries[: settings.collection_max_items]:
@@ -169,9 +175,9 @@ def _collect_rss(source: SourceConfig) -> list[dict]:
     return items
 
 
-def _collect_api(source: SourceConfig) -> list[dict]:
-    raw, _, final_url = _fetch_html(source.url)
-    payload = json.loads(raw)
+def _collect_api(source: dict) -> list[dict]:
+    raw, _, final_url = _fetch_html(source["url"])
+    payload = json_loads(raw)
     if isinstance(payload, dict):
         for key in ("items", "articles", "data", "results"):
             if isinstance(payload.get(key), list):
@@ -191,8 +197,8 @@ def _collect_api(source: SourceConfig) -> list[dict]:
     return result
 
 
-def _collect_web(source: SourceConfig) -> list[dict]:
-    raw, content_type, final_url = _fetch_html(source.url)
+def _collect_web(source: dict) -> list[dict]:
+    raw, content_type, final_url = _fetch_html(source["url"])
     title, content = _extract_html(raw, final_url)
     if not content.strip() and "html" in content_type:
         try:
@@ -201,136 +207,108 @@ def _collect_web(source: SourceConfig) -> list[dict]:
             with sync_playwright() as playwright:
                 browser = playwright.chromium.launch(headless=True)
                 page = browser.new_page(user_agent=settings.collection_user_agent)
-                page.goto(source.url, wait_until="networkidle", timeout=settings.collection_timeout * 1000)
+                page.goto(source["url"], wait_until="networkidle", timeout=settings.collection_timeout * 1000)
                 title = page.title() or title
                 content = page.locator("body").inner_text()
                 browser.close()
         except Exception as exc:  # noqa: BLE001
-            logger.debug("Playwright 兜底不可用 %s: %s", source.url, exc)
-    return [{"title": title or source.name, "content": content[:100000], "url": normalize_url(final_url or source.url), "author": ""}]
+            logger.debug("Playwright 兜底不可用 %s: %s", source.get("url"), exc)
+    return [{"title": title or source.get("name", ""), "content": content[:100000], "url": normalize_url(final_url or source.get("url", "")), "author": ""}]
 
 
-def collect_source(source: SourceConfig) -> list[dict]:
-    if source.type == "rss":
+def json_loads(raw: str):
+    import json
+
+    return json.loads(raw)
+
+
+def collect_source(source: dict) -> list[dict]:
+    source_type = str(source.get("type"))
+    if source_type == "rss":
         return _collect_rss(source)
-    if source.type == "api":
+    if source_type == "api":
         return _collect_api(source)
     return _collect_web(source)
 
 
-def _matches_source(item: dict, source: SourceConfig) -> bool:
-    # Source-level keyword fields are retained only for compatibility with the
-    # intelligence module. Public-source collection itself must remain complete,
-    # then each monitoring group performs its own explicit matching.
+def _matches_source(item: dict, source: dict) -> bool:
+    # 公开来源需完整采集，具体命中断言由各监控域自行完成。
     return True
 
 
-def persist_articles(db: Session, source: SourceConfig, raw_items: list[dict]) -> int:
-    inserted = 0
-    existing_hashes = {row[0] for row in db.query(CollectedArticle.content_hash).all()}
+def build_ingest_items(source: dict, raw_items: list[dict]) -> list[dict]:
+    """把抓取结果换算成 Java 入库载荷（按既有算法计算 content_hash/title_hash）。"""
+    payload: list[dict] = []
     for item in raw_items:
         if not _matches_source(item, source):
             continue
-        title = str(item.get("title") or source.name).strip()[:512]
+        title = str(item.get("title") or source.get("name", "")).strip()[:512]
         content = str(item.get("content") or "").strip()
-        url = normalize_url(str(item.get("url") or source.url))
+        url = normalize_url(str(item.get("url") or source.get("url", "")))
         digest = article_hash(title, content, url)
-        if digest in existing_hashes:
-            continue
-        db.add(CollectedArticle(
-            source_id=source.id,
-            title=title,
-            content=content,
-            url=url,
-            author=str(item.get("author") or "")[:256],
-            content_hash=digest,
-            title_hash=f"{simhash(title):016x}",
-            meta={"sourceName": source.name, "keywords": source.keywords or [], "competitors": source.competitors or []},
-        ))
-        existing_hashes.add(digest)
-        inserted += 1
-    db.commit()
-    return inserted
-
-
-def rebuild_clusters(db: Session, since_days: int = 30) -> list[ArticleCluster]:
-    cutoff = utcnow() - timedelta(days=since_days)
-    articles = db.query(CollectedArticle).filter(CollectedArticle.collected_at >= cutoff).order_by(CollectedArticle.collected_at.desc()).all()
-    db.query(ArticleCluster).delete()
-    groups: list[dict] = []
-    for article in articles:
-        signature = simhash(f"{article.title} {article.content[:3000]}")
-        vector = article.embedding or []
-        best = None
-        best_score = 999
-        for group in groups:
-            distance = hamming_distance(signature, group["signature"])
-            cosine = _cosine(vector, group["vector"]) if vector and group["vector"] else 0
-            score = distance - cosine * 8
-            if score < best_score:
-                best, best_score = group, score
-        if best is None or best_score > 18:
-            best = {"signature": signature, "vector": vector, "articles": []}
-            groups.append(best)
-        best["articles"].append(article)
-    clusters = []
-    for group in groups:
-        rows = group["articles"]
-        topic = rows[0].title[:256] or "未命名主题"
-        sources = sorted({str(row.source_id) for row in rows})
-        cluster = ArticleCluster(
-            topic=topic,
-            article_ids=[row.id for row in rows],
-            report_count=len(rows),
-            time_start=min((row.publish_time or row.collected_at) for row in rows),
-            time_end=max((row.publish_time or row.collected_at) for row in rows),
-            sources=sources,
-            meta={"dedupe": "simhash", "clusterScore": 1.0 if len(rows) == 1 else 0.5},
+        payload.append(
+            {
+                "title": title,
+                "content": content,
+                "url": url,
+                "author": str(item.get("author") or "")[:256],
+                "contentHash": digest,
+                "titleHash": f"{simhash(title):016x}",
+                "status": "new",
+                "embedding": [],
+                "meta": {
+                    "sourceName": source.get("name", ""),
+                    "keywords": source.get("keywords") or [],
+                    "competitors": source.get("competitors") or [],
+                },
+            }
         )
-        db.add(cluster)
-        clusters.append(cluster)
-    db.commit()
-    return clusters
+    return payload
 
 
-def _article_view(article: CollectedArticle, source_name: str = "") -> dict:
+# ---------- 面向用户/报告展示的视图 ----------
+
+
+def article_view(article: dict) -> dict:
     return {
-        "id": article.id,
-        "sourceId": article.source_id,
-        "sourceName": source_name,
-        "title": article.title,
-        "content": article.content[:2000],
-        "url": article.url,
-        "author": article.author,
-        "publishTime": article.publish_time or article.collected_at,
-        "collectedAt": article.collected_at,
-        "sources": [{"id": article.source_id, "url": article.url, "title": article.title}],
-        "generatedAt": article.collected_at,
+        "id": article.get("id"),
+        "sourceId": article.get("sourceId"),
+        "sourceName": article.get("sourceName", ""),
+        "title": article.get("title", ""),
+        "content": str(article.get("content") or "")[:2000],
+        "url": article.get("url", ""),
+        "author": article.get("author", ""),
+        "publishTime": article.get("publishTime"),
+        "collectedAt": article.get("collectedAt"),
+        "sources": [
+            {
+                "id": article.get("sourceId"),
+                "url": article.get("url", ""),
+                "title": article.get("title", ""),
+                "sourceName": article.get("sourceName", ""),
+            }
+        ],
+        "generatedAt": article.get("collectedAt"),
         "model": "",
         "riskFlags": ["公开来源内容，发布前需人工核验"],
     }
 
 
-def list_articles(db: Session, keyword: str = "", source_id: int | None = None, page: int = 1, page_size: int = 20) -> dict:
-    query = db.query(CollectedArticle, SourceConfig.name).join(SourceConfig, SourceConfig.id == CollectedArticle.source_id)
-    if source_id:
-        query = query.filter(CollectedArticle.source_id == source_id)
-    if keyword.strip():
-        term = f"%{keyword.strip()}%"
-        query = query.filter(or_(CollectedArticle.title.ilike(term), CollectedArticle.content.ilike(term)))
-    total = query.count()
-    rows = query.order_by(CollectedArticle.collected_at.desc()).offset(max(0, page - 1) * page_size).limit(min(page_size, 100)).all()
-    return {"items": [_article_view(article, source_name) for article, source_name in rows], "total": total, "page": page, "pageSize": page_size}
+def list_articles(keyword: str = "", source_id: int | None = None, page: int = 1, page_size: int = 20) -> dict:
+    data = java_client.list_articles(keyword=keyword, source_id=source_id, page=page, page_size=page_size)
+    items = [article_view(row) for row in (data.get("items") or [])]
+    return {"items": items, "total": data.get("total", 0), "page": page, "pageSize": page_size}
 
 
-def summarize_articles(db: Session, article_ids: list[int], cluster_id: int | None = None) -> dict:
-    articles = db.query(CollectedArticle).filter(CollectedArticle.id.in_(article_ids)).order_by(CollectedArticle.collected_at.desc()).all()
+def summarize_articles(article_ids: list[int], cluster_id: int | None = None) -> dict:
+    if not article_ids:
+        return {"summary": "暂无可摘要的情报条目", "sources": [], "generatedAt": _iso(utcnow()), "model": "rule-based", "riskFlags": ["未找到条目"]}
+    articles = java_client.list_articles_by_ids(article_ids)
     if not articles:
-        return {"summary": "暂无可摘要的情报条目", "sources": [], "generatedAt": utcnow().isoformat(), "model": "rule-based", "riskFlags": ["未找到条目"]}
-    source_map = {row.id: row.name for row in db.query(SourceConfig).all()}
-    context = "\n".join(f"- {a.title}: {a.content[:1200]}" for a in articles)
+        return {"summary": "暂无可摘要的情报条目", "sources": [], "generatedAt": _iso(utcnow()), "model": "rule-based", "riskFlags": ["未找到条目"]}
+    context = "\n".join(f"- {a.get('title', '')}: {str(a.get('content') or '')[:1200]}" for a in articles)
     model = "rule-based"
-    summary = "；".join(a.title for a in articles[:3])
+    summary = "；".join(str(a.get("title", "")) for a in articles[:3])
     risk_flags = ["摘要基于公开来源，仅供决策参考"]
     llm = LLMClient()
     if not llm.is_mock:
@@ -347,78 +325,188 @@ def summarize_articles(db: Session, article_ids: list[int], cluster_id: int | No
     return {
         "summary": summary,
         "clusterId": cluster_id,
-        "sources": [{"articleId": a.id, "sourceId": a.source_id, "sourceName": source_map.get(a.source_id, ""), "url": a.url, "title": a.title} for a in articles],
-        "generatedAt": utcnow().isoformat(),
+        "sources": [
+            {
+                "articleId": a.get("id"),
+                "sourceId": a.get("sourceId"),
+                "sourceName": a.get("sourceName", ""),
+                "url": a.get("url", ""),
+                "title": a.get("title", ""),
+            }
+            for a in articles
+        ],
+        "generatedAt": _iso(utcnow()),
         "model": model,
         "riskFlags": risk_flags,
     }
 
 
-def generate_report(db: Session, period: str = "daily") -> IntelligenceReport:
+# ---------- 聚类 ----------
+
+
+def _fetch_recent_articles(since_days: int, page_size: int = 100) -> list[dict]:
+    """分页拉取 Java 权威表中的近期文章（含 embedding）。"""
+    rows: list[dict] = []
+    page = 1
+    while True:
+        data = java_client.list_articles(since_days=since_days, page=page, page_size=page_size)
+        items = data.get("items") or []
+        rows.extend(items)
+        total = int(data.get("total") or 0)
+        if len(rows) >= total or not items:
+            break
+        page += 1
+    return rows
+
+
+def rebuild_clusters(since_days: int = 30) -> list[dict]:
+    """读取近期文章 → 本地 simhash+cosine 聚类 → 全量重建回写 Java article_cluster。"""
+    articles = _fetch_recent_articles(since_days)
+    groups: list[dict] = []
+    for article in articles:
+        signature = simhash(f"{article.get('title', '')} {str(article.get('content') or '')[:3000]}")
+        vector = article.get("embedding") or []
+        best = None
+        best_score = 999
+        for group in groups:
+            distance = hamming_distance(signature, group["signature"])
+            cosine = _cosine(vector, group["vector"]) if vector and group["vector"] else 0
+            score = distance - cosine * 8
+            if score < best_score:
+                best, best_score = group, score
+        if best is None or best_score > 18:
+            best = {"signature": signature, "vector": vector, "articles": []}
+            groups.append(best)
+        best["articles"].append(article)
+
+    clusters: list[dict] = []
+    for group in groups:
+        rows = group["articles"]
+        topic = str(rows[0].get("title", ""))[:256] or "未命名主题"
+        sources = sorted({str(row.get("sourceId")) for row in rows if row.get("sourceId") is not None})
+        times = [
+            datetime.fromisoformat(str(row.get("publishTime") or row.get("collectedAt")))
+            for row in rows
+            if (row.get("publishTime") or row.get("collectedAt"))
+        ]
+        clusters.append(
+            {
+                "topic": topic,
+                "summary": "",
+                "articleIds": [row.get("id") for row in rows],
+                "reportCount": len(rows),
+                "timeStart": _iso(min(times)) if times else None,
+                "timeEnd": _iso(max(times)) if times else None,
+                "sources": sources,
+                "meta": {"dedupe": "simhash", "clusterScore": 1.0 if len(rows) == 1 else 0.5},
+            }
+        )
+    java_client.replace_clusters(clusters)
+    return clusters
+
+
+# ---------- 简报 ----------
+
+
+def generate_report(period: str = "daily") -> dict:
+    """读取近期聚类 → 逐簇摘要 → 组装并保存简报（Java intelligence_report）→ 回写聚类摘要。"""
     now = utcnow()
-    cutoff = now - timedelta(days=7 if period == "weekly" else 1)
-    clusters = db.query(ArticleCluster).filter(ArticleCluster.time_end >= cutoff).order_by(ArticleCluster.report_count.desc()).limit(20).all()
+    days = 7 if period == "weekly" else 1
+    clusters = java_client.list_clusters(since_days=days, limit=50)
+    top = clusters[:20]
     items = []
-    all_ids = []
-    for cluster in clusters:
-        data = summarize_articles(db, cluster.article_ids[:8], cluster.id)
-        cluster.summary = data["summary"]
-        items.append({"clusterId": cluster.id, "topic": cluster.topic, "reportCount": cluster.report_count, **data})
-        all_ids.extend(cluster.article_ids)
-    report = IntelligenceReport(
-        title=f"行业与竞品情报简报（{period}）",
-        period=period,
-        topic_tags=[cluster.topic for cluster in clusters[:10]],
-        items=items,
-        trend={"period": period, "articleCount": len(set(all_ids)), "clusterCount": len(clusters), "topTopics": [cluster.topic for cluster in clusters[:5]]},
-        sources=[source_item for report_item in items for source_item in report_item.get("sources", [])],
-        model="rule-based" if not settings.llm_api_key else settings.llm_model_generation,
-        risk_flags=["情报简报为参考信息，重要结论需人工核验"],
-    )
-    db.add(report)
-    db.commit()
-    db.refresh(report)
-    return report
+    all_ids: list[int] = []
+    enriched: list[dict] = []
+    for cluster in top:
+        ids = [int(i) for i in (cluster.get("articleIds") or [])]
+        data = summarize_articles(ids, cluster.get("id"))
+        cluster["summary"] = data["summary"]
+        items.append(
+            {
+                "clusterId": cluster.get("id"),
+                "topic": cluster.get("topic"),
+                "reportCount": cluster.get("reportCount"),
+                **data,
+            }
+        )
+        all_ids.extend(ids)
+        enriched.append(cluster)
+    if enriched:
+        java_client.replace_clusters(enriched)
+    report = {
+        "title": f"行业与竞品情报简报（{period}）",
+        "period": period,
+        "topicTags": [cluster.get("topic") for cluster in top[:10]],
+        "items": items,
+        "trend": {
+            "period": period,
+            "articleCount": len(set(all_ids)),
+            "clusterCount": len(top),
+            "topTopics": [cluster.get("topic") for cluster in top[:5]],
+        },
+        "sources": [source_item for report_item in items for source_item in report_item.get("sources", [])],
+        "model": "rule-based" if not settings.llm_api_key else settings.llm_model_generation,
+        "riskFlags": ["情报简报为参考信息，重要结论需人工核验"],
+        "generatedAt": _iso(now),
+    }
+    return java_client.save_report(report)
 
 
-def run_collection_task(db: Session, task_id: int) -> None:
-    task = db.get(CollectionTaskLog, task_id)
-    if not task:
-        return
-    source = db.get(SourceConfig, task.source_id)
-    if not source:
-        task.status, task.error, task.finished_at = "failed", "采集源不存在", utcnow()
-        db.commit()
-        return
-    task.status, task.started_at = "running", utcnow()
-    source.last_run_at = task.started_at
-    db.commit()
+# ---------- 任务执行（Worker） ----------
+
+
+def _mark_source_failure(source_id: int, error: str) -> None:
     try:
+        source = java_client.get_source(source_id)
+    except IntelligenceJavaError:
+        logger.exception("读取采集源状态失败 source=%s", source_id)
+        return
+    if not source:
+        return
+    failures = int(source.get("consecutiveFailures") or 0) + 1
+    state = {
+        "healthStatus": "degraded",
+        "consecutiveFailures": failures,
+        "lastError": str(error)[:4000],
+    }
+    if failures >= settings.collection_failure_pause_after and source.get("status") != "paused":
+        state["healthStatus"] = "paused"
+        state["status"] = "paused"
+    java_client.update_source_run_state(source_id, state)
+
+
+def run_collection_task(task_id: int) -> dict | None:
+    """采集任务执行：任务与来源状态均由 Java 权威保存，本函数负责编排与回写。"""
+    task = java_client.get_task(task_id)
+    if not task:
+        return None
+    source_id = int(task.get("sourceId"))
+    java_client.mark_task_start(task_id)
+    java_client.update_source_run_state(source_id, {"lastRunAt": _iso(utcnow())})
+    try:
+        source = java_client.get_source(source_id)
+        if not source:
+            raise CollectionRunError(f"采集源不存在 source={source_id}")
         items = collect_source(source)
-        task.items_count = persist_articles(db, source, items)
-        rebuild_clusters(db)
-        source.health_status = "healthy"
-        source.consecutive_failures = 0
-        source.last_success_at = utcnow()
-        source.last_error = ""
-        task.status = "success"
+        payload = build_ingest_items(source, items)
+        result = java_client.ingest_articles(source_id, payload)
+        inserted = int(result.get("inserted") or 0)
+        java_client.update_source_run_state(
+            source_id,
+            {
+                "healthStatus": "healthy",
+                "consecutiveFailures": 0,
+                "lastSuccessAt": _iso(utcnow()),
+                "lastError": "",
+            },
+        )
+        java_client.mark_task_result(task_id, inserted)
+        return java_client.get_task(task_id)
     except Exception as exc:  # noqa: BLE001
-        logger.exception("情报采集失败 source=%s", source.id)
-        task.status = "failed"
-        task.error = str(exc)[:4000]
-        source.health_status = "degraded"
-        source.consecutive_failures = (source.consecutive_failures or 0) + 1
-        source.last_error = str(exc)[:4000]
-        if source.consecutive_failures >= settings.collection_failure_pause_after:
-            source.status = "paused"
-            source.health_status = "paused"
-    task.finished_at = utcnow()
-    db.commit()
-
-
-def create_task(db: Session, source_id: int, retry_count: int = 0) -> CollectionTaskLog:
-    task = CollectionTaskLog(source_id=source_id, status="queued", retry_count=retry_count)
-    db.add(task)
-    db.commit()
-    db.refresh(task)
-    return task
+        logger.exception("情报采集失败 task=%s source=%s", task_id, source_id)
+        try:
+            _mark_source_failure(source_id, str(exc))
+            java_client.mark_task_failure(task_id, str(exc))
+        except IntelligenceJavaError:
+            logger.exception("回写失败状态失败 task=%s", task_id)
+        raise CollectionRunError(str(exc)) from exc

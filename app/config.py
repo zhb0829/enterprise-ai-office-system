@@ -53,6 +53,8 @@ class Settings(BaseSettings):
     # 情报聚合 / Celery。权限由 Java 网关统一负责。
     redis_url: str = "redis://localhost:6379/0"
     celery_enabled: bool = False
+    # 情报权威数据（source_config 等）全部由 Java 管理，Python 经 Java internal API 读写。
+    intelligence_java_base_url: str = "http://localhost:8080"
     collection_user_agent: str = "EAOS-IntelligenceCollector/0.1 (+internal)"
     collection_timeout: int = 20
     collection_max_items: int = 50

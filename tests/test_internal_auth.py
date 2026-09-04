@@ -16,8 +16,7 @@ from app.opinion import routers as opinion_routers
 from app.routers import intelligence, qualification
 
 INTERNAL_INTELLIGENCE_ENDPOINTS = (
-    ("/internal/intelligence/sources/1/run", 202),
-    ("/internal/intelligence/tasks/1/retry", 202),
+    ("/internal/intelligence/tasks/1/dispatch", 202),
     ("/internal/intelligence/reports/generate", 200),
 )
 VALID_PRODUCTION_TOKENS = {
@@ -35,24 +34,11 @@ def intelligence_client(monkeypatch):
     app.include_router(intelligence.internal_router)
     app.dependency_overrides[get_db] = lambda: object()
 
-    task = {
-        "id": 1,
-        "source_id": 1,
-        "status": "queued",
-        "items_count": 0,
-        "retry_count": 0,
-        "created_at": datetime(2026, 9, 3),
-    }
-    report = {
-        "id": 1,
-        "title": "每日情报报告",
-        "period": "daily",
-        "generated_at": datetime(2026, 9, 3),
-    }
-    monkeypatch.setattr(intelligence, "trigger_collection", lambda source_id, background_tasks, db: task)
-    monkeypatch.setattr(intelligence, "retry_collection", lambda task_id, background_tasks, db: task)
-    monkeypatch.setattr(intelligence, "rebuild_clusters", lambda db: None)
-    monkeypatch.setattr(intelligence, "generate_report", lambda db, period: report)
+    import app.services.intelligence as intel_svc
+
+    monkeypatch.setattr(intel_svc, "run_collection_task", lambda task_id: {"id": task_id, "status": "running"})
+    monkeypatch.setattr(intel_svc, "rebuild_clusters", lambda since_days=30: [])
+    monkeypatch.setattr(intel_svc, "generate_report", lambda period="daily": {"id": 1, "period": period})
     return TestClient(app)
 
 

@@ -1,4 +1,7 @@
-"""Celery 可选适配。未启用 Celery 时由 FastAPI BackgroundTasks 执行同一业务函数。"""
+"""Celery 可选适配。未启用 Celery 时由 FastAPI BackgroundTasks 执行同一业务函数。
+
+情报任务与来源状态由 Java 权威保存，Celery 只承担调度与重试。
+"""
 from ..config import settings
 
 try:
@@ -26,41 +29,31 @@ try:
         max_retries=3,
     )
     def collect_source_task(self, task_id: int):
-        from ..db import SessionLocal
-        from ..models import CollectionTaskLog, SourceConfig
-        from .intelligence import run_collection_task
+        from .intelligence import CollectionRunError, run_collection_task
+        from .intelligence_client import java_client
 
-        db = SessionLocal()
         try:
-            task = db.get(CollectionTaskLog, task_id)
-            if task:
-                task.celery_task_id = self.request.id or ""
-                task.retry_count = self.request.retries
-                db.commit()
-            run_collection_task(db, task_id)
-            task = db.get(CollectionTaskLog, task_id)
-            source = db.get(SourceConfig, task.source_id) if task else None
-            if task and task.status == "failed" and source and source.status != "paused":
-                raise CollectionRetryError(task.error or f"采集任务 {task_id} 执行失败")
-        finally:
-            db.close()
+            run_collection_task(task_id)
+        except CollectionRunError:
+            task = java_client.get_task(task_id)
+            if not task or task.get("status") != "failed":
+                return
+            source = java_client.get_source(task.get("sourceId")) if task.get("sourceId") else None
+            if source and source.get("status") != "paused":
+                raise CollectionRetryError(task.get("error") or f"采集任务 {task_id} 执行失败")
 
     @celery_app.task(name="app.services.celery_app.collect_enabled_sources")
     def collect_enabled_sources():
-        from ..db import SessionLocal
-        from ..models import SourceConfig
-        from .intelligence import create_task, has_active_task, is_source_due
+        from .intelligence import is_source_due
+        from .intelligence_client import java_client
 
-        db = SessionLocal()
-        try:
-            for source in db.query(SourceConfig).filter(SourceConfig.status == "enabled").all():
-                if not is_source_due(source) or has_active_task(db, source.id):
-                    continue
-                task = create_task(db, source.id)
-                collect_source_task.delay(task.id)
-        finally:
-            db.close()
+        for source in java_client.list_sources(status="enabled"):
+            if not is_source_due(source):
+                continue
+            created = java_client.create_task(source["id"], 0)
+            collect_source_task.delay(created["id"])
 
 except ImportError:  # pragma: no cover - 纯离线环境
     celery_app = None
     collect_source_task = None
+    collect_enabled_sources = None
