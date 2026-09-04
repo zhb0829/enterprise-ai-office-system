@@ -323,15 +323,15 @@ main 与 python 分支各自独立 CI/CD、独立版本号、独立回滚。生�
 - [x] Java 仓库提交移除 `ai-service` 源码与文档/CI/Compose 改动并推送（`2065052` → `origin/main`）；删除本地残留 `ai-service/.venv`。
 - [x] 修复内部鉴权测试令牌注入（新增 `tests/conftest.py`），无需外部环境变量即可 `74 passed`。
 - [x] 情报聚合重叠表 owner 落地为 Java 权威：Java 新增 `/internal/intelligence/**` 回写/查询 API（`183086b`）；Python 删除重叠表 Alembic/ORM 并改为 HTTP 回写（`6db1f7a`）。
+- [x] 契约固化：新增 `/internal` 契约文档与任务信封 JSON Schema（`docs/contracts/internal-api.md`、`task-envelope.schema.json`），Python 增加契约路径回归测试 `tests/test_contract_paths.py`。
+- [x] 全表 owner 登记：`docs/db-ownership-register.md` 枚举 Java/Python 全部表（每表 owner/写者/迁移）。
+- [x] 静态文件下载改为受控链路：Java 新增 `/api/files/**` 鉴权代理下载（防路径穿越），Python 下发受控地址，生产网关移除 `/static` 直连 Python，前端改带令牌 blob 拉取。
+- [x] 生产 Secret/镜像/域名：交付 `deploy/env.production.example` 与 `docs/production-release-checklist.md`（真实值上线时注入）。
 
 待完成：
 
-- [ ] 完成 OpenAPI/JSON Schema 契约文件和契约测试。
-- [ ] 完成所有数据库表的 owner 登记。
-- [ ] 将跨项目直接数据库读取改成内部 API。
-- [ ] 明确静态文件下载的权限链路。
-- [ ] 配置生产 Secret、镜像仓库和正式域名。
-- [ ] 在 Linux + Docker 环境执行完整部署验收。
+- [ ] 在 Linux + Docker 环境执行完整部署验收（含受控下载与 internal 联调）。
+- [ ] 生产 Secret/域名真值注入、镜像推送与域名解析（模板已就绪）。
 
 ## 十一、验收清单
 

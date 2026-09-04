@@ -60,7 +60,7 @@
 <script setup>
 import { onMounted, ref } from 'vue';
 import {
-  exportOpinionReportPdf, fetchOpinionMonitors, fetchOpinionReports, generateOpinionReport, publishOpinionReport,
+  exportOpinionReportPdf, fetchOpinionMonitors, fetchOpinionReports, generateOpinionReport, openFileBlobUrl, publishOpinionReport,
 } from '../api';
 
 const monitors = ref([]);
@@ -112,8 +112,14 @@ async function exportPdf(report) {
   exporting.value = report.id; pdfUrl.value = '';
   try {
     const result = await exportOpinionReportPdf(report.id);
-    pdfUrl.value = result?.downloadUrl || '';
-    if (!pdfUrl.value) error.value = result?.error || '导出未返回文件地址';
+    if (!result?.downloadUrl) {
+      error.value = result?.error || '导出未返回文件地址';
+      return;
+    }
+    if (pdfUrl.value && pdfUrl.value.startsWith('blob:')) {
+      URL.revokeObjectURL(pdfUrl.value);
+    }
+    pdfUrl.value = await openFileBlobUrl(result.downloadUrl);
   } catch (e) { error.value = `导出失败：${e.message}`; } finally { exporting.value = null; }
 }
 function toggleReport(report) { activeReport.value = activeReport.value?.id === report.id ? null : report; }

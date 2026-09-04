@@ -225,7 +225,7 @@
           </button>
         </div>
         <div v-if="exportHistory.length" class="export-history">
-          <a v-for="item in exportHistory" :key="item.id" :href="item.download_url" target="_blank">
+          <a v-for="item in exportHistory" :key="item.id" :title="item.download_url" @click.prevent="downloadExport(item)">
             {{ item.format.toUpperCase() }} · {{ formatDate(item.created_at) }}
           </a>
         </div>
@@ -356,6 +356,7 @@ import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import {
   createDraftStream,
+  downloadFile,
   editDraftContent,
   exportDraft,
   fetchDraft,
@@ -920,14 +921,18 @@ async function submitExport() {
   }
 }
 
-function triggerDownload(url) {
-  const filename = decodeURIComponent(url.split('/').filter(Boolean).pop() || 'draft');
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
+function downloadExport(item) {
+  downloadFile(item.download_url).catch((error) => {
+    errorMessage.value = `下载失败：${error.message}`;
+  });
+}
+
+async function triggerDownload(url) {
+  try {
+    await downloadFile(url);
+  } catch (error) {
+    errorMessage.value = `下载失败：${error.message}`;
+  }
 }
 
 function initWorkspaceMotion() {

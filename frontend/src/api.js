@@ -88,6 +88,47 @@ function unwrapEnvelope(data) {
     : data;
 }
 
+async function fetchFileBlob(path, retried = false) {
+  const response = await fetch(path, { headers: authHeaders() });
+  if (response.status === 401 && !retried && !path.startsWith('/api/auth/')) {
+    const refreshed = await tryRefresh();
+    if (refreshed) {
+      return fetchFileBlob(path, true);
+    }
+    handleUnauthorized();
+    throw new Error('登录已过期，请重新登录');
+  }
+  if (!response.ok) {
+    const text = await response.text().catch(() => '');
+    throw new Error(text || `下载失败：${response.status}`);
+  }
+  return response.blob();
+}
+
+function nameFromPath(path) {
+  return decodeURIComponent(String(path || '').split('/').filter(Boolean).pop() || 'file');
+}
+
+/** 受控下载：经 Java 鉴权端点以带令牌请求取回文件，触发浏览器保存。 */
+export async function downloadFile(path, fallbackName) {
+  const blob = await fetchFileBlob(path);
+  const filename = fallbackName || nameFromPath(path);
+  const objectUrl = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = objectUrl;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(objectUrl), 5000);
+}
+
+/** 受控下载：返回 object URL，供 iframe/新窗口预览。 */
+export async function openFileBlobUrl(path) {
+  const blob = await fetchFileBlob(path);
+  return URL.createObjectURL(blob);
+}
+
 export async function login(username, password) {
   const data = await request('/api/auth/login', {
     method: 'POST',

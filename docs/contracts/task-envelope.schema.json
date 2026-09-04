@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://internal.eaos.local/schemas/task-envelope.json",
+  "title": "AsyncTaskEnvelope",
+  "description": "Java/Python 异步任务回执信封（Java 权威任务行视图的稳定子集）。",
+  "type": "object",
+  "properties": {
+    "id": { "type": ["integer", "null"], "description": "权威任务行 id" },
+    "taskId": { "type": ["integer", "string", "null"], "description": "兼容别名（业务侧若需要）" },
+    "sourceId": { "type": ["integer", "null"] },
+    "idempotencyKey": { "type": ["string", "null"] },
+    "status": { "enum": ["queued", "running", "success", "failed", "paused"] },
+    "progress": { "type": ["integer", "number", "null"], "minimum": 0, "maximum": 100 },
+    "traceId": { "type": ["string", "null"] },
+    "errorCode": { "type": ["string", "null"] },
+    "error": { "type": ["string", "null"], "description": "错误消息（入库截断 4000）" },
+    "errorMessage": { "type": ["string", "null"] },
+    "resultRef": { "type": ["string", "null"] },
+    "itemsCount": { "type": ["integer", "null"] },
+    "retryCount": { "type": ["integer", "null"] },
+    "startedAt": { "type": ["string", "null"], "format": "date-time" },
+    "finishedAt": { "type": ["string", "null"], "format": "date-time" },
+    "createdAt": { "type": ["string", "null"], "format": "date-time" },
+    "ok": { "type": ["boolean", "null"] }
+  },
+  "required": ["status"],
+  "additionalProperties": true
+}
