@@ -64,6 +64,7 @@ services:
       MEETING_JAVA_BASE_URL: http://admin-server:8080
       MEETING_JAVA_TOKEN: ${MEETING_INTERNAL_TOKEN}
       QUAL_JAVA_BASE_URL: http://admin-server:8080
+      INTELLIGENCE_JAVA_BASE_URL: http://admin-server:8080
       APP_ENV: production
       EXPORT_DIR: /data/storage/exports
       UPLOAD_DIR: /data/storage/uploads
