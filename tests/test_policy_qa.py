@@ -21,6 +21,22 @@ def use_offline_embeddings(monkeypatch):
     monkeypatch.setattr(materials.settings, "embedding_api_key", "")
 
 
+@pytest.fixture()
+def sqlite_app(monkeypatch):
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    session_factory = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+    app_db.Base.metadata.create_all(bind=engine)
+    monkeypatch.setattr(app_db, "engine", engine)
+    monkeypatch.setattr(app_db, "SessionLocal", session_factory)
+    monkeypatch.setattr(app_main, "engine", engine)
+    monkeypatch.setattr(app_main, "SessionLocal", session_factory)
+    monkeypatch.setattr(app_main, "load_seed_templates", lambda db: 0)
+
+
 def test_policy_chat_refuses_without_evidence(monkeypatch):
     engine = create_engine(
         "sqlite://",
@@ -157,7 +173,7 @@ def test_policy_interpret_normalizes_string_fields_from_llm(monkeypatch):
     assert result["obligations"] == ["保留相关资料"]
 
 
-def test_policy_url_import_returns_clear_message_for_source_403(monkeypatch):
+def test_policy_url_import_returns_clear_message_for_source_403(monkeypatch, sqlite_app):
     monkeypatch.setattr(
         "app.routers.policy.fetch_public_source",
         lambda url: (_ for _ in ()).throw(

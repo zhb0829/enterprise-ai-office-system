@@ -4,20 +4,13 @@ from __future__ import annotations
 import re
 from typing import Annotated
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Request, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
 
-from ..config import settings
+from ..security import require_internal_token
 from ..services.materials import MaterialParseError, UnsupportedFileError, parse_material
 from ..services.qualification import process_task
 
 router = APIRouter()
-
-
-async def require_internal_token(request: Request) -> None:
-    provided = request.headers.get("X-Internal-Token", "")
-    expected = settings.ai_internal_token or ""
-    if not provided or provided != expected:
-        raise HTTPException(status_code=403, detail="invalid internal token")
 
 
 FileUpload = Annotated[UploadFile, File(...)]

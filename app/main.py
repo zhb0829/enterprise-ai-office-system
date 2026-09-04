@@ -2,13 +2,15 @@
 import sys
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from .config import settings
 from .db import Base, SessionLocal, engine
+from .observability import configure_logging, install_observability
 from .routers import drafts, exports, intelligence, materials, policy, policy_aliases, qualification, templates
+from .security import require_internal_token
 from .services.template_loader import load_seed_templates, load_styles
 from .opinion import models_ai  # noqa: F401  登记 AI 记录表供 create_all
 from .opinion.routers import internal_router as opinion_internal_router
@@ -69,12 +71,16 @@ app.include_router(meeting_ai_router, prefix="/api/meeting/ai", tags=["meeting-a
 app.mount("/static/exports", StaticFiles(directory=str(settings.export_path)), name="exports")
 app.mount("/static/uploads", StaticFiles(directory=str(settings.upload_path)), name="uploads")
 
+# 可观测性：traceId 中间件 + /metrics（Q13）
+configure_logging()
+install_observability(app)
+
 
 @app.get("/api/health")
 def health():
     return {"status": "ok", "env": settings.app_env}
 
 
-@app.get("/internal/health")
+@app.get("/internal/health", dependencies=[Depends(require_internal_token)])
 def internal_health():
     return {"status": "ok", "service": "ai-server", "env": settings.app_env}
