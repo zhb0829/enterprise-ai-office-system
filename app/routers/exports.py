@@ -14,7 +14,8 @@ router = APIRouter()
 
 def _download_url(path: str) -> str:
     filename = Path(path).name
-    return f"/static/exports/{urllib.parse.quote(filename)}"
+    # 受控下载：浏览器经 Java /api/files/export 鉴权后由 Java 代理拉取
+    return f"/api/files/export/{urllib.parse.quote(filename)}"
 
 
 def _to_out(row: ExportLog) -> ExportLogOut:
@@ -42,7 +43,7 @@ def create_export(payload: ExportRequest, db: Session = Depends(get_db)):
 
     return ExportResponse(
         file_path=path,
-        download_url=f"/static/exports/{urllib.parse.quote(filename)}",
+        download_url=f"/api/files/export/{urllib.parse.quote(filename)}",
         format=payload.format,
     )
 

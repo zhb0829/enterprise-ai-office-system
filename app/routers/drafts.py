@@ -355,7 +355,7 @@ def export(payload: ExportRequest, db: Session = Depends(get_db)):
 
     return ExportResponse(
         file_path=path,
-        download_url=f"/static/exports/{urllib.parse.quote(filename)}",
+        download_url=f"/api/files/export/{urllib.parse.quote(filename)}",
         format=payload.format,
     )
 

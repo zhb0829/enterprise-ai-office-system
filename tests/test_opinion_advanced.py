@@ -28,7 +28,7 @@ def test_rule_report_builds_html_and_summary():
 def test_export_pdf_falls_back_to_html():
     result = export_pdf(1, "测试报告", "<h3>标题</h3><p>正文</p>")
     assert result["format"] in ("pdf", "html")
-    assert result["downloadUrl"].startswith("/static/uploads/")
+    assert result["downloadUrl"].startswith("/api/files/upload/")
 
 
 def test_simhash_distance_reflects_similarity():

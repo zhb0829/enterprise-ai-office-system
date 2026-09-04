@@ -12,6 +12,7 @@ import re
 import shutil
 import subprocess
 import time
+import urllib.parse
 from datetime import datetime
 
 from ..config import settings
@@ -137,7 +138,7 @@ def export_pdf(report_id: int, title: str, content_html: str) -> dict:
             ]
             subprocess.run(cmd, check=True, capture_output=True, text=True, encoding="utf-8")
             return {
-                "downloadUrl": f"/static/uploads/{filename}",
+                "downloadUrl": f"/api/files/upload/{urllib.parse.quote(filename)}",
                 "format": "pdf",
                 "reportId": report_id,
             }
@@ -146,7 +147,7 @@ def export_pdf(report_id: int, title: str, content_html: str) -> dict:
     html_filename = f"{safe}_{report_id}.html"
     _write_html(settings.upload_path / html_filename, title, content_html)
     return {
-        "downloadUrl": f"/static/uploads/{html_filename}",
+        "downloadUrl": f"/api/files/upload/{urllib.parse.quote(html_filename)}",
         "format": "html",
         "reportId": report_id,
         "note": "本机未安装 pandoc/xelatex，已提供可打印 HTML 版本",
