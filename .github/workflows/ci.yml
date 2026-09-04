@@ -92,3 +92,20 @@ jobs:
             docker push ${{ secrets.ACR_REGISTRY }}/frontend-admin:${{ github.sha }}
             docker push ${{ secrets.ACR_REGISTRY }}/frontend-admin:latest
           fi
+
+  gateway:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 构建网关镜像
+        run: docker build -t eaos/gateway:${{ github.sha }} ./deploy/gateway
+      - name: 推送镜像
+        if: github.ref == 'refs/heads/main' && env.ACR_CONFIGURED == 'true'
+        env:
+          ACR_CONFIGURED: ${{ secrets.ACR_REGISTRY != '' && secrets.ACR_USERNAME != '' && secrets.ACR_PASSWORD != '' }}
+        run: |
+          echo "${{ secrets.ACR_PASSWORD }}" | docker login ${{ secrets.ACR_REGISTRY }} -u "${{ secrets.ACR_USERNAME }}" --password-stdin
+          docker tag eaos/gateway:${{ github.sha }} ${{ secrets.ACR_REGISTRY }}/gateway:${{ github.sha }}
+          docker tag eaos/gateway:${{ github.sha }} ${{ secrets.ACR_REGISTRY }}/gateway:latest
+          docker push ${{ secrets.ACR_REGISTRY }}/gateway:${{ github.sha }}
+          docker push ${{ secrets.ACR_REGISTRY }}/gateway:latest

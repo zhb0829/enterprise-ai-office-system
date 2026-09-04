@@ -1,5 +1,6 @@
 # 企业AI智能办公系统 — 生产编排（Q1/Q8/Q16）
-# 全新服务器：cp .env.example .env && 编辑密钥后  docker compose up -d
+# 全新服务器（纯镜像，推荐）：cp .env.example .env && 编辑密钥后  docker compose up -d
+# 本地/离线构建：缺少镜像时叠加构建文件： docker compose -f docker-compose.yml -f docker-compose.build.yml up -d
 name: eaos
 
 services:
@@ -23,7 +24,6 @@ services:
 
   admin-server:
     image: ${ACR_REGISTRY}/admin-server:${EAOS_IMAGE_TAG:-latest}
-    build: ../admin-server
     container_name: eaos-admin-server
     restart: unless-stopped
     environment:
@@ -82,21 +82,18 @@ services:
 
   frontend:
     image: ${ACR_REGISTRY}/frontend:${EAOS_IMAGE_TAG:-latest}
-    build: ../frontend
     container_name: eaos-frontend
     restart: unless-stopped
     networks: [eaos]
 
   frontend-admin:
     image: ${ACR_REGISTRY}/frontend-admin:${EAOS_IMAGE_TAG:-latest}
-    build: ../frontend-admin
     container_name: eaos-frontend-admin
     restart: unless-stopped
     networks: [eaos]
 
   gateway:
     image: ${ACR_REGISTRY}/gateway:${EAOS_IMAGE_TAG:-latest}
-    build: ./gateway
     container_name: eaos-gateway
     restart: unless-stopped
     ports:

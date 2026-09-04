@@ -1,0 +1,18 @@
+# 本地/离线构建叠加层：生产 docker-compose.yml 已纯镜像；叠加本文件可在无 registry 时本地构建。
+# 用法（在 deploy/ 下）：
+#   docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
+# Java/前端/gateway 镜像本地构建；ai-service 镜像仍须由 Python 仓库构建并导入/推送。
+name: eaos
+
+services:
+  admin-server:
+    build: ../admin-server
+
+  frontend:
+    build: ../frontend
+
+  frontend-admin:
+    build: ../frontend-admin
+
+  gateway:
+    build: ./gateway

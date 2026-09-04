@@ -326,7 +326,8 @@ main 与 python 分支各自独立 CI/CD、独立版本号、独立回滚。生�
 - [x] 契约固化：新增 `/internal` 契约文档与任务信封 JSON Schema（`docs/contracts/internal-api.md`、`task-envelope.schema.json`），Python 增加契约路径回归测试 `tests/test_contract_paths.py`。
 - [x] 全表 owner 登记：`docs/db-ownership-register.md` 枚举 Java/Python 全部表（每表 owner/写者/迁移）。
 - [x] 静态文件下载改为受控链路：Java 新增 `/api/files/**` 鉴权代理下载（防路径穿越），Python 下发受控地址，生产网关移除 `/static` 直连 Python，前端改带令牌 blob 拉取。
-- [x] 生产 Secret/镜像/域名：交付 `deploy/env.production.example` 与 `docs/production-release-checklist.md`（真实值上线时注入）。
+- [x] 生产 Secret/镜像/域名：交付 `deploy/.env.example`（单一真源模板）与 `docs/production-release-checklist.md`（真实值上线时注入）。
+- [x] 生产 Compose 改纯镜像模式并新增 `deploy/docker-compose.build.yml` 本地构建叠加层；Java CI 补充 gateway 镜像构建/推送 job。
 
 待完成：
 

@@ -5,7 +5,7 @@
 
 ## 1. Secret 清单与校验
 
-运行时密钥统一放 `deploy/.env`（由 `deploy/env.production.example` 复制），不进 Git/镜像：
+运行时密钥统一放 `deploy/.env`（由 `deploy/.env.example` 复制，单一真源），不进 Git/镜像：
 
 | 密钥 | 要求 | 用途 |
 |---|---|---|
@@ -21,10 +21,12 @@
 
 ## 2. 镜像仓库（ACR/自建 Registry）
 
-- 双分支各自 CI 推送：`main` 推 `admin-server / frontend / frontend-admin`，`python` 推 `ai-service`。
+- 双分支各自 CI 推送：`main` 推 `admin-server / frontend / frontend-admin / gateway`，`python` 推 `ai-service`。
 - CI Secrets：`ACR_REGISTRY / ACR_USERNAME / ACR_PASSWORD`（repo-level，双分支 workflow 均可用）。
-- 部署机登录后 `docker compose pull && docker compose up -d`。
-- 回滚：重打旧 `git-sha` 镜像 tag 或改 `EAOS_IMAGE_TAG` 指回上一版本。
+- 生产 compose 为纯镜像模式（`deploy/docker-compose.yml` 无 build）；本地/离线构建用
+  `docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build`。
+- 部署机：`docker login <ACR_REGISTRY>` 后 `docker compose pull && docker compose up -d`。
+- 回滚：改 `EAOS_IMAGE_TAG` 指回上一版本 `git-sha` 或重打 tag。
 
 ## 3. 正式域名与 TLS
 
