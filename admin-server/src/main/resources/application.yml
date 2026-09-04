@@ -61,7 +61,7 @@ eaos:
     # 统一文件存储根目录（FileStorage 抽象，替换散落的 qual-storage/meeting-storage）
     root: ${EAOS_STORAGE_ROOT:storage}
   ai:
-    # 独立 Python agent 服务（monorepo ai-service/）内网地址
+    # 独立 Python AI 服务内网地址
     base-url: ${AI_BASE_URL:http://localhost:8000}
     internal-prefix: /internal
     internal-token: ${AI_INTERNAL_TOKEN:}

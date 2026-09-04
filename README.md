@@ -6,11 +6,14 @@
 
 ```
 ├── admin-server/      # Spring Boot 3：统一网关、认证、管理型业务 API
-├── ai-service/        # FastAPI：AI/文档/采集服务（端口 8000）
 ├── frontend/          # Vue3 用户工作台（端口 5173）
 ├── frontend-admin/    # Vue3 管理端（端口 5174）
-└── docker-compose.yml # PostgreSQL + pgvector（宿主机端口 5433）
+├── deploy/            # 生产编排、网关和可观测性配置
+└── docker-compose.yml # 本地 PostgreSQL + pgvector（宿主机端口 5433）
 ```
+
+Python AI 服务已独立维护于
+`E:\project\enterprise-ai-office-system-new`，本仓库只通过内网 API 调用其能力。
 
 ## 快速启动
 
@@ -24,7 +27,7 @@
 2. 启动 Python AI 服务：
 
    ```powershell
-   cd E:\project\enterprise-ai-office-system-admin\ai-service
+   cd E:\project\enterprise-ai-office-system-new
    .\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --port 8000
    ```
 
@@ -60,10 +63,13 @@
 
 ## 关键配置
 
-- 数据库（admin-server/src/main/resources/application.yml，环境变量可覆盖）：默认 `localhost:5433/eaos`，账号 `eaos/eaos_dev_password`
+- 数据库（`admin-server/src/main/resources/application.yml`，环境变量可覆盖）：默认 `localhost:5433/eaos`，账号 `eaos/eaos_dev_password`
 - `AI_BASE_URL`：Python AI 服务地址（默认 `http://localhost:8000`）。
 - `JWT_SECRET`：必须设置至少 32 个字符的非默认值。
 - `AI_INTERNAL_TOKEN`、`OPINION_INTERNAL_TOKEN`、`MEETING_INTERNAL_TOKEN`：必须设置至少 16 个字符的非默认随机值；生产环境 Python 与 Java 都会在启动时校验。
+
+Java 和 Python 使用独立仓库、独立构建与发布流程。生产 Compose 只拉取
+`ai-service` 镜像，不从本仓库构建 Python 源码。
 
 政策法规模块：
 

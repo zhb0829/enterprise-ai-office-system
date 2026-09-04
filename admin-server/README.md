@@ -1,6 +1,7 @@
 # admin-server — 后台管理系统（Java / Spring Boot 3）
 
-企业AI智能办公系统后台管理服务，作为对外唯一 API 网关：负责认证鉴权、业务/管理型 CRUD、列表/看板/报表查询、配置管理、通知通道、任务调度面板，并将 AI/文档/采集类请求转发给同仓 `../ai-service`。
+企业AI智能办公系统后台管理服务，作为对外唯一 API 网关：负责认证鉴权、业务/管理型 CRUD、列表/看板/报表查询、配置管理、通知通道、任务调度面板，并将 AI/文档/采集类请求转发给独立 Python 项目
+`E:\project\enterprise-ai-office-system-new`。
 
 ## 技术栈
 
@@ -56,7 +57,7 @@ src/main/resources/
 └── schema.sql                    # 建表脚本（幂等）
 ```
 
-## 与 Python 服务协作
+## 与独立 Python 服务协作
 
 - 同步请求：通过 `AiService`（RestTemplate）调用 Python 的 `/internal/**` 内网接口。
 - 异步任务：Java 写任务表 → Python Celery Worker 消费 → 回写状态。

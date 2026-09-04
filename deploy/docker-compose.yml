@@ -48,7 +48,7 @@ services:
 
   ai-service:
     image: ${ACR_REGISTRY}/ai-service:${EAOS_IMAGE_TAG:-latest}
-    build: ../ai-service
+    # Python 镜像由独立的 enterprise-ai-office-system-new 仓库构建并推送。
     container_name: eaos-ai-service
     restart: unless-stopped
     environment:
