@@ -289,7 +289,7 @@ public class IntelligenceAdminService {
       Integer sinceDays, String keyword, Long sourceId, Integer page, Integer pageSize) {
     int pageNo = page == null ? 1 : Math.max(1, page);
     int size = pageSize == null ? 20 : Math.min(Math.max(1, pageSize), 100);
-    var wrapper = Wrappers.<CollectedArticle>query().orderByDesc("collected_at");
+    var wrapper = Wrappers.<CollectedArticle>query();
     if (sinceDays != null && sinceDays > 0) {
       wrapper.ge("collected_at", LocalDateTime.now().minusDays(sinceDays));
     }
@@ -298,6 +298,7 @@ public class IntelligenceAdminService {
       wrapper.and(w -> w.like("title", keyword.trim()).or().like("content", keyword.trim()));
     }
     Long total = articleMapper.selectCount(wrapper);
+    wrapper.orderByDesc("collected_at");
     wrapper.last("LIMIT " + size + " OFFSET " + ((pageNo - 1) * size));
     return Map.of(
         "items",
