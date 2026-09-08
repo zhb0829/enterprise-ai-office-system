@@ -1,0 +1,8 @@
+# 演示/内测 overlay：无 ACR 时在虚拟机本地构建 ai-service 镜像。
+# 前置：Python 源码克隆自同一仓库的 python 分支，且与本仓库为同级目录：
+#   git clone -b python <repo-url> enterprise-ai-office-system-python
+# 用法（在 deploy/ 目录）：
+#   docker compose -f docker-compose.yml -f docker-compose.build.yml -f docker-compose.demo.yml up -d --build
+services:
+  ai-service:
+    build: ../../enterprise-ai-office-system-python
