@@ -28,9 +28,10 @@ logs/
 deploy/nginx.pid
 
 # Runtime file storage（FileStorage 根目录与各服务散落目录）
-storage/
-qual-storage/
-admin-server/meeting-storage/
+# 注意：必须锚定根路径，否则会误伤 src/main/java/com/eaos/admin/storage 源码包
+/storage/
+/qual-storage/
+/admin-server/meeting-storage/
 ai-service/uploads/
 ai-service/exports/
 ai-service/.pytest-tmp/
