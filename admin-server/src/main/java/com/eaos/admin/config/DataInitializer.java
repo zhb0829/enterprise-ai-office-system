@@ -112,7 +112,7 @@ public class DataInitializer implements ApplicationRunner {
     return role.getId();
   }
 
-  /** 生成满足密码策略（大小写 + 数字，>=10 位）的随机密码。 */
+  /** 生成满足密码策略（大小写 + 数字，>=6 位）的随机密码。 */
   private String generatePassword(int length) {
     StringBuilder sb = new StringBuilder(length);
     sb.append(LOWER.charAt(RANDOM.nextInt(LOWER.length())));

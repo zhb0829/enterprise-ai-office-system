@@ -2,7 +2,7 @@
   <div class="login-shell">
     <form class="login-card" @submit.prevent="submit">
       <h1>修改初始密码</h1>
-      <p class="login-sub">首次登录或密码已重置，请设置新密码。至少 10 位，需同时包含大写字母、小写字母和数字。</p>
+      <p class="login-sub">首次登录或密码已重置，请设置新密码。至少 6 位，需同时包含大写字母、小写字母和数字。</p>
       <p v-if="error" class="error-text">{{ error }}</p>
       <div class="field">
         <label for="old-password">原密码</label>
@@ -37,7 +37,7 @@ const error = ref('');
 const loading = ref(false);
 
 function validate(value) {
-  return value.length >= 10 && /[a-z]/.test(value) && /[A-Z]/.test(value) && /\d/.test(value);
+  return value.length >= 6 && /[a-z]/.test(value) && /[A-Z]/.test(value) && /\d/.test(value);
 }
 
 async function submit() {
@@ -47,7 +47,7 @@ async function submit() {
     return;
   }
   if (!validate(newPassword.value)) {
-    error.value = '密码至少 10 位，且需同时包含大写字母、小写字母和数字';
+    error.value = '密码至少 6 位，且需同时包含大写字母、小写字母和数字';
     return;
   }
   loading.value = true;

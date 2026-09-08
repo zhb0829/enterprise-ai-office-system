@@ -56,7 +56,7 @@
         <h3>新建用户</h3>
         <div class="field"><label>用户名</label><input v-model="createForm.username" required /></div>
         <div class="field"><label>昵称</label><input v-model="createForm.nickname" /></div>
-        <div class="field"><label>初始密码（≥10 位，含大小写与数字）</label><input v-model="createForm.password" type="text" required /></div>
+        <div class="field"><label>初始密码（≥6 位，含大小写与数字）</label><input v-model="createForm.password" type="text" required /></div>
         <div class="field"><label>角色</label>
           <select v-model="createForm.role"><option value="USER">USER（普通用户）</option><option value="ADMIN">ADMIN（管理员）</option></select>
         </div>
@@ -71,7 +71,7 @@
     <div v-if="resetTarget" class="modal-mask" @click.self="resetTarget = null">
       <form class="modal-card" @submit.prevent="resetPassword">
         <h3>重置密码：{{ resetTarget.username }}</h3>
-        <div class="field"><label>新密码（≥10 位，含大小写与数字）</label><input v-model="newPassword" type="text" required /></div>
+        <div class="field"><label>新密码（≥6 位，含大小写与数字）</label><input v-model="newPassword" type="text" required /></div>
         <p class="page-sub">重置成功后该用户下次登录将被要求修改密码。</p>
         <div class="modal-actions">
           <button class="ghost-button" type="button" @click="resetTarget = null">取消</button>
@@ -122,8 +122,8 @@ function openCreate() {
 }
 
 async function createUser() {
-  if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{10,}$/.test(createForm.password)) {
-    message.value = '初始密码需至少 10 位，且包含大小写字母与数字';
+  if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{6,}$/.test(createForm.password)) {
+    message.value = '初始密码需至少 6 位，且包含大小写字母与数字';
     return;
   }
   saving.value = true; message.value = '';
@@ -157,8 +157,8 @@ function openReset(user) {
 }
 
 async function resetPassword() {
-  if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{10,}$/.test(newPassword.value)) {
-    message.value = '新密码需至少 10 位，且包含大小写字母与数字';
+  if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{6,}$/.test(newPassword.value)) {
+    message.value = '新密码需至少 6 位，且包含大小写字母与数字';
     return;
   }
   saving.value = true; message.value = '';
