@@ -16,4 +16,4 @@ policies:
     receiver: eaos-email
 
 deleteRules:
-  orgId: 1
+  - orgId: 1
