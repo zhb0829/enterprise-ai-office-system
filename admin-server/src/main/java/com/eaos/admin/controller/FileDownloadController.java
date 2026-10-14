@@ -1,6 +1,8 @@
 package com.eaos.admin.controller;
 
 import com.eaos.admin.config.AiServiceProperties;
+import com.eaos.admin.security.AiGatewayIdentity;
+import com.eaos.admin.opinion.service.OpinionReportService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -11,10 +13,12 @@ import java.net.URL;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Locale;
+import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -35,8 +39,10 @@ public class FileDownloadController {
   private static final String UPLOAD_PREFIX = "/api/files/upload/";
   private static final int CONNECT_TIMEOUT_MS = 10_000;
   private static final int READ_TIMEOUT_MS = 300_000;
+  private static final Pattern REPORT_FILE = Pattern.compile("opinion-report_([1-9]\\d*)\\.(pdf|html)");
 
   private final AiServiceProperties aiProperties;
+  private final OpinionReportService reportService;
 
   @GetMapping({"/export/**", "/upload/**"})
   public void proxy(HttpServletRequest request, HttpServletResponse response) throws IOException {
@@ -54,7 +60,13 @@ public class FileDownloadController {
       return;
     }
 
-    String path = URLDecoder.decode(rel, StandardCharsets.UTF_8);
+    String path;
+    try {
+      path = URLDecoder.decode(rel, StandardCharsets.UTF_8);
+    } catch (IllegalArgumentException exc) {
+      response.sendError(HttpServletResponse.SC_BAD_REQUEST, "非法的文件路径");
+      return;
+    }
     if (!isSafeRelativePath(path)) {
       log.warn("拒绝非法下载路径 kind={} path={}", kind, path);
       response.sendError(HttpServletResponse.SC_BAD_REQUEST, "非法的文件路径");
@@ -66,19 +78,37 @@ public class FileDownloadController {
       return;
     }
 
-    String target = aiProperties.getBaseUrl() + "/static/" + kind + "/" + path;
+    String target = aiProperties.getBaseUrl() + "/static/" + kind + "/" + percentEncode(filename);
+    String downloadResource = "";
+    var reportFile = REPORT_FILE.matcher(filename);
+    if ("uploads".equals(kind) && reportFile.matches()) {
+      try {
+        Long reportId = Long.valueOf(reportFile.group(1));
+        reportService.get(reportId);
+        downloadResource = "opinion-report:" + reportId;
+      } catch (AccessDeniedException exc) {
+        response.sendError(HttpServletResponse.SC_FORBIDDEN, "无权访问报告");
+        return;
+      } catch (IllegalArgumentException exc) {
+        response.sendError(HttpServletResponse.SC_NOT_FOUND, "报告不存在");
+        return;
+      }
+    }
     log.info("受控下载 {} {} -> {}", kind, filename, target);
     try {
       HttpURLConnection conn = (HttpURLConnection) new URL(target).openConnection();
       conn.setRequestMethod("GET");
-      conn.setInstanceFollowRedirects(true);
+      conn.setInstanceFollowRedirects(false);
       conn.setConnectTimeout(CONNECT_TIMEOUT_MS);
       conn.setReadTimeout(READ_TIMEOUT_MS);
       conn.setRequestProperty("User-Agent", "eaos-admin-file-gateway");
+      AiGatewayIdentity.apply(conn, aiProperties);
+      // Never forward a browser-supplied resource assertion.
+      if (!downloadResource.isEmpty()) conn.setRequestProperty("X-Download-Resource", downloadResource);
       int status = conn.getResponseCode();
-      if (status >= 400) {
+      if (status < 200 || status >= 300) {
         conn.disconnect();
-        response.sendError(status, "文件不存在或不可用");
+        response.sendError(status >= 400 ? status : 502, "文件不存在或不可用");
         return;
       }
       response.setContentType(contentType(filename));
@@ -105,7 +135,9 @@ public class FileDownloadController {
 
   private boolean isSafeRelativePath(String path) {
     if (path == null || path.isEmpty()) return false;
-    if (path.contains("\0") || path.startsWith("/") || path.matches("^[a-zA-Z]:.*")) return false;
+    if (path.contains("\0") || path.contains("\\") || path.contains("/")
+        || path.contains("\r") || path.contains("\n") || path.contains("%")
+        || path.matches("^[a-zA-Z]:.*")) return false;
     for (String segment : path.split("/")) {
       if (segment.equals("..") || segment.equals(".")) return false;
     }

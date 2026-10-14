@@ -1,6 +1,7 @@
 package com.eaos.admin.controller;
 
 import com.eaos.admin.config.AiServiceProperties;
+import com.eaos.admin.security.AiGatewayIdentity;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -76,7 +77,8 @@ public class GatewayProxyController {
     "/api/intelligence/clusters/**",
     "/api/intelligence/summarize",
     "/api/intelligence/summarize/**",
-    "/api/meeting/ai/**"
+    "/api/meeting/ai/**",
+    "/api/agent/**"
   })
   public void proxy(HttpServletRequest request, HttpServletResponse response) throws IOException {
     String path = request.getRequestURI();
@@ -134,7 +136,10 @@ public class GatewayProxyController {
     Enumeration<String> names = request.getHeaderNames();
     while (names.hasMoreElements()) {
       String name = names.nextElement();
-      if (HOP_BY_HOP.contains(name.toLowerCase())) {
+      if (HOP_BY_HOP.contains(name.toLowerCase())
+          || Set.of("x-internal-token", "x-user-id", "x-user-permissions", "x-trace-id",
+              "x-tenant-id", "x-department-id", "x-data-clearance", "x-public-only")
+              .contains(name.toLowerCase())) {
         continue;
       }
       Enumeration<String> values = request.getHeaders(name);
@@ -142,6 +147,7 @@ public class GatewayProxyController {
         conn.addRequestProperty(name, values.nextElement());
       }
     }
+    AiGatewayIdentity.apply(conn, aiServiceProperties);
   }
 
   private void copyResponseHeaders(HttpURLConnection conn, HttpServletResponse response) {

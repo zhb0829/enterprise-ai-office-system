@@ -1,0 +1,16 @@
+ALTER TABLE opinion_analysis ADD COLUMN subjects JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE opinion_analysis ADD COLUMN event_type VARCHAR(32) NOT NULL DEFAULT 'other';
+ALTER TABLE opinion_analysis ADD COLUMN risk_model_version VARCHAR(64) NOT NULL DEFAULT 'opinion-risk-v1';
+ALTER TABLE opinion_event ADD COLUMN event_key VARCHAR(64);
+ALTER TABLE opinion_event ADD COLUMN subjects JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE opinion_event ADD COLUMN event_type VARCHAR(32) NOT NULL DEFAULT 'other';
+ALTER TABLE opinion_event ADD COLUMN trend_direction VARCHAR(16) NOT NULL DEFAULT 'stable';
+ALTER TABLE opinion_event ADD COLUMN growth_rate NUMERIC(12,4);
+ALTER TABLE opinion_event ADD COLUMN reports_per_hour NUMERIC(12,4) NOT NULL DEFAULT 0;
+ALTER TABLE opinion_event ADD COLUMN timeline JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE opinion_event ADD COLUMN risk_score INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE opinion_event ADD COLUMN risk_factors JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE opinion_event ADD COLUMN risk_model_version VARCHAR(64) NOT NULL DEFAULT 'opinion-risk-v1';
+ALTER TABLE opinion_event ADD COLUMN review_required BOOLEAN NOT NULL DEFAULT TRUE;
+CREATE UNIQUE INDEX uq_opinion_event_key ON opinion_event(monitor_id, event_key);
+CREATE INDEX idx_opinion_event_trend ON opinion_event(monitor_id, trend_direction, time_end DESC);

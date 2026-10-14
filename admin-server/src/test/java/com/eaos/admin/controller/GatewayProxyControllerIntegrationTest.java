@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.eaos.admin.config.AiServiceProperties;
+import com.eaos.admin.security.LoginUser;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
@@ -20,6 +21,9 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.slf4j.MDC;
 
 class GatewayProxyControllerIntegrationTest {
 
@@ -28,6 +32,10 @@ class GatewayProxyControllerIntegrationTest {
   private final AtomicReference<String> upstreamQuery = new AtomicReference<>();
   private final AtomicReference<String> upstreamBody = new AtomicReference<>();
   private final AtomicReference<String> upstreamRequestId = new AtomicReference<>();
+  private final AtomicReference<String> upstreamUserId = new AtomicReference<>();
+  private final AtomicReference<String> upstreamPermissions = new AtomicReference<>();
+  private final AtomicReference<String> upstreamToken = new AtomicReference<>();
+  private final AtomicReference<String> upstreamTrace = new AtomicReference<>();
 
   private HttpServer upstream;
   private MockMvc mockMvc;
@@ -40,14 +48,50 @@ class GatewayProxyControllerIntegrationTest {
 
     AiServiceProperties properties = new AiServiceProperties();
     properties.setBaseUrl("http://127.0.0.1:" + upstream.getAddress().getPort());
+    properties.setInternalToken("trusted-test-token");
     mockMvc = MockMvcBuilders.standaloneSetup(new GatewayProxyController(properties)).build();
   }
 
   @AfterEach
   void stopUpstream() {
+    SecurityContextHolder.clearContext();
+    MDC.clear();
     if (upstream != null) {
       upstream.stop(0);
     }
+  }
+
+  @Test
+  void replacesSpoofedHeadersWithTrustedIdentity() throws Exception {
+    LoginUser user = new LoginUser(42L, "reviewer", "", "Reviewer", "ADMIN", true);
+    SecurityContextHolder.getContext().setAuthentication(
+        new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities()));
+    MDC.put("traceId", "trusted-trace");
+    mockMvc.perform(post("/api/agent/tools/search_policy/invoke")
+            .contentType(MediaType.APPLICATION_JSON)
+            .header("X-Internal-Token", "spoofed-token")
+            .header("X-User-Id", "spoofed-user")
+            .header("X-User-Permissions", "spoofed-permission")
+            .header("X-Trace-Id", "spoofed-trace")
+            .content("{}"))
+        .andExpect(status().isCreated());
+    assertEquals("trusted-test-token", upstreamToken.get());
+    assertEquals("42", upstreamUserId.get());
+    assertTrue(upstreamPermissions.get().contains("draft:review"));
+    assertTrue(upstreamPermissions.get().contains("agent:audit"));
+    assertEquals("trusted-trace", upstreamTrace.get());
+  }
+
+  @Test
+  void anonymousRequestCannotForgeReviewerIdentity() throws Exception {
+    mockMvc.perform(post("/api/drafts/draft-v1/review")
+            .header("X-User-Id", "spoofed-user")
+            .header("X-User-Permissions", "draft:review,agent:audit")
+            .content("{}"))
+        .andExpect(status().isCreated());
+    assertEquals(null, upstreamUserId.get());
+    assertEquals(null, upstreamPermissions.get());
+    assertEquals("trusted-test-token", upstreamToken.get());
   }
 
   @Test
@@ -78,6 +122,10 @@ class GatewayProxyControllerIntegrationTest {
     upstreamQuery.set(exchange.getRequestURI().getQuery());
     upstreamBody.set(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
     upstreamRequestId.set(exchange.getRequestHeaders().getFirst("X-Request-Id"));
+    upstreamUserId.set(exchange.getRequestHeaders().getFirst("X-User-Id"));
+    upstreamPermissions.set(exchange.getRequestHeaders().getFirst("X-User-Permissions"));
+    upstreamToken.set(exchange.getRequestHeaders().getFirst("X-Internal-Token"));
+    upstreamTrace.set(exchange.getRequestHeaders().getFirst("X-Trace-Id"));
 
     byte[] response = "{\"proxied\":true}".getBytes(StandardCharsets.UTF_8);
     exchange.getResponseHeaders().add("Content-Type", MediaType.APPLICATION_JSON_VALUE);

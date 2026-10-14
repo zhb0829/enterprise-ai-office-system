@@ -43,6 +43,13 @@ public class OpinionAnalysis {
   private String topic;
 
   @TableField(jdbcType = JdbcType.OTHER, typeHandler = PostgresJsonTypeHandler.class)
+  private List<String> subjects;
+
+  private String eventType;
+
+  private String riskModelVersion;
+
+  @TableField(jdbcType = JdbcType.OTHER, typeHandler = PostgresJsonTypeHandler.class)
   private List<String> keywords;
 
   private String model;

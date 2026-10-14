@@ -30,6 +30,15 @@
           <button class="ghost-button" type="button" @click="handleLogout">退出登录</button>
         </div>
       </header>
+      <nav class="mobile-navigation" aria-label="管理导航">
+        <select :value="route.path" aria-label="管理页面" @change="router.push($event.target.value)">
+          <optgroup v-for="group in groups" :key="group" :label="group">
+            <option v-for="item in menuItems.filter((i) => i.group === group)" :key="item.path" :value="item.path">
+              {{ item.title }}
+            </option>
+          </optgroup>
+        </select>
+      </nav>
       <main class="layout-content">
         <router-view />
       </main>
@@ -49,6 +58,7 @@ const apiReady = ref(false);
 const menuItems = [
   { path: '/admin/templates', title: '模板管理', group: '内容管理' },
   { path: '/admin/materials', title: '素材管理', group: '内容管理' },
+  { path: '/admin/draft-reviews', title: '稿件审核', group: '内容管理' },
   { path: '/admin/policy-documents', title: '政策法规知识库', group: '知识库管理' },
   { path: '/admin/qualification-guides', title: '资质指南库', group: '知识库管理' },
   { path: '/admin/qualification-tasks', title: '资质编制任务', group: '知识库管理' },
@@ -88,3 +98,16 @@ onMounted(() => {
   checkApi();
 });
 </script>
+
+<style scoped>
+.mobile-navigation { display: none; }
+@media (max-width: 760px) {
+  .layout-shell { grid-template-columns: minmax(0, 1fr); }
+  .sidebar { display: none; }
+  .layout-topbar { padding: 16px; gap: 12px; flex-wrap: wrap; }
+  .layout-topbar h1 { font-size: 18px; overflow-wrap: anywhere; }
+  .mobile-navigation { display: block; padding: 12px 16px; border-bottom: 1px solid #d8dee9; }
+  .mobile-navigation select { width: 100%; }
+  .layout-content { padding: 20px 16px; min-width: 0; }
+}
+</style>

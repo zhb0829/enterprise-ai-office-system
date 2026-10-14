@@ -1,5 +1,9 @@
 const jsonHeaders = { 'Content-Type': 'application/json' };
 
+export function verifyDraftFacts(id) {
+  return request(`/api/drafts/${encodeURIComponent(id)}/verify`, { method: 'POST' });
+}
+
 const TOKEN_KEY = 'eaos-token';
 const REFRESH_KEY = 'eaos-refresh-token';
 
@@ -807,4 +811,3 @@ export function markAllNotificationsRead(type = '') {
   const suffix = type ? `?type=${encodeURIComponent(type)}` : '';
   return request(`/api/notifications/read-all${suffix}`, { method: 'POST' }).then(unwrapEnvelope);
 }
-

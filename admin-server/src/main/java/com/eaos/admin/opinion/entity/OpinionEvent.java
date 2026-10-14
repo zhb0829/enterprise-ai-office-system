@@ -34,6 +34,31 @@ public class OpinionEvent {
   /** 关注 / 预警 / 危机 */
   private String riskLevel;
 
+  private String eventKey;
+
+  @TableField(jdbcType = JdbcType.OTHER, typeHandler = PostgresJsonTypeHandler.class)
+  private List<String> subjects;
+
+  private String eventType;
+
+  private String trendDirection;
+
+  private BigDecimal growthRate;
+
+  private BigDecimal reportsPerHour;
+
+  @TableField(jdbcType = JdbcType.OTHER, typeHandler = PostgresJsonTypeHandler.class)
+  private List<Map<String, Object>> timeline;
+
+  private Integer riskScore;
+
+  @TableField(jdbcType = JdbcType.OTHER, typeHandler = PostgresJsonTypeHandler.class)
+  private Map<String, Object> riskFactors;
+
+  private String riskModelVersion;
+
+  private Boolean reviewRequired;
+
   private LocalDateTime timeStart;
 
   private LocalDateTime timeEnd;

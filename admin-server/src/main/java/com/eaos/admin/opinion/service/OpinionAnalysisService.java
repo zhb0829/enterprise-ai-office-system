@@ -63,6 +63,8 @@ public class OpinionAnalysisService {
     payload.put("title", article.getTitle());
     payload.put("content", content.length() > 12000 ? content.substring(0, 12000) : content);
     payload.put("url", article.getUrl());
+    payload.put("publishTime", article.getPublishTime());
+    payload.put("sourceId", article.getSourceId());
     payload.put(
         "matchedKeywords",
         article.getMatchedKeywords() == null ? List.of() : article.getMatchedKeywords());
@@ -98,6 +100,7 @@ public class OpinionAnalysisService {
 
   @Transactional
   public OpinionAnalysis submitResult(AnalysisResultRequest request) {
+    articleMapper.lockArticle(request.getArticleId());
     OpinionAnalysisTask task = taskMapper.selectById(request.getTaskId());
     if (task == null) {
       throw new IllegalArgumentException("analysis task not found");
@@ -142,6 +145,13 @@ public class OpinionAnalysisService {
           request.getRiskFactors() == null ? List.of() : request.getRiskFactors());
       result.setRiskScore(request.getRiskScore() == null ? 0 : request.getRiskScore());
       result.setTopic(OpinionText.trim(request.getTopic(), 256));
+      String sourceText = (article.getTitle() == null ? "" : article.getTitle())
+          + " " + (article.getContent() == null ? "" : article.getContent());
+      result.setSubjects(request.getSubjects() == null ? List.of() :
+          request.getSubjects().stream().filter(s -> s != null && !s.isBlank() && sourceText.contains(s))
+              .distinct().limit(20).toList());
+      result.setEventType(request.getEventType() == null ? "other" : request.getEventType());
+      result.setRiskModelVersion(OpinionText.trim(request.getRiskModelVersion(), 64));
       result.setKeywords(request.getKeywords() == null ? List.of() : request.getKeywords());
       result.setModel(OpinionText.trim(request.getModel(), 128));
       result.setPromptVersion(OpinionText.trim(request.getPromptVersion(), 64));
@@ -173,6 +183,7 @@ public class OpinionAnalysisService {
       throw new IllegalArgumentException("analysis not found");
     }
     accessService.requireMonitor(original.getMonitorId());
+    articleMapper.lockArticle(original.getArticleId());
     Map<String, Object> oldValue = snapshot(original);
     OpinionAnalysis revised = copyOf(original);
     if (request.getSentiment() != null) {
@@ -193,7 +204,7 @@ public class OpinionAnalysisService {
     if (request.getStatus() != null) {
       revised.setStatus(request.getStatus());
     }
-    revised.setVersion((original.getVersion() == null ? 1 : original.getVersion()) + 1);
+    revised.setVersion(nextAnalysisVersion(original.getArticleId(), original.getMonitorId()));
     revised.setSource("manual");
     revised.setAuditedBy(OpinionCurrentUser.username());
     revised.setCreatedAt(null);
@@ -215,6 +226,8 @@ public class OpinionAnalysisService {
         revised.getId(),
         Map.of("sourceAnalysisId", analysisId, "field", request.getField()),
         null);
+    eventService.aggregate(original.getMonitorId());
+    alertEngine.evaluate(original.getMonitorId());
     return revised;
   }
 
@@ -251,6 +264,9 @@ public class OpinionAnalysisService {
     snapshot.put("emotionTags", analysis.getEmotionTags());
     snapshot.put("riskScore", analysis.getRiskScore());
     snapshot.put("topic", analysis.getTopic());
+    snapshot.put("subjects", analysis.getSubjects());
+    snapshot.put("eventType", analysis.getEventType());
+    snapshot.put("riskModelVersion", analysis.getRiskModelVersion());
     snapshot.put("status", analysis.getStatus());
     return snapshot;
   }
@@ -267,6 +283,9 @@ public class OpinionAnalysisService {
     copy.setRiskFactors(source.getRiskFactors());
     copy.setRiskScore(source.getRiskScore());
     copy.setTopic(source.getTopic());
+    copy.setSubjects(source.getSubjects());
+    copy.setEventType(source.getEventType());
+    copy.setRiskModelVersion(source.getRiskModelVersion());
     copy.setKeywords(source.getKeywords());
     copy.setModel(source.getModel());
     copy.setPromptVersion(source.getPromptVersion());

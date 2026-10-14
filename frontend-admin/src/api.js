@@ -1,5 +1,25 @@
 const jsonHeaders = { 'Content-Type': 'application/json' };
 
+export function fetchReviewDrafts(status = '审阅', offset = 0) {
+  return request(`/api/drafts?status=${encodeURIComponent(status)}&offset=${offset}`);
+}
+
+export function submitDraftReview(id, decision, comment) {
+  return request(`/api/drafts/${encodeURIComponent(id)}/review`, {
+    method: 'POST', headers: jsonHeaders, body: JSON.stringify({ decision, comment }),
+  });
+}
+
+export function verifyDraft(id) {
+  return request(`/api/drafts/${encodeURIComponent(id)}/verify`, { method: 'POST' });
+}
+
+export function updateReviewDraftStatus(id, status) {
+  return request(`/api/drafts/${encodeURIComponent(id)}/status`, {
+    method: 'POST', headers: jsonHeaders, body: JSON.stringify({ status }),
+  });
+}
+
 const TOKEN_KEY = 'eaos-token';
 const REFRESH_KEY = 'eaos-refresh-token';
 

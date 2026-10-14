@@ -44,6 +44,7 @@ const router = createRouter({
       children: [
         { path: 'templates', name: 'admin-templates', component: Templates, meta: { title: '模板管理', group: '内容管理' } },
         { path: 'materials', name: 'admin-materials', component: Materials, meta: { title: '素材管理', group: '内容管理' } },
+        { path: 'draft-reviews', name: 'admin-draft-reviews', component: () => import('../admin/views/DraftReviews.vue'), meta: { title: '稿件审核', group: '内容管理' } },
         { path: 'policy-documents', name: 'admin-policy-documents', component: PolicyDocuments, meta: { title: '政策法规知识库', group: '知识库管理' } },
         { path: 'qualification-rules', name: 'admin-qualification-rules', component: QualificationRules, meta: { title: '资质编制校验规则', group: '知识库管理' } },
         { path: 'qualification-guides', name: 'admin-qualification-guides', component: QualificationGuides, meta: { title: '资质指南库', group: '知识库管理' } },

@@ -325,6 +325,7 @@
       >
         <div class="list-toolbar">
           <button class="ghost-button" type="button" :disabled="!currentDraft.id" @click="refreshFactcheck">刷新核查报告</button>
+          <button class="ghost-button" type="button" :disabled="!currentDraft.id || statusUpdating || currentDraft.status === '发布'" @click="reverifyFacts">重新核查</button>
         </div>
         <div v-for="(item, index) in factChecks" :key="index" class="fact-item">
           <div class="fact-topline">
@@ -333,7 +334,13 @@
           </div>
           <p>{{ item.basis || '暂无依据说明' }}</p>
           <small v-if="item.suggestion">{{ item.suggestion }}</small>
+          <p v-for="(source, sourceIndex) in currentDraft.evidence?.find((row) => row.claim === item.claim)?.sources || []" :key="sourceIndex">
+            {{ source.sourceRef || source.field }}：{{ source.excerpt }}
+          </p>
         </div>
+        <p v-for="review in currentDraft.reviews || []" :key="review.id">
+          {{ { approve: '审核通过', reject: '退回', invalidated: '审批失效' }[review.decision] || review.decision }} · {{ review.reviewerId }}：{{ review.comment }}
+        </p>
       </div>
 
       <div
@@ -371,6 +378,7 @@ import {
   reviseDraft,
   searchMaterials,
   updateDraftStatus,
+  verifyDraftFacts,
 } from '../api';
 import { demoDraft, demoMaterials, demoStyles, demoSuggestions, demoTemplates, demoVersions } from '../demoData';
 
@@ -595,7 +603,7 @@ function formatDate(value) {
 }
 
 function badgeClass(status) {
-  if (status?.includes('一致')) return 'ok';
+  if (status === '一致') return 'ok';
   if (status?.includes('无法')) return 'warn';
   return 'danger';
 }
@@ -935,6 +943,18 @@ async function triggerDownload(url) {
   }
 }
 
+async function reverifyFacts() {
+  statusUpdating.value = true;
+  errorMessage.value = '';
+  try {
+    currentDraft.value = await verifyDraftFacts(currentDraft.value.id);
+  } catch (error) {
+    errorMessage.value = `核查失败：${error.message}`;
+  } finally {
+    statusUpdating.value = false;
+  }
+}
+
 function initWorkspaceMotion() {
   const root = workspaceRoot.value;
   if (!root || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
@@ -998,5 +1018,6 @@ onBeforeUnmount(() => {
   background: #fef2f2;
   color: #991b1b;
 }
+
 .load-failed-banner p { margin: 0; }
 </style>
