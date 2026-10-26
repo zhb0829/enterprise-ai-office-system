@@ -138,7 +138,8 @@ public class GatewayProxyController {
       String name = names.nextElement();
       if (HOP_BY_HOP.contains(name.toLowerCase())
           || Set.of("x-internal-token", "x-user-id", "x-user-permissions", "x-trace-id",
-              "x-tenant-id", "x-department-id", "x-data-clearance", "x-public-only")
+              "x-tenant-id", "x-department-id", "x-data-clearance", "x-public-only",
+              "x-user-role", "x-target-tenant")
               .contains(name.toLowerCase())) {
         continue;
       }

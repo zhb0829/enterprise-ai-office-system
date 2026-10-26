@@ -65,6 +65,18 @@ eaos:
     base-url: ${AI_BASE_URL:http://localhost:8000}
     internal-prefix: /internal
     internal-token: ${AI_INTERNAL_TOKEN:}
+  rate-limit:
+    # G3 网关层租户资源隔离：令牌桶（rps/burst）+ 并发配额，超限快速失败 429，不排队。
+    # AI 服务侧另有 app/resource_guard.py 作为第二道防线。
+    enabled: ${RATE_LIMIT_ENABLED:true}
+    rps: ${RATE_LIMIT_RPS:50}
+    burst: ${RATE_LIMIT_BURST:100}
+    # 0 表示该维度不限
+    max-concurrency: ${RATE_LIMIT_MAX_CONCURRENCY:32}
+    global-concurrency: ${RATE_LIMIT_GLOBAL_CONCURRENCY:128}
+    exempt-paths: ${RATE_LIMIT_EXEMPT_PATHS:/api/auth,/api/health,/actuator,/swagger-ui,/v3/api-docs,/internal,/error}
+    # 按租户覆盖（键为 sys_user.tenant_id，例如 tenants.7.rps=5）；缺省项回落全局默认
+    tenants: {}
   opinion:
     # Python Worker 调用本服务 /internal/opinion/** 使用的服务间令牌
     internal-token: ${OPINION_INTERNAL_TOKEN:}

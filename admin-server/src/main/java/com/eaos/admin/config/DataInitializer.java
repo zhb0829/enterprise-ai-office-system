@@ -43,6 +43,9 @@ public class DataInitializer implements ApplicationRunner {
   public void run(ApplicationArguments args) {
     Long tenantId = seedTenant();
     Long adminRoleId = seedRole("ADMIN", "系统管理员");
+    // G7 三角色租户治理分工：ADMIN→平台管理员（管租户）、TENANT_ADMIN→租户管理员（管知识库）、
+    // USER→普通用户（只提问）；映射与权限口径见 security/AiGatewayIdentity.java。
+    seedRole("TENANT_ADMIN", "租户管理员");
     seedRole("USER", "普通用户");
 
     Long count =

@@ -67,6 +67,12 @@ Python AI 服务已独立维护于
 - `AI_BASE_URL`：Python AI 服务地址（默认 `http://localhost:8000`）。
 - `JWT_SECRET`：必须设置至少 32 个字符的非默认值。
 - `AI_INTERNAL_TOKEN`、`OPINION_INTERNAL_TOKEN`、`MEETING_INTERNAL_TOKEN`：必须设置至少 16 个字符的非默认随机值；生产环境 Python 与 Java 都会在启动时校验。
+- 网关租户限流（G3，`eaos.rate-limit.*`）：按认证租户做令牌桶（`RATE_LIMIT_RPS` / `RATE_LIMIT_BURST`）
+  与并发配额（`RATE_LIMIT_MAX_CONCURRENCY` / `RATE_LIMIT_GLOBAL_CONCURRENCY`），超限返回 429 + `Retry-After`，
+  不排队、不拖垮全站。租户键取 JWT 认证出的 `LoginUser.tenantId`，客户端自报的组织头不参与配额计算；
+  按租户覆盖用 `eaos.rate-limit.tenants.<tenantId>.rps|burst|concurrency`（缺省项回落全局默认）；
+  `RATE_LIMIT_ENABLED=false` 仅用于排障与容量测试。AI 服务侧另有 `app/resource_guard.py` 作为第二道防线。
+  说明：当前账户模型仍固定下发 `X-Tenant-Id=default`，本限流只做配额维度隔离，不改变既有数据隔离契约。
 
 Java 和 Python 使用独立仓库、独立构建与发布流程。生产 Compose 只拉取
 `ai-service` 镜像，不从本仓库构建 Python 源码。
