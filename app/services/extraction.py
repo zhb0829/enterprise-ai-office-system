@@ -7,6 +7,7 @@
 import logging
 
 from ..config import settings
+from ..agent.runtime import traced
 from .llm import LLMClient, LLMError
 
 logger = logging.getLogger(__name__)
@@ -24,12 +25,14 @@ def validate_required(request: dict, template: dict) -> list[str]:
     return []
 
 
+@traced("announcement.extract", prompt_version="extract-v1")
 def extract_elements(request: dict, template: dict, llm: LLMClient) -> list[dict]:
     """抽取结构化要素，返回 [{name, value, source_ref, verified_status}]。
 
     顺序：LLM 从事件描述抽取的要点在前，用户显式要素（keyFacts/people/audience）在后。
     """
     elements: list[dict] = []
+    elements.append({"name": "事件原文", "value": request.get(_EVENT, ""), "source_ref": "input:eventDesc", "verified_status": "来自用户输入"})
     for k in request.get("keyFacts") or []:
         if k.get("value"):
             elements.append(
@@ -60,6 +63,7 @@ def extract_elements(request: dict, template: dict, llm: LLMClient) -> list[dict
             [{"role": "system", "content": sys_p}, {"role": "user", "content": user_p}],
             model=settings.llm_model_extraction,
             temperature=0,
+            purpose="extraction",
         )
         for e in data.get("elements", []):
             if e.get("name") and e.get("value"):

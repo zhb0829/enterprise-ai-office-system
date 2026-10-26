@@ -1,0 +1,14 @@
+{
+  "version": "synthetic-graph-v1",
+  "notice": "关系推理用例：问题指向文件之间的引用/归属关系，答案条款与问题词面基本不重叠；仅用于工程回归。",
+  "cases": [
+    {"id":"g01","question":"测试数据安全实施细则的上位依据是哪一份文件？","expected":[["dsl-base","第一条"]]},
+    {"id":"g02","question":"测试研发补助申报细则所依据的上位文件是什么？","expected":[["rd-rule","第一条"]]},
+    {"id":"g03","question":"测试生产安全实施细则的上位依据来自哪份文件？","expected":[["safe-rule","第一条"]]},
+    {"id":"g04","question":"哪份文件是数据安全实施细则的制定依据？","expected":[["dsl-base","第一条"]]},
+    {"id":"g05","question":"研发补助申报细则的制定依据是哪份管理办法？","expected":[["rd-rule","第一条"]]},
+    {"id":"g06","question":"生产安全实施细则依据的是哪份条例？","expected":[["safe-rule","第一条"]]},
+    {"id":"g07","question":"测试数据局发布的管理条例里，企业需要建立什么制度？","expected":[["dsl-base","第一条"]]},
+    {"id":"g08","question":"测试应急局主管的条例中，安全培训多久组织一次？","expected":[["safe-rule","第一条"]]}
+  ]
+}

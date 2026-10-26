@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from ..config import settings
 from ..db import get_db
+from ..agent.governance import governed_get
 from ..models import ReferenceMaterial
 from ..schemas import MaterialChunkOut, MaterialDetail, MaterialEmbeddingReindexResult, MaterialOut
 from ..services.materials import (
@@ -118,9 +119,9 @@ def search_materials(
 
 
 @router.post("/reindex", response_model=MaterialEmbeddingReindexResult)
-def reindex_materials(material_id: int | None = None, db: Session = Depends(get_db)):
+def reindex_materials(material_id: int | None = None, rechunk: bool = False, db: Session = Depends(get_db)):
     try:
-        return reindex_material_embeddings(db, material_id)
+        return reindex_material_embeddings(db, material_id, rechunk=rechunk)
     except EmbeddingError as exc:
         db.rollback()
         raise HTTPException(503, detail={"message": str(exc)}) from exc
@@ -129,7 +130,7 @@ def reindex_materials(material_id: int | None = None, db: Session = Depends(get_
 @router.get("/{material_id}", response_model=MaterialDetail)
 def get_material(material_id: int, db: Session = Depends(get_db)):
     """素材详情。"""
-    m = db.get(ReferenceMaterial, material_id)
+    m = governed_get(db, ReferenceMaterial, material_id)
     if not m:
         raise HTTPException(404, "素材不存在")
     return MaterialDetail(
@@ -146,9 +147,14 @@ def get_material(material_id: int, db: Session = Depends(get_db)):
 @router.delete("/{material_id}", status_code=204)
 def delete_material(material_id: int, db: Session = Depends(get_db)):
     """删除素材记录与原始文件。"""
-    m = db.get(ReferenceMaterial, material_id)
+    m = governed_get(db, ReferenceMaterial, material_id)
     if not m:
         raise HTTPException(404, "素材不存在")
+    from ..agent.knowledge import KnowledgeStore, namespace_for
+    store = KnowledgeStore(db, namespace_for("materials"))
+    if store.active():
+        release = store.stage([], deleted_keys=[f"material:{m.id}"])
+        store.publish(release.id)
     (settings.upload_path / f"{m.id}_{m.filename}").unlink(missing_ok=True)
     db.delete(m)
     db.commit()

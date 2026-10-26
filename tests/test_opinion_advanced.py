@@ -85,28 +85,11 @@ def test_rag_chunking_and_query_text():
 
 
 def test_rag_retrieve_empty_when_no_index(monkeypatch):
-    class EmptyQuery:
-        def order_by(self, _field):
-            return self
-
-        def all(self):
-            return []
-
-    class Empty:
-        def query(self, _model):
-            return EmptyQuery()
-
-        def close(self):
-            pass
-
-        def __enter__(self):
-            return self
-
-        def __exit__(self, *args):
-            return False
-
-    def fake_db(*args, **kwargs):
-        return Empty()
-
-    monkeypatch.setattr("app.opinion.rag.SessionLocal", fake_db)
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+    from app.db import Base
+    engine = create_engine("sqlite://")
+    Base.metadata.create_all(engine)
+    monkeypatch.setattr("app.opinion.rag.SessionLocal", sessionmaker(bind=engine))
     assert _retrieve("质量问题") == []
+    engine.dispose()

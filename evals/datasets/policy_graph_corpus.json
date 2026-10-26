@@ -1,0 +1,13 @@
+{
+  "version": "synthetic-graph-v1",
+  "asOf": "2026-10-11",
+  "notice": "Synthetic policies for graph-retrieval engineering evaluation only; not legal sources.",
+  "documents": [
+    {"key":"dsl-base","title":"测试数据安全管理条例","docNumber":"TEST-DSL-BASE","issuingAuthority":"测试数据局","region":"全国","industryTags":["科技"],"effectiveDate":"2026-01-01T00:00:00","content":"第一条 数据处理企业应建立访问权限审批制度。\n第二条 企业应当每年开展一次权限审计。"},
+    {"key":"dsl-impl","title":"测试数据安全实施细则","docNumber":"TEST-DSL-IMPL","issuingAuthority":"测试数据局","region":"全国","industryTags":["科技"],"effectiveDate":"2026-03-01T00:00:00","content":"第一条 本细则依据《测试数据安全管理条例》制定。\n第二条 企业向第三方提供个人信息前应取得单独同意。"},
+    {"key":"rd-rule","title":"测试研发补助管理办法","docNumber":"TEST-RD-RULE","issuingAuthority":"测试科技局","region":"测试市","industryTags":["科技"],"effectiveDate":"2026-01-01T00:00:00","content":"第一条 本办法适用于测试市科技企业。\n第二条 企业申请研发补助须提交研发费用台账。"},
+    {"key":"rd-detail","title":"测试研发补助申报细则","docNumber":"TEST-RD-DETAIL","issuingAuthority":"测试科技局","region":"测试市","industryTags":["科技"],"effectiveDate":"2026-04-01T00:00:00","content":"第一条 本细则依据《测试研发补助管理办法》制定。\n第二条 申报材料包括研发费用台账和年度审计报告。"},
+    {"key":"safe-rule","title":"测试生产安全管理条例","docNumber":"TEST-SAFE-RULE","issuingAuthority":"测试应急局","region":"全国","industryTags":["制造"],"effectiveDate":"2026-01-01T00:00:00","content":"第一条 制造企业应当每季度组织一次安全培训。\n第二条 企业发生安全事件应在24小时内提交事件报告。"},
+    {"key":"safe-impl","title":"测试生产安全实施细则","docNumber":"TEST-SAFE-IMPL","issuingAuthority":"测试应急局","region":"全国","industryTags":["制造"],"effectiveDate":"2026-05-01T00:00:00","content":"第一条 本细则依据《测试生产安全管理条例》制定。\n第二条 安全培训记录应保存不少于3年。"}
+  ]
+}

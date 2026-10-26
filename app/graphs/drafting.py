@@ -12,7 +12,8 @@ from langgraph.graph import END, START, StateGraph
 
 from ..services.extraction import extract_elements, validate_required
 from ..services.generation import check_risks, generate_content, suggest_content
-from ..services.llm import LLMClient
+from ..services.llm import LLMClient, LLMCapacityError
+from ..agent.runtime import context_call, traced
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +30,7 @@ class DraftState(TypedDict, total=False):
     fact_check_report: list
 
 
+@traced("announcement.validate")
 def check_required_node(state: DraftState) -> dict:
     missing = validate_required(state.get("request", {}), state.get("template", {}))
     return {"missing": missing}
@@ -40,25 +42,44 @@ def extract_node(state: DraftState, llm: LLMClient) -> dict:
 
 
 def generate_node(state: DraftState, llm: LLMClient) -> dict:
-    """多文风并行生成。"""
-    from ..services.generation import _resolve_styles
+    """多文风并行生成。
+
+    G3：LLM 容量池满时，该文风降级为规则化草稿并打上 `degraded` 标记，
+    由 `suggest_node` 汇总进 riskFlags —— 池满属于可归因的过载，不该变成 5xx，
+    也不该静默产出低置信度草稿。
+    """
+    from ..services.generation import _resolve_styles, mock_generate_content
 
     request = state.get("request", {})
     template = state.get("template", {})
     elements = state.get("elements", [])
     materials = state.get("materials", "")
-    styles = _resolve_styles(request)
 
     def _gen(style: str) -> dict:
         try:
             content = generate_content(request, template, elements, style, materials, llm)
             return {"style": style, "content": content}
+        except LLMCapacityError:
+            logger.warning("LLM 容量池已满，[%s] 降级为规则化草稿", style)
+            return {
+                "style": style,
+                "content": mock_generate_content(
+                    request, template, elements, style, materials,
+                    banner=f"（{style}文风 · 因模型容量不足，本文为规则化草稿，发布前需人工复核）",
+                ),
+                "degraded": True,
+                "degradeReason": "llm-pool-saturated",
+            }
         except Exception as exc:  # noqa: BLE001
             logger.error("生成失败 [%s]: %s", style, exc)
             return {"style": style, "content": "", "error": str(exc)}
 
-    with ThreadPoolExecutor(max_workers=min(len(styles), 5)) as ex:
-        drafts = list(ex.map(_gen, styles))
+    styles = _resolve_styles(request)
+    if len(styles) == 1:
+        drafts = [_gen(styles[0])]
+    else:
+        with ThreadPoolExecutor(max_workers=min(len(styles), 5)) as ex:
+            drafts = [future.result() for future in [ex.submit(context_call(_gen, style)) for style in styles]]
     return {"drafts": drafts}
 
 
@@ -67,6 +88,12 @@ def suggest_node(state: DraftState, llm: LLMClient) -> dict:
     main = next((d for d in drafts if d.get("content") and not d.get("error")), {})
     suggestions = suggest_content(state.get("request", {}), state.get("template", {}), main, llm)
     risk_flags = check_risks(state.get("request", {}))
+    degraded_styles = sorted({d.get("style") for d in drafts if d.get("degraded")})
+    if degraded_styles:
+        risk_flags.append(
+            "以下文风因模型容量不足已降级为规则化草稿，发布前需人工复核："
+            + "、".join(str(style) for style in degraded_styles)
+        )
     return {"suggestions": suggestions, "risk_flags": risk_flags}
 
 

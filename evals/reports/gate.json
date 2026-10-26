@@ -1,0 +1,109 @@
+{
+  "generated_at": "2026-10-26T18:37:55.913139",
+  "tolerance": 0.0,
+  "passed": true,
+  "failures": [],
+  "comparisons": [
+    {
+      "layer": "retrieval",
+      "metric": "recall_at_k",
+      "direction": "higher",
+      "baseline": 1.0,
+      "current": 1.0,
+      "delta": 0.0,
+      "status": "ok"
+    },
+    {
+      "layer": "retrieval",
+      "metric": "mrr",
+      "direction": "higher",
+      "baseline": 0.9333333333333333,
+      "current": 0.9333333333333333,
+      "delta": 0.0,
+      "status": "ok"
+    },
+    {
+      "layer": "retrieval",
+      "metric": "ndcg_at_k",
+      "direction": "higher",
+      "baseline": 0.9507906338095277,
+      "current": 0.9507906338095277,
+      "delta": 0.0,
+      "status": "ok"
+    },
+    {
+      "layer": "generation",
+      "metric": "answer_accuracy",
+      "direction": "higher",
+      "baseline": 1.0,
+      "current": 1.0,
+      "delta": 0.0,
+      "status": "ok"
+    },
+    {
+      "layer": "generation",
+      "metric": "answer_completeness",
+      "direction": "higher",
+      "baseline": 1.0,
+      "current": 1.0,
+      "delta": 0.0,
+      "status": "ok"
+    },
+    {
+      "layer": "citation",
+      "metric": "citation_precision",
+      "direction": "higher",
+      "baseline": 1.0,
+      "current": 1.0,
+      "delta": 0.0,
+      "status": "ok"
+    },
+    {
+      "layer": "citation",
+      "metric": "citation_traceability",
+      "direction": "higher",
+      "baseline": 1.0,
+      "current": 1.0,
+      "delta": 0.0,
+      "status": "ok"
+    },
+    {
+      "layer": "experience",
+      "metric": "fallback_rate",
+      "direction": "lower",
+      "baseline": 1.0,
+      "current": 1.0,
+      "delta": 0.0,
+      "status": "ok"
+    }
+  ],
+  "reported_only": [
+    {
+      "layer": "citation",
+      "metric": "refusal_rate",
+      "baseline": 0.25,
+      "current": 0.25,
+      "delta": 0.0,
+      "note": "仅报告，不做方向门禁"
+    },
+    {
+      "layer": "experience",
+      "metric": "latency_p50_ms",
+      "baseline": 3.92,
+      "current": 4.04,
+      "delta": 0.12,
+      "note": "仅报告，不做方向门禁"
+    },
+    {
+      "layer": "experience",
+      "metric": "latency_p95_ms",
+      "baseline": 6.18,
+      "current": 5.9,
+      "delta": -0.28,
+      "note": "仅报告，不做方向门禁"
+    }
+  ],
+  "baseline_generated_at": "2026-10-25T14:39:59.589714",
+  "report": "evals\\reports\\g4g6-offline-2026-10-26.json",
+  "baseline": "evals\\baselines\\offline.json"
+}

@@ -1,17 +1,25 @@
 """草稿生成/修改/润色/导出接口。"""
 import json
+import hmac
 import logging
 import urllib.parse
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from ..config import settings
 from ..db import get_db
-from ..models import Draft, Template
+from ..models import Draft, FactCheck, Template
+from ..agent.models import DraftEvidence, DraftReview
+from ..agent.review import assert_publishable, evidence_rows, persist_evidence, require_reviewer, review_draft, review_out
+from ..agent.runtime import agent_run, agent_stream, context_call, current_run, step
+from ..agent.roles import AgentPipeline, EvidenceVerifier, FunctionActor, FunctionRetriever, TaskContext, WorkflowPlanner
+from ..agent.governance import governed_get
+from ..observability import user_id_var
+from ..security import require_internal_token
 from ..schemas import (
     DraftDetail,
     EditRequest,
@@ -29,8 +37,9 @@ from ..schemas import (
     ReviseResponse,
     StatusUpdateRequest,
     VersionNode,
+    ReviewRequest,
 )
-from ..services import generation
+from ..services import generation, model_router
 from ..services.generation import MissingElements, TemplateNotFound
 from ..services.llm import LLMClient, LLMError
 
@@ -56,7 +65,7 @@ def _material_query(request: dict) -> str:
     return " ".join([request.get("title") or "", request.get("eventDesc") or "", facts, people]).strip()
 
 
-def _to_draft_detail(draft: Draft) -> DraftDetail:
+def _to_draft_detail(draft: Draft, db: Session | None = None) -> DraftDetail:
     return DraftDetail(
         id=draft.id,
         title=draft.title,
@@ -76,32 +85,54 @@ def _to_draft_detail(draft: Draft) -> DraftDetail:
             FactCheckItem(claim=fc.claim, status=fc.status, basis=fc.basis, suggestion=fc.suggestion)
             for fc in draft.fact_checks
         ],
+        evidence=[
+            {"id": item.id, "claim": item.claim, "status": item.status, "sources": item.sources, "contentHash": item.content_hash}
+            for item in evidence_rows(db, draft.id)
+        ] if db else [],
+        reviews=[review_out(item) for item in db.query(DraftReview).filter(DraftReview.draft_id == draft.id).order_by(DraftReview.id).all()] if db else [],
     )
 
 
 @router.post("/news", response_model=GenerateResponse)
+@agent_run("announcement", plan=("validate", "materials", "extract", "generate", "verify", "persist"))
 def generate_news(payload: GenerateRequest, db: Session = Depends(get_db)):
     """初稿生成：要素 + 模板 + 文风 → 草稿 + 建议 + 多文风版本。
 
     缺必填要素时返回 422，body.detail.missing 为缺失清单。
     """
     request = payload.model_dump()
-    template = _get_template(db, request["template"])
+    request["created_by"] = user_id_var.get()
     llm = LLMClient()
-    materials = generation.load_materials_text(
-        db, request.get("referenceMaterials") or [], _material_query(request)
-    )
-
     from ..graphs.drafting import build_draft_graph
 
-    graph = build_draft_graph(llm)
-    state = graph.invoke(
-        {
-            "request": request,
-            "template": template.schema_,
-            "materials": materials,
+    def retrieve(context):
+        template = _get_template(db, request["template"])
+        materials = generation.load_materials_text(db, request.get("referenceMaterials") or [], _material_query(request))
+        schema = template.schema_
+        db.expunge(template)
+        db.rollback()
+        return {"template": template, "schema": schema, "materials": materials}
+
+    def act(context, evidence):
+        state = build_draft_graph(llm).invoke({
+            "request": request, "template": evidence["schema"], "materials": evidence["materials"],
+        })
+        return {"state": state, "template": evidence["template"]}
+
+    def verify(context, evidence, result):
+        state = result["state"]
+        if state.get("missing"):
+            raise HTTPException(422, detail={"message": "缺少必填要素，请补充后重新提交", "missing": state["missing"]})
+        return {
+            "passed": any(d.get("content") and not d.get("error") for d in state.get("drafts", [])),
+            "fact_checks": state.get("fact_check_report", []), "human_review_required": True,
         }
-    )
+
+    bundle = AgentPipeline(
+        WorkflowPlanner(permission="draft:write"),
+        FunctionRetriever(retrieve), FunctionActor(act), EvidenceVerifier(verify),
+    ).execute(TaskContext("announcement", request, memory=current_run.get().memory))
+    state, template = bundle["state"], bundle["template"]
 
     missing = state.get("missing") or []
     if missing:
@@ -126,11 +157,12 @@ def generate_news(payload: GenerateRequest, db: Session = Depends(get_db)):
         revisionSuggestions=state.get("suggestions") or [],
         factCheckReport=fact_report,
         versionId=draft.id,
-        sources=[],
+        sources=[source for item in fact_report for source in item.get("evidence", [])],
         generatedAt=draft.created_at,
         model=draft.model,
         riskFlags=risk_flags,
         variants=state.get("drafts") or [],
+        runId=current_run.get().run_id,
     )
 
 
@@ -150,18 +182,34 @@ def generate_news_stream(payload: GenerateRequest, db: Session = Depends(get_db)
     )
 
     request = payload.model_dump()
-    template = _get_template(db, request["template"])
+    request["created_by"] = user_id_var.get()
     llm = LLMClient()
-    materials = generation.load_materials_text(
-        db, request.get("referenceMaterials") or [], _material_query(request)
-    )
+
+    def retrieve(context):
+        template = _get_template(db, request["template"])
+        materials = generation.load_materials_text(db, request.get("referenceMaterials") or [], _material_query(request))
+        schema = template.schema_
+        db.expunge(template)
+        db.rollback()
+        return {"template": template, "schema": schema, "materials": materials}
 
     def _sse(obj: dict) -> str:
         return f"data: {json.dumps(obj, ensure_ascii=False)}\n\n"
 
+    @agent_stream("announcement_stream", db, payload)
     def event_stream():
         try:
-            missing = extraction.validate_required(request, template.schema_)
+            context = TaskContext("announcement_stream", request, memory=current_run.get().memory)
+            planner = WorkflowPlanner(permission="draft:write")
+            with step("planner") as record:
+                plan = planner.plan(context)
+                current_run.get().plan = list(plan.stages)
+                record["output"] = {"stages": list(plan.stages)}
+            with step("retriever") as record:
+                evidence = FunctionRetriever(retrieve).retrieve(context, plan)
+                record["output"] = evidence
+            template, template_schema, materials = evidence["template"], evidence["schema"], evidence["materials"]
+            missing = extraction.validate_required(request, template_schema)
             if missing:
                 yield _sse(
                     {
@@ -172,16 +220,21 @@ def generate_news_stream(payload: GenerateRequest, db: Session = Depends(get_db)
                 return
 
             yield _sse({"type": "status", "stage": "extract"})
-            elements = extraction.extract_elements(request, template.schema_, llm)
+            elements = extraction.extract_elements(request, template_schema, llm)
 
             styles = _resolve_styles(request)
             main_style = styles[0]
             yield _sse({"type": "status", "stage": "generate", "style": main_style})
 
             main_parts: list[str] = []
-            for chunk in generate_content_stream(request, template.schema_, elements, main_style, materials, llm):
-                main_parts.append(chunk)
-                yield _sse({"type": "delta", "text": chunk})
+            with step("actor") as record:
+                stream = FunctionActor(lambda context, evidence: {
+                    "stream": generate_content_stream(request, template_schema, elements, main_style, materials, llm),
+                }).act(context, plan, evidence)["stream"]
+                for chunk in stream:
+                    main_parts.append(chunk)
+                    yield _sse({"type": "delta", "text": chunk})
+                record["output"] = {"content": "".join(main_parts)}
             main_content = "".join(main_parts)
 
             other_drafts: list[dict] = []
@@ -189,14 +242,14 @@ def generate_news_stream(payload: GenerateRequest, db: Session = Depends(get_db)
 
                 def _gen(style: str) -> dict:
                     try:
-                        content = generation.generate_content(request, template.schema_, elements, style, materials, llm)
+                        content = generation.generate_content(request, template_schema, elements, style, materials, llm)
                         return {"style": style, "content": content}
                     except Exception as exc:  # noqa: BLE001
                         logger.error("其他文风生成失败 [%s]: %s", style, exc)
                         return {"style": style, "content": "", "error": str(exc)}
 
                 with ThreadPoolExecutor(max_workers=min(len(styles) - 1, 4)) as ex:
-                    other_drafts = list(ex.map(_gen, styles[1:]))
+                    other_drafts = [future.result() for future in [ex.submit(context_call(_gen, style)) for style in styles[1:]]]
 
             drafts = [{"style": main_style, "content": main_content}] + other_drafts
 
@@ -205,7 +258,7 @@ def generate_news_stream(payload: GenerateRequest, db: Session = Depends(get_db)
 
             yield _sse({"type": "status", "stage": "suggest"})
             suggestions = suggest_content(
-                request, template.schema_, {"style": main_style, "content": main_content}, llm
+                request, template_schema, {"style": main_style, "content": main_content}, llm
             )
             risk_flags = list(check_risks(request))
             unverifiable = [r for r in fact_report if r.get("status") == "无法核实"]
@@ -219,6 +272,13 @@ def generate_news_stream(payload: GenerateRequest, db: Session = Depends(get_db)
                 "suggestions": suggestions,
                 "risk_flags": risk_flags,
             }
+            with step("verifier") as record:
+                report = EvidenceVerifier(lambda context, evidence, result: {
+                    "passed": bool(result["content"].strip()), "fact_checks": fact_report,
+                    "human_review_required": True,
+                }).verify(context, plan, evidence, {"content": main_content})
+                current_run.get().verification.update(report)
+                record["output"] = report
             try:
                 draft = persist_draft(db, request, template, state)
             except LLMError as exc:
@@ -232,7 +292,8 @@ def generate_news_stream(payload: GenerateRequest, db: Session = Depends(get_db)
                     "revisionSuggestions": suggestions,
                     "factCheckReport": fact_report,
                     "versionId": draft.id,
-                    "sources": [],
+                    "sources": [source for item in fact_report for source in item.get("evidence", [])],
+                    "runId": current_run.get().run_id,
                     "generatedAt": draft.created_at.isoformat(),
                     "model": draft.model,
                     "riskFlags": risk_flags,
@@ -247,9 +308,10 @@ def generate_news_stream(payload: GenerateRequest, db: Session = Depends(get_db)
 
 
 @router.post("/revise", response_model=ReviseResponse)
+@agent_run("announcement_revision")
 def revise(payload: ReviseRequest, db: Session = Depends(get_db)):
     """多轮修改：携带修改指令基于原版本生成新版本，返回新草稿 + 差异说明。"""
-    base = db.get(Draft, payload.draftId)
+    base = governed_get(db, Draft, payload.draftId)
     if not base:
         raise HTTPException(404, "草稿不存在")
     instruction = payload.instruction.strip()
@@ -267,6 +329,8 @@ def revise(payload: ReviseRequest, db: Session = Depends(get_db)):
     materials = generation.load_materials_text(
         db, base_request.get("referenceMaterials") or [], _material_query(base_request)
     )
+    db.expunge_all()
+    db.rollback()
     graph = build_revision_graph(llm)
     state = graph.invoke(
         {"base": base, "instruction": instruction, "elements": elements, "materials": materials}
@@ -311,7 +375,7 @@ def polish(payload: PolishRequest, db: Session = Depends(get_db)):
     from ..services.polish import polish_text
 
     if payload.draftId:
-        base = db.get(Draft, payload.draftId)
+        base = governed_get(db, Draft, payload.draftId)
         if not base:
             raise HTTPException(404, "草稿不存在")
         text = base.content
@@ -337,7 +401,7 @@ def polish(payload: PolishRequest, db: Session = Depends(get_db)):
         changes=[PolishChange(**c) for c in changes],
         versionId=version_id,
         generatedAt=datetime.now(timezone.utc),
-        model=settings.llm_model_generation,
+        model=(model_router.last_decision("draft.polish") or {}).get("model") or settings.llm_model_generation,
     )
 
 
@@ -363,7 +427,7 @@ def export(payload: ExportRequest, db: Session = Depends(get_db)):
 @router.get("/{draft_id}/versions", response_model=VersionNode)
 def get_version_tree(draft_id: str, db: Session = Depends(get_db)):
     """版本历史（树状），返回整棵版本树（根节点展开）。"""
-    draft = db.get(Draft, draft_id)
+    draft = governed_get(db, Draft, draft_id)
     if not draft:
         raise HTTPException(404, "草稿不存在")
     from ..services.revise import build_version_tree
@@ -374,7 +438,7 @@ def get_version_tree(draft_id: str, db: Session = Depends(get_db)):
 @router.get("/{draft_id}/factcheck", response_model=list[FactCheckItem])
 def get_factcheck_report(draft_id: str, db: Session = Depends(get_db)):
     """独立查询核查报告，供发布前复核与历史查看。"""
-    draft = db.get(Draft, draft_id)
+    draft = governed_get(db, Draft, draft_id)
     if not draft:
         raise HTTPException(404, "草稿不存在")
     return [
@@ -384,9 +448,9 @@ def get_factcheck_report(draft_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/{draft_id}/status", response_model=DraftDetail)
-def update_draft_status(draft_id: str, payload: StatusUpdateRequest, db: Session = Depends(get_db)):
+def update_draft_status(draft_id: str, payload: StatusUpdateRequest, request: Request, db: Session = Depends(get_db)):
     """状态流转：草稿/审阅/发布。发布前存在不一致或无法核实时阻断。"""
-    draft = db.get(Draft, draft_id)
+    draft = governed_get(db, Draft, draft_id)
     if not draft:
         raise HTTPException(404, "草稿不存在")
 
@@ -398,30 +462,84 @@ def update_draft_status(draft_id: str, payload: StatusUpdateRequest, db: Session
     current = draft.status if draft.status in transitions else "草稿"
     target = payload.status
     if target == current:
-        return _to_draft_detail(draft)
+        return _to_draft_detail(draft, db)
     if target not in transitions[current]:
         raise HTTPException(422, detail={"message": f"不允许从「{current}」流转到「{target}」"})
     if target == "发布":
-        risks = [fc for fc in draft.fact_checks if fc.status != "一致"]
-        if risks:
-            raise HTTPException(
-                422,
-                detail={"message": "核查报告仍存在风险项，不能发布", "risk_count": len(risks)},
-            )
+        supplied_token = request.headers.get("x-internal-token", "")
+        if (
+            not settings.ai_internal_token
+            or not hmac.compare_digest(supplied_token, settings.ai_internal_token)
+            or not user_id_var.get()
+            or "draft:write" not in request.headers.get("x-user-permissions", "").split(",")
+        ):
+            raise HTTPException(403, "trusted identity and draft:write permission required for publication")
+        assert_publishable(db, draft)
 
     draft.status = target
     db.commit()
     db.refresh(draft)
-    return _to_draft_detail(draft)
+    return _to_draft_detail(draft, db)
 
+
+@router.post("/{draft_id}/review")
+def submit_review(draft_id: str, payload: ReviewRequest, reviewer: str = Depends(require_reviewer), db: Session = Depends(get_db)):
+    draft = governed_get(db, Draft, draft_id)
+    if not draft:
+        raise HTTPException(404, "草稿不存在")
+    return review_out(review_draft(db, draft, reviewer, payload.decision, payload.comment))
+
+
+@router.get("", dependencies=[Depends(require_reviewer)])
+def list_drafts(status: str = "审阅", limit: int = Query(20, ge=1, le=100), offset: int = Query(0, ge=0), db: Session = Depends(get_db)):
+    query = db.query(Draft)
+    if status:
+        query = query.filter(Draft.status == status)
+    total = query.count()
+    rows = query.order_by(Draft.created_at.desc(), Draft.id).offset(offset).limit(limit).all()
+    return {"total": total, "items": [{
+        "id": row.id, "title": row.title, "version": row.version, "status": row.status,
+        "createdBy": row.created_by, "createdAt": row.created_at,
+    } for row in rows]}
+
+
+@router.post("/{draft_id}/verify", dependencies=[Depends(require_internal_token)])
+@agent_run("announcement_reverification")
+def verify_draft(draft_id: str, request: Request, db: Session = Depends(get_db)):
+    permissions = request.headers.get("x-user-permissions", "").split(",")
+    if not user_id_var.get() or "draft:verify" not in permissions:
+        raise HTTPException(403, "trusted identity and draft:verify permission required")
+    draft = governed_get(db, Draft, draft_id)
+    if not draft:
+        raise HTTPException(404, "草稿不存在")
+    if draft.status == "发布":
+        raise HTTPException(422, "已发布版本不能重新核查，请先创建新版本")
+    if not draft.created_by:
+        draft.created_by = user_id_var.get()
+    from ..services.factcheck import run_factcheck
+    elements = [{"name": e.name, "value": e.value, "source_ref": e.source_ref, "verified_status": e.verified_status} for e in draft.elements]
+    payload = draft.input_payload or {}
+    materials = generation.load_materials_text(db, payload.get("referenceMaterials") or [], _material_query(payload))
+    report = run_factcheck(draft.content, elements, materials, LLMClient())
+    # An unchanged fingerprint must not resurrect an approval after re-verification.
+    db.add(DraftReview(
+        draft_id=draft.id, reviewer_id=user_id_var.get(), decision="invalidated",
+        comment="重新核查事实，原审批失效", content_hash="", evidence_hash="",
+    ))
+    db.query(DraftEvidence).filter(DraftEvidence.draft_id == draft.id).delete(synchronize_session=False)
+    draft.fact_checks = [FactCheck(claim=r["claim"], status=r["status"], basis=r.get("basis", ""), suggestion=r.get("suggestion", "")) for r in report]
+    persist_evidence(db, draft, report)
+    db.commit()
+    db.refresh(draft)
+    return _to_draft_detail(draft, db)
 
 @router.post("/{draft_id}/revert", response_model=ReviseResponse)
 def revert(draft_id: str, payload: RevertRequest, db: Session = Depends(get_db)):
     """回退：基于当前版本生成一个新版本，其内容等于目标历史版本。"""
-    base = db.get(Draft, draft_id)
+    base = governed_get(db, Draft, draft_id)
     if not base:
         raise HTTPException(404, "草稿不存在")
-    target = db.get(Draft, payload.targetId)
+    target = governed_get(db, Draft, payload.targetId)
     if not target:
         raise HTTPException(404, "目标版本不存在")
     if (target.root_id or target.id) != (base.root_id or base.id):
@@ -450,7 +568,7 @@ def revert(draft_id: str, payload: RevertRequest, db: Session = Depends(get_db))
 @router.post("/{draft_id}/edit", response_model=ReviseResponse)
 def edit_draft_content(draft_id: str, payload: EditRequest, db: Session = Depends(get_db)):
     """手动编辑正文：基于当前草稿生成新版本并落库（不经过 LLM）。"""
-    base = db.get(Draft, draft_id)
+    base = governed_get(db, Draft, draft_id)
     if not base:
         raise HTTPException(404, "草稿不存在")
     content = payload.content.strip()
@@ -473,7 +591,7 @@ def edit_draft_content(draft_id: str, payload: EditRequest, db: Session = Depend
 @router.get("/{draft_id}", response_model=DraftDetail)
 def get_draft(draft_id: str, db: Session = Depends(get_db)):
     """草稿详情（含抽取要素与事实核查结果）。"""
-    draft = db.get(Draft, draft_id)
+    draft = governed_get(db, Draft, draft_id)
     if not draft:
         raise HTTPException(404, "草稿不存在")
-    return _to_draft_detail(draft)
+    return _to_draft_detail(draft, db)

@@ -8,6 +8,8 @@ import logging
 import re
 
 from ..config import settings
+from ..agent.runtime import current_run, traced
+from ..agent.runtime_flags import enabled as flag_enabled
 from .llm import LLMClient, LLMError
 
 logger = logging.getLogger(__name__)
@@ -44,6 +46,7 @@ def extract_claims(text: str, llm: LLMClient) -> list[str]:
             ],
             model=settings.llm_model_factcheck,
             temperature=0,
+            purpose="factcheck",
         )
         return [str(c) for c in (data.get("claims") or []) if str(c).strip()]
     except (LLMError, ValueError, AttributeError) as exc:
@@ -70,6 +73,7 @@ def verify_claims(claims: list[str], elements: list[dict], materials: str, llm: 
             ],
             model=settings.llm_model_factcheck,
             temperature=0,
+            purpose="factcheck",
         )
         report = []
         for item in data.get("report") or []:
@@ -92,14 +96,71 @@ def verify_claims(claims: list[str], elements: list[dict], materials: str, llm: 
         return _mock_verify(claims, elements, materials)
 
 
+@traced("announcement.verify", prompt_version="factcheck-v2")
 def run_factcheck(content: str, elements: list[dict], materials: str, llm: LLMClient) -> list[dict]:
-    """完整核查流程：抽取断言 → 逐条核验。"""
+    """完整核查流程：抽取断言 → 逐条核验。
+
+    G5 运行时开关 `factcheck` 关闭时，整条链路退化为规则化核查，
+    并在每条结果与 AgentRun 审计里明确标记 `degraded`，不冒充"已核查通过"。
+    """
     if not content:
         return []
-    claims = extract_claims(content, llm)
+    factcheck_enabled = flag_enabled("factcheck")
+    if factcheck_enabled:
+        claims = list(dict.fromkeys([*extract_claims(content, llm), *_mock_extract_claims(content)]))
+    else:
+        logger.warning("模型事实核查已被运行时开关关闭，退化为规则化核查")
+        claims = list(dict.fromkeys(_mock_extract_claims(content)))
     if not claims:
         return []
-    return verify_claims(claims, elements, materials, llm)
+    if factcheck_enabled:
+        proposed = {item["claim"]: item for item in verify_claims(claims, elements, materials, llm) if item["claim"] in claims}
+    else:
+        proposed = {item["claim"]: item for item in _mock_verify(claims, elements, materials)}
+    report = []
+    for claim in claims:
+        item = proposed.get(claim, {"claim": claim, "status": "无法核实", "basis": "模型遗漏核查", "suggestion": "请补充证据"})
+        item["evidence"] = evidence_for_claim(claim, elements, materials)
+        if item["status"] == "一致" and not item["evidence"]:
+            item.update(status="无法核实", basis="没有可定位的完整事实证据", suggestion="补充支持断言的原始来源后重新生成")
+        if not factcheck_enabled:
+            item["degraded"] = True
+            item["degradeReason"] = "runtime-flag-factcheck-off"
+        report.append(item)
+    capture = current_run.get()
+    if capture:
+        capture.verification = {
+            "fact_check_report": report,
+            "evidence_coverage": sum(bool(item["evidence"]) for item in report) / len(report) if report else 0,
+            "factcheck": {
+                "enabled": factcheck_enabled,
+                "degraded": not factcheck_enabled,
+                "reason": "" if factcheck_enabled else "runtime-flag-factcheck-off",
+            },
+        }
+    return report
+
+
+def evidence_for_claim(claim: str, elements: list[dict], materials: str) -> list[dict]:
+    """Only exact excerpts are proof; matching scattered numbers is not."""
+    sources = []
+    for index, element in enumerate(elements):
+        value = str(element.get("value") or "")
+        if claim in value and element.get("verified_status") != "待核实":
+            sources.append({
+                "kind": "user_input", "field": element.get("name", ""), "elementIndex": index,
+                "sourceRef": element.get("source_ref", ""), "excerpt": claim,
+                "start": value.index(claim), "end": value.index(claim) + len(claim),
+            })
+    for part in re.split(r"(?=\[素材:)", materials or ""):
+        header, _, text = part.partition("\n")
+        if claim in text:
+            start = text.index(claim)
+            sources.append({
+                "kind": "material", "sourceRef": header.strip("[]"), "excerpt": claim,
+                "start": start, "end": start + len(claim),
+            })
+    return sources
 
 
 # ===== Mock 规则化实现（无 Key 兜底） =====
@@ -107,8 +168,9 @@ def _split_sentences(text: str) -> list[str]:
     sentences = []
     for line in text.splitlines():
         line = line.strip()
-        if not line or line.startswith(("#", "**", "【")):
+        if not line:
             continue
+        line = re.sub(r"^#{1,6}\s+", "", line).replace("**", "").strip()
         for s in re.split(r"[。！？\n]", line):
             s = s.strip()
             if len(s) >= 6:
@@ -121,7 +183,7 @@ def _mock_extract_claims(text: str) -> list[str]:
     for s in _split_sentences(text):
         if _HINT_RE.search(s):
             claims.append(s)
-    return claims[:20]
+    return claims
 
 
 def _mock_verify(claims: list[str], elements: list[dict], materials: str) -> list[dict]:

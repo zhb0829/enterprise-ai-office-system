@@ -1,0 +1,1332 @@
+{
+  "dataset_version": "synthetic-graph-v1",
+  "dataset_source": "synthetic",
+  "dataset_digest": "129a7bc8c5e6579336317c9432d7a98ad992583b1b142802b84789d8982b0c87",
+  "synthetic": true,
+  "mode": "offline",
+  "generated_at": "2026-10-25T17:20:22.093838",
+  "scope": "Synthetic relationship-reasoning corpus; engineering regression only, not real policy accuracy or production acceptance",
+  "application": "engineering-regression-only",
+  "graph_build": {
+    "tenantId": "default",
+    "clauses": 12,
+    "backends": {
+      "rule": 12
+    },
+    "llmCalls": 0,
+    "llmBudgetExhausted": false,
+    "documents": 6,
+    "entitiesNew": 33,
+    "entitiesMerged": 0,
+    "entitiesUpdated": 38,
+    "relationsNew": 71,
+    "relationsSkipped": 0,
+    "relationsReplaced": 0,
+    "rejected": 12,
+    "graph": {
+      "entities": 33,
+      "relations": 71,
+      "communities": 7
+    }
+  },
+  "graph_communities": {
+    "detected": 7,
+    "written": 7,
+    "minSize": 3,
+    "sources": {
+      "rule": 7
+    },
+    "model": "",
+    "sizes": [
+      7,
+      7,
+      7,
+      3,
+      3,
+      3,
+      3
+    ]
+  },
+  "variants": {
+    "dense_only": {
+      "sources": [
+        "dense"
+      ],
+      "summary": {
+        "recall_at_k": 0.0,
+        "mrr": 0,
+        "ndcg_at_k": 0.0,
+        "cases": 8,
+        "degraded_graph_cases": 0
+      },
+      "cases": [
+        {
+          "id": "g01",
+          "question": "测试数据安全实施细则的上位依据是哪一份文件？",
+          "sources": [
+            "dense"
+          ],
+          "recall_at_k": 0.0,
+          "mrr": 0,
+          "ndcg_at_k": 0.0,
+          "retrieved": [],
+          "expected": [
+            [
+              "dsl-base",
+              "第一条"
+            ]
+          ],
+          "graph": null
+        },
+        {
+          "id": "g02",
+          "question": "测试研发补助申报细则所依据的上位文件是什么？",
+          "sources": [
+            "dense"
+          ],
+          "recall_at_k": 0.0,
+          "mrr": 0,
+          "ndcg_at_k": 0.0,
+          "retrieved": [
+            [
+              "safe-rule",
+              "第二条"
+            ]
+          ],
+          "expected": [
+            [
+              "rd-rule",
+              "第一条"
+            ]
+          ],
+          "graph": null
+        },
+        {
+          "id": "g03",
+          "question": "测试生产安全实施细则的上位依据来自哪份文件？",
+          "sources": [
+            "dense"
+          ],
+          "recall_at_k": 0.0,
+          "mrr": 0,
+          "ndcg_at_k": 0.0,
+          "retrieved": [],
+          "expected": [
+            [
+              "safe-rule",
+              "第一条"
+            ]
+          ],
+          "graph": null
+        },
+        {
+          "id": "g04",
+          "question": "哪份文件是数据安全实施细则的制定依据？",
+          "sources": [
+            "dense"
+          ],
+          "recall_at_k": 0.0,
+          "mrr": 0,
+          "ndcg_at_k": 0.0,
+          "retrieved": [],
+          "expected": [
+            [
+              "dsl-base",
+              "第一条"
+            ]
+          ],
+          "graph": null
+        },
+        {
+          "id": "g05",
+          "question": "研发补助申报细则的制定依据是哪份管理办法？",
+          "sources": [
+            "dense"
+          ],
+          "recall_at_k": 0.0,
+          "mrr": 0,
+          "ndcg_at_k": 0.0,
+          "retrieved": [],
+          "expected": [
+            [
+              "rd-rule",
+              "第一条"
+            ]
+          ],
+          "graph": null
+        },
+        {
+          "id": "g06",
+          "question": "生产安全实施细则依据的是哪份条例？",
+          "sources": [
+            "dense"
+          ],
+          "recall_at_k": 0.0,
+          "mrr": 0,
+          "ndcg_at_k": 0.0,
+          "retrieved": [],
+          "expected": [
+            [
+              "safe-rule",
+              "第一条"
+            ]
+          ],
+          "graph": null
+        },
+        {
+          "id": "g07",
+          "question": "测试数据局发布的管理条例里，企业需要建立什么制度？",
+          "sources": [
+            "dense"
+          ],
+          "recall_at_k": 0.0,
+          "mrr": 0,
+          "ndcg_at_k": 0.0,
+          "retrieved": [],
+          "expected": [
+            [
+              "dsl-base",
+              "第一条"
+            ]
+          ],
+          "graph": null
+        },
+        {
+          "id": "g08",
+          "question": "测试应急局主管的条例中，安全培训多久组织一次？",
+          "sources": [
+            "dense"
+          ],
+          "recall_at_k": 0.0,
+          "mrr": 0,
+          "ndcg_at_k": 0.0,
+          "retrieved": [],
+          "expected": [
+            [
+              "safe-rule",
+              "第一条"
+            ]
+          ],
+          "graph": null
+        }
+      ]
+    },
+    "lexical_dense": {
+      "sources": [
+        "lexical",
+        "dense"
+      ],
+      "summary": {
+        "recall_at_k": 1.0,
+        "mrr": 0.4083333333333333,
+        "ndcg_at_k": 0.5472648406198042,
+        "cases": 8,
+        "degraded_graph_cases": 0
+      },
+      "cases": [
+        {
+          "id": "g01",
+          "question": "测试数据安全实施细则的上位依据是哪一份文件？",
+          "sources": [
+            "lexical",
+            "dense"
+          ],
+          "recall_at_k": 1.0,
+          "mrr": 0.2,
+          "ndcg_at_k": 0.38685280723454163,
+          "retrieved": [
+            [
+              "dsl-impl",
+              "第一条"
+            ],
+            [
+              "dsl-impl",
+              "第二条"
+            ],
+            [
+              "safe-impl",
+              "第一条"
+            ],
+            [
+              "safe-impl",
+              "第二条"
+            ],
+            [
+              "dsl-base",
+              "第一条"
+            ],
+            [
+              "dsl-base",
+              "第二条"
+            ]
+          ],
+          "expected": [
+            [
+              "dsl-base",
+              "第一条"
+            ]
+          ],
+          "graph": null
+        },
+        {
+          "id": "g02",
+          "question": "测试研发补助申报细则所依据的上位文件是什么？",
+          "sources": [
+            "lexical",
+            "dense"
+          ],
+          "recall_at_k": 1.0,
+          "mrr": 0.25,
+          "ndcg_at_k": 0.43067655807339306,
+          "retrieved": [
+            [
+              "rd-detail",
+              "第一条"
+            ],
+            [
+              "rd-detail",
+              "第二条"
+            ],
+            [
+              "rd-rule",
+              "第二条"
+            ],
+            [
+              "rd-rule",
+              "第一条"
+            ],
+            [
+              "dsl-impl",
+              "第一条"
+            ],
+            [
+              "safe-impl",
+              "第一条"
+            ]
+          ],
+          "expected": [
+            [
+              "rd-rule",
+              "第一条"
+            ]
+          ],
+          "graph": null
+        },
+        {
+          "id": "g03",
+          "question": "测试生产安全实施细则的上位依据来自哪份文件？",
+          "sources": [
+            "lexical",
+            "dense"
+          ],
+          "recall_at_k": 1.0,
+          "mrr": 0.2,
+          "ndcg_at_k": 0.38685280723454163,
+          "retrieved": [
+            [
+              "safe-impl",
+              "第一条"
+            ],
+            [
+              "safe-impl",
+              "第二条"
+            ],
+            [
+              "dsl-impl",
+              "第一条"
+            ],
+            [
+              "dsl-impl",
+              "第二条"
+            ],
+            [
+              "safe-rule",
+              "第一条"
+            ],
+            [
+              "safe-rule",
+              "第二条"
+            ]
+          ],
+          "expected": [
+            [
+              "safe-rule",
+              "第一条"
+            ]
+          ],
+          "graph": null
+        },
+        {
+          "id": "g04",
+          "question": "哪份文件是数据安全实施细则的制定依据？",
+          "sources": [
+            "lexical",
+            "dense"
+          ],
+          "recall_at_k": 1.0,
+          "mrr": 0.16666666666666666,
+          "ndcg_at_k": 0.3562071871080222,
+          "retrieved": [
+            [
+              "dsl-impl",
+              "第一条"
+            ],
+            [
+              "safe-impl",
+              "第一条"
+            ],
+            [
+              "dsl-impl",
+              "第二条"
+            ],
+            [
+              "safe-impl",
+              "第二条"
+            ],
+            [
+              "rd-detail",
+              "第一条"
+            ],
+            [
+              "dsl-base",
+              "第一条"
+            ]
+          ],
+          "expected": [
+            [
+              "dsl-base",
+              "第一条"
+            ]
+          ],
+          "graph": null
+        },
+        {
+          "id": "g05",
+          "question": "研发补助申报细则的制定依据是哪份管理办法？",
+          "sources": [
+            "lexical",
+            "dense"
+          ],
+          "recall_at_k": 1.0,
+          "mrr": 0.25,
+          "ndcg_at_k": 0.43067655807339306,
+          "retrieved": [
+            [
+              "rd-detail",
+              "第一条"
+            ],
+            [
+              "rd-detail",
+              "第二条"
+            ],
+            [
+              "rd-rule",
+              "第二条"
+            ],
+            [
+              "rd-rule",
+              "第一条"
+            ],
+            [
+              "dsl-impl",
+              "第一条"
+            ],
+            [
+              "safe-impl",
+              "第一条"
+            ]
+          ],
+          "expected": [
+            [
+              "rd-rule",
+              "第一条"
+            ]
+          ],
+          "graph": null
+        },
+        {
+          "id": "g06",
+          "question": "生产安全实施细则依据的是哪份条例？",
+          "sources": [
+            "lexical",
+            "dense"
+          ],
+          "recall_at_k": 1.0,
+          "mrr": 0.2,
+          "ndcg_at_k": 0.38685280723454163,
+          "retrieved": [
+            [
+              "safe-impl",
+              "第一条"
+            ],
+            [
+              "dsl-impl",
+              "第一条"
+            ],
+            [
+              "safe-impl",
+              "第二条"
+            ],
+            [
+              "dsl-impl",
+              "第二条"
+            ],
+            [
+              "safe-rule",
+              "第一条"
+            ],
+            [
+              "safe-rule",
+              "第二条"
+            ]
+          ],
+          "expected": [
+            [
+              "safe-rule",
+              "第一条"
+            ]
+          ],
+          "graph": null
+        },
+        {
+          "id": "g07",
+          "question": "测试数据局发布的管理条例里，企业需要建立什么制度？",
+          "sources": [
+            "lexical",
+            "dense"
+          ],
+          "recall_at_k": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_k": 1.0,
+          "retrieved": [
+            [
+              "dsl-base",
+              "第一条"
+            ],
+            [
+              "dsl-base",
+              "第二条"
+            ],
+            [
+              "dsl-impl",
+              "第一条"
+            ],
+            [
+              "safe-rule",
+              "第一条"
+            ],
+            [
+              "safe-rule",
+              "第二条"
+            ],
+            [
+              "dsl-impl",
+              "第二条"
+            ]
+          ],
+          "expected": [
+            [
+              "dsl-base",
+              "第一条"
+            ]
+          ],
+          "graph": null
+        },
+        {
+          "id": "g08",
+          "question": "测试应急局主管的条例中，安全培训多久组织一次？",
+          "sources": [
+            "lexical",
+            "dense"
+          ],
+          "recall_at_k": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_k": 1.0,
+          "retrieved": [
+            [
+              "safe-rule",
+              "第一条"
+            ],
+            [
+              "safe-impl",
+              "第二条"
+            ],
+            [
+              "dsl-base",
+              "第二条"
+            ],
+            [
+              "safe-impl",
+              "第一条"
+            ],
+            [
+              "safe-rule",
+              "第二条"
+            ],
+            [
+              "dsl-impl",
+              "第一条"
+            ]
+          ],
+          "expected": [
+            [
+              "safe-rule",
+              "第一条"
+            ]
+          ],
+          "graph": null
+        }
+      ]
+    },
+    "lexical_dense_graph": {
+      "sources": [
+        "lexical",
+        "dense",
+        "graph"
+      ],
+      "summary": {
+        "recall_at_k": 1.0,
+        "mrr": 0.425,
+        "ndcg_at_k": 0.560764998585641,
+        "cases": 8,
+        "degraded_graph_cases": 0
+      },
+      "cases": [
+        {
+          "id": "g01",
+          "question": "测试数据安全实施细则的上位依据是哪一份文件？",
+          "sources": [
+            "lexical",
+            "dense",
+            "graph"
+          ],
+          "recall_at_k": 1.0,
+          "mrr": 0.2,
+          "ndcg_at_k": 0.38685280723454163,
+          "retrieved": [
+            [
+              "dsl-impl",
+              "第一条"
+            ],
+            [
+              "dsl-impl",
+              "第二条"
+            ],
+            [
+              "safe-impl",
+              "第一条"
+            ],
+            [
+              "safe-impl",
+              "第二条"
+            ],
+            [
+              "dsl-base",
+              "第一条"
+            ],
+            [
+              "dsl-base",
+              "第二条"
+            ]
+          ],
+          "expected": [
+            [
+              "dsl-base",
+              "第一条"
+            ]
+          ],
+          "graph": {
+            "enabled": true,
+            "degraded": false,
+            "seeds": [
+              "测试数据安全实施细则",
+              "测试数据局",
+              "测试数据安全实施细则第一条",
+              "测试数据安全实施细则第二条"
+            ],
+            "matched": 4,
+            "paths": [
+              {
+                "articleNo": "第一条",
+                "hops": 1,
+                "relevance": 1.5,
+                "steps": [
+                  "包含条款:Policy:测试数据安全实施细则->Clause:测试数据安全实施细则第一条"
+                ]
+              },
+              {
+                "articleNo": "第二条",
+                "hops": 1,
+                "relevance": 1.5,
+                "steps": [
+                  "包含条款:Policy:测试数据安全实施细则->Clause:测试数据安全实施细则第二条"
+                ]
+              },
+              {
+                "articleNo": "第一条",
+                "hops": 2,
+                "relevance": 1.333333,
+                "steps": [
+                  "依据:Policy:测试数据安全实施细则->Policy:测试数据安全管理条例",
+                  "包含条款:Policy:测试数据安全管理条例->Clause:测试数据安全管理条例第一条"
+                ]
+              },
+              {
+                "articleNo": "第二条",
+                "hops": 2,
+                "relevance": 1.333333,
+                "steps": [
+                  "依据:Policy:测试数据安全实施细则->Policy:测试数据安全管理条例",
+                  "包含条款:Policy:测试数据安全管理条例->Clause:测试数据安全管理条例第二条"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "g02",
+          "question": "测试研发补助申报细则所依据的上位文件是什么？",
+          "sources": [
+            "lexical",
+            "dense",
+            "graph"
+          ],
+          "recall_at_k": 1.0,
+          "mrr": 0.3333333333333333,
+          "ndcg_at_k": 0.5,
+          "retrieved": [
+            [
+              "rd-detail",
+              "第一条"
+            ],
+            [
+              "rd-detail",
+              "第二条"
+            ],
+            [
+              "rd-rule",
+              "第一条"
+            ],
+            [
+              "rd-rule",
+              "第二条"
+            ],
+            [
+              "dsl-impl",
+              "第一条"
+            ],
+            [
+              "safe-impl",
+              "第一条"
+            ]
+          ],
+          "expected": [
+            [
+              "rd-rule",
+              "第一条"
+            ]
+          ],
+          "graph": {
+            "enabled": true,
+            "degraded": false,
+            "seeds": [
+              "测试研发补助申报细则",
+              "测试研发补助申报细则第一条",
+              "测试研发补助申报细则第二条"
+            ],
+            "matched": 4,
+            "paths": [
+              {
+                "articleNo": "第一条",
+                "hops": 1,
+                "relevance": 1.5,
+                "steps": [
+                  "包含条款:Policy:测试研发补助申报细则->Clause:测试研发补助申报细则第一条"
+                ]
+              },
+              {
+                "articleNo": "第二条",
+                "hops": 1,
+                "relevance": 1.5,
+                "steps": [
+                  "包含条款:Policy:测试研发补助申报细则->Clause:测试研发补助申报细则第二条"
+                ]
+              },
+              {
+                "articleNo": "第一条",
+                "hops": 2,
+                "relevance": 1.333333,
+                "steps": [
+                  "依据:Policy:测试研发补助申报细则->Policy:测试研发补助管理办法",
+                  "包含条款:Policy:测试研发补助管理办法->Clause:测试研发补助管理办法第一条"
+                ]
+              },
+              {
+                "articleNo": "第二条",
+                "hops": 2,
+                "relevance": 1.333333,
+                "steps": [
+                  "依据:Policy:测试研发补助申报细则->Policy:测试研发补助管理办法",
+                  "包含条款:Policy:测试研发补助管理办法->Clause:测试研发补助管理办法第二条"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "g03",
+          "question": "测试生产安全实施细则的上位依据来自哪份文件？",
+          "sources": [
+            "lexical",
+            "dense",
+            "graph"
+          ],
+          "recall_at_k": 1.0,
+          "mrr": 0.16666666666666666,
+          "ndcg_at_k": 0.3562071871080222,
+          "retrieved": [
+            [
+              "safe-impl",
+              "第一条"
+            ],
+            [
+              "safe-impl",
+              "第二条"
+            ],
+            [
+              "dsl-impl",
+              "第一条"
+            ],
+            [
+              "dsl-impl",
+              "第二条"
+            ],
+            [
+              "safe-rule",
+              "第二条"
+            ],
+            [
+              "safe-rule",
+              "第一条"
+            ]
+          ],
+          "expected": [
+            [
+              "safe-rule",
+              "第一条"
+            ]
+          ],
+          "graph": {
+            "enabled": true,
+            "degraded": false,
+            "seeds": [
+              "测试生产安全实施细则",
+              "测试生产安全实施细则第一条",
+              "测试生产安全实施细则第二条"
+            ],
+            "matched": 4,
+            "paths": [
+              {
+                "articleNo": "第一条",
+                "hops": 1,
+                "relevance": 1.5,
+                "steps": [
+                  "包含条款:Policy:测试生产安全实施细则->Clause:测试生产安全实施细则第一条"
+                ]
+              },
+              {
+                "articleNo": "第二条",
+                "hops": 1,
+                "relevance": 1.5,
+                "steps": [
+                  "包含条款:Policy:测试生产安全实施细则->Clause:测试生产安全实施细则第二条"
+                ]
+              },
+              {
+                "articleNo": "第二条",
+                "hops": 2,
+                "relevance": 1.333333,
+                "steps": [
+                  "依据:Policy:测试生产安全实施细则->Policy:测试生产安全管理条例",
+                  "包含条款:Policy:测试生产安全管理条例->Clause:测试生产安全管理条例第二条"
+                ]
+              },
+              {
+                "articleNo": "第一条",
+                "hops": 2,
+                "relevance": 1.333333,
+                "steps": [
+                  "依据:Policy:测试生产安全实施细则->Policy:测试生产安全管理条例",
+                  "包含条款:Policy:测试生产安全管理条例->Clause:测试生产安全管理条例第一条"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "g04",
+          "question": "哪份文件是数据安全实施细则的制定依据？",
+          "sources": [
+            "lexical",
+            "dense",
+            "graph"
+          ],
+          "recall_at_k": 1.0,
+          "mrr": 0.2,
+          "ndcg_at_k": 0.38685280723454163,
+          "retrieved": [
+            [
+              "dsl-impl",
+              "第一条"
+            ],
+            [
+              "dsl-impl",
+              "第二条"
+            ],
+            [
+              "safe-impl",
+              "第一条"
+            ],
+            [
+              "safe-impl",
+              "第二条"
+            ],
+            [
+              "dsl-base",
+              "第一条"
+            ],
+            [
+              "dsl-base",
+              "第二条"
+            ]
+          ],
+          "expected": [
+            [
+              "dsl-base",
+              "第一条"
+            ]
+          ],
+          "graph": {
+            "enabled": true,
+            "degraded": false,
+            "seeds": [
+              "测试数据安全实施细则"
+            ],
+            "matched": 4,
+            "paths": [
+              {
+                "articleNo": "第一条",
+                "hops": 1,
+                "relevance": 0.5,
+                "steps": [
+                  "包含条款:Policy:测试数据安全实施细则->Clause:测试数据安全实施细则第一条"
+                ]
+              },
+              {
+                "articleNo": "第二条",
+                "hops": 1,
+                "relevance": 0.5,
+                "steps": [
+                  "包含条款:Policy:测试数据安全实施细则->Clause:测试数据安全实施细则第二条"
+                ]
+              },
+              {
+                "articleNo": "第一条",
+                "hops": 2,
+                "relevance": 0.333333,
+                "steps": [
+                  "依据:Policy:测试数据安全实施细则->Policy:测试数据安全管理条例",
+                  "包含条款:Policy:测试数据安全管理条例->Clause:测试数据安全管理条例第一条"
+                ]
+              },
+              {
+                "articleNo": "第二条",
+                "hops": 2,
+                "relevance": 0.333333,
+                "steps": [
+                  "依据:Policy:测试数据安全实施细则->Policy:测试数据安全管理条例",
+                  "包含条款:Policy:测试数据安全管理条例->Clause:测试数据安全管理条例第二条"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "g05",
+          "question": "研发补助申报细则的制定依据是哪份管理办法？",
+          "sources": [
+            "lexical",
+            "dense",
+            "graph"
+          ],
+          "recall_at_k": 1.0,
+          "mrr": 0.3333333333333333,
+          "ndcg_at_k": 0.5,
+          "retrieved": [
+            [
+              "rd-detail",
+              "第一条"
+            ],
+            [
+              "rd-detail",
+              "第二条"
+            ],
+            [
+              "rd-rule",
+              "第一条"
+            ],
+            [
+              "rd-rule",
+              "第二条"
+            ],
+            [
+              "dsl-impl",
+              "第一条"
+            ],
+            [
+              "safe-impl",
+              "第一条"
+            ]
+          ],
+          "expected": [
+            [
+              "rd-rule",
+              "第一条"
+            ]
+          ],
+          "graph": {
+            "enabled": true,
+            "degraded": false,
+            "seeds": [
+              "测试研发补助申报细则"
+            ],
+            "matched": 4,
+            "paths": [
+              {
+                "articleNo": "第一条",
+                "hops": 1,
+                "relevance": 0.5,
+                "steps": [
+                  "包含条款:Policy:测试研发补助申报细则->Clause:测试研发补助申报细则第一条"
+                ]
+              },
+              {
+                "articleNo": "第二条",
+                "hops": 1,
+                "relevance": 0.5,
+                "steps": [
+                  "包含条款:Policy:测试研发补助申报细则->Clause:测试研发补助申报细则第二条"
+                ]
+              },
+              {
+                "articleNo": "第一条",
+                "hops": 2,
+                "relevance": 0.333333,
+                "steps": [
+                  "依据:Policy:测试研发补助申报细则->Policy:测试研发补助管理办法",
+                  "包含条款:Policy:测试研发补助管理办法->Clause:测试研发补助管理办法第一条"
+                ]
+              },
+              {
+                "articleNo": "第二条",
+                "hops": 2,
+                "relevance": 0.333333,
+                "steps": [
+                  "依据:Policy:测试研发补助申报细则->Policy:测试研发补助管理办法",
+                  "包含条款:Policy:测试研发补助管理办法->Clause:测试研发补助管理办法第二条"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "g06",
+          "question": "生产安全实施细则依据的是哪份条例？",
+          "sources": [
+            "lexical",
+            "dense",
+            "graph"
+          ],
+          "recall_at_k": 1.0,
+          "mrr": 0.16666666666666666,
+          "ndcg_at_k": 0.3562071871080222,
+          "retrieved": [
+            [
+              "safe-impl",
+              "第一条"
+            ],
+            [
+              "dsl-impl",
+              "第一条"
+            ],
+            [
+              "safe-impl",
+              "第二条"
+            ],
+            [
+              "dsl-impl",
+              "第二条"
+            ],
+            [
+              "safe-rule",
+              "第二条"
+            ],
+            [
+              "safe-rule",
+              "第一条"
+            ]
+          ],
+          "expected": [
+            [
+              "safe-rule",
+              "第一条"
+            ]
+          ],
+          "graph": {
+            "enabled": true,
+            "degraded": false,
+            "seeds": [
+              "测试生产安全实施细则"
+            ],
+            "matched": 4,
+            "paths": [
+              {
+                "articleNo": "第一条",
+                "hops": 1,
+                "relevance": 0.5,
+                "steps": [
+                  "包含条款:Policy:测试生产安全实施细则->Clause:测试生产安全实施细则第一条"
+                ]
+              },
+              {
+                "articleNo": "第二条",
+                "hops": 1,
+                "relevance": 0.5,
+                "steps": [
+                  "包含条款:Policy:测试生产安全实施细则->Clause:测试生产安全实施细则第二条"
+                ]
+              },
+              {
+                "articleNo": "第二条",
+                "hops": 2,
+                "relevance": 0.333333,
+                "steps": [
+                  "依据:Policy:测试生产安全实施细则->Policy:测试生产安全管理条例",
+                  "包含条款:Policy:测试生产安全管理条例->Clause:测试生产安全管理条例第二条"
+                ]
+              },
+              {
+                "articleNo": "第一条",
+                "hops": 2,
+                "relevance": 0.333333,
+                "steps": [
+                  "依据:Policy:测试生产安全实施细则->Policy:测试生产安全管理条例",
+                  "包含条款:Policy:测试生产安全管理条例->Clause:测试生产安全管理条例第一条"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "g07",
+          "question": "测试数据局发布的管理条例里，企业需要建立什么制度？",
+          "sources": [
+            "lexical",
+            "dense",
+            "graph"
+          ],
+          "recall_at_k": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_k": 1.0,
+          "retrieved": [
+            [
+              "dsl-base",
+              "第一条"
+            ],
+            [
+              "dsl-base",
+              "第二条"
+            ],
+            [
+              "dsl-impl",
+              "第一条"
+            ],
+            [
+              "safe-rule",
+              "第一条"
+            ],
+            [
+              "safe-rule",
+              "第二条"
+            ],
+            [
+              "dsl-impl",
+              "第二条"
+            ]
+          ],
+          "expected": [
+            [
+              "dsl-base",
+              "第一条"
+            ]
+          ],
+          "graph": {
+            "enabled": true,
+            "degraded": false,
+            "seeds": [
+              "测试数据局"
+            ],
+            "matched": 4,
+            "paths": [
+              {
+                "articleNo": "第一条",
+                "hops": 2,
+                "relevance": 1.166667,
+                "steps": [
+                  "发布:Authority:测试数据局->Policy:测试数据安全管理条例",
+                  "包含条款:Policy:测试数据安全管理条例->Clause:测试数据安全管理条例第一条"
+                ]
+              },
+              {
+                "articleNo": "第二条",
+                "hops": 2,
+                "relevance": 1.166667,
+                "steps": [
+                  "发布:Authority:测试数据局->Policy:测试数据安全管理条例",
+                  "包含条款:Policy:测试数据安全管理条例->Clause:测试数据安全管理条例第二条"
+                ]
+              },
+              {
+                "articleNo": "第一条",
+                "hops": 2,
+                "relevance": 1.166667,
+                "steps": [
+                  "发布:Authority:测试数据局->Policy:测试数据安全实施细则",
+                  "包含条款:Policy:测试数据安全实施细则->Clause:测试数据安全实施细则第一条"
+                ]
+              },
+              {
+                "articleNo": "第二条",
+                "hops": 2,
+                "relevance": 1.166667,
+                "steps": [
+                  "发布:Authority:测试数据局->Policy:测试数据安全实施细则",
+                  "包含条款:Policy:测试数据安全实施细则->Clause:测试数据安全实施细则第二条"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "g08",
+          "question": "测试应急局主管的条例中，安全培训多久组织一次？",
+          "sources": [
+            "lexical",
+            "dense",
+            "graph"
+          ],
+          "recall_at_k": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_k": 1.0,
+          "retrieved": [
+            [
+              "safe-rule",
+              "第一条"
+            ],
+            [
+              "safe-impl",
+              "第二条"
+            ],
+            [
+              "dsl-base",
+              "第二条"
+            ],
+            [
+              "safe-rule",
+              "第二条"
+            ],
+            [
+              "safe-impl",
+              "第一条"
+            ],
+            [
+              "dsl-impl",
+              "第一条"
+            ]
+          ],
+          "expected": [
+            [
+              "safe-rule",
+              "第一条"
+            ]
+          ],
+          "graph": {
+            "enabled": true,
+            "degraded": false,
+            "seeds": [
+              "测试应急局"
+            ],
+            "matched": 4,
+            "paths": [
+              {
+                "articleNo": "第二条",
+                "hops": 2,
+                "relevance": 1.074074,
+                "steps": [
+                  "发布:Authority:测试应急局->Policy:测试生产安全管理条例",
+                  "包含条款:Policy:测试生产安全管理条例->Clause:测试生产安全管理条例第二条"
+                ]
+              },
+              {
+                "articleNo": "第一条",
+                "hops": 2,
+                "relevance": 1.074074,
+                "steps": [
+                  "发布:Authority:测试应急局->Policy:测试生产安全实施细则",
+                  "包含条款:Policy:测试生产安全实施细则->Clause:测试生产安全实施细则第一条"
+                ]
+              },
+              {
+                "articleNo": "第二条",
+                "hops": 2,
+                "relevance": 1.074074,
+                "steps": [
+                  "发布:Authority:测试应急局->Policy:测试生产安全实施细则",
+                  "包含条款:Policy:测试生产安全实施细则->Clause:测试生产安全实施细则第二条"
+                ]
+              },
+              {
+                "articleNo": "第一条",
+                "hops": 2,
+                "relevance": 1.074074,
+                "steps": [
+                  "发布:Authority:测试应急局->Policy:测试生产安全管理条例",
+                  "包含条款:Policy:测试生产安全管理条例->Clause:测试生产安全管理条例第一条"
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "decision": {
+    "baseline": "dense_only",
+    "treatment": "lexical_dense_graph",
+    "reference": "lexical_dense",
+    "recall_gain_vs_vector": 1.0,
+    "mrr_gain_vs_vector": 0.425,
+    "recall_gain_vs_lexical_dense": 0.0,
+    "mrr_gain_vs_lexical_dense": 0.016667,
+    "promoted": true,
+    "note": "有正向增益：可按 settings.kg_enabled=true 上线，并保留本报告作为上线依据。",
+    "summary_line": {
+      "vector_recall": 0.0,
+      "vector_mrr": 0,
+      "graph_recall": 1.0,
+      "graph_mrr": 0.425,
+      "lexical_dense_recall": 1.0,
+      "lexical_dense_mrr": 0.4083333333333333
+    }
+  }
+}

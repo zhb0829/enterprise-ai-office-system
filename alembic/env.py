@@ -8,6 +8,9 @@ from sqlalchemy import engine_from_config, pool
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app import models  # noqa: F401  确保模型已注册到 metadata
+from app.agent import models as agent_models, platform_models  # noqa: F401
+from app.meeting import models_ai as meeting_models  # noqa: F401
+from app.opinion import models_ai as opinion_models  # noqa: F401
 from app.config import settings
 from app.db import Base
 

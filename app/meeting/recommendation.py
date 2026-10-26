@@ -5,6 +5,7 @@ import math
 import re
 
 from sqlalchemy import text
+from sqlalchemy.orm import Session
 
 from ..db import engine
 from ..services.materials import embed_texts
@@ -25,6 +26,22 @@ def recommend(conference: dict, report: str) -> tuple[list[dict], list[dict]]:
 
 
 def _policy_candidates() -> list[dict]:
+    from ..agent.knowledge import KnowledgeStore
+    from ..agent.governance import utcnow
+    from ..services.policy import _snapshot_clauses
+    with Session(engine) as db:
+        snapshot = KnowledgeStore(db, "public:policy").snapshot()
+        if snapshot["releaseId"]:
+            documents = {}
+            for clause in _snapshot_clauses(snapshot, utcnow()):
+                document = clause.document
+                row = documents.setdefault(document.id, {
+                    "id": document.id, "title": document.title, "docNumber": document.doc_number,
+                    "authority": document.issuing_authority, "text": "",
+                    "knowledgeVersion": snapshot["version"],
+                })
+                row["text"] = (row["text"] + "\n" + clause.content)[:4000]
+            return list(documents.values())[:300]
     sql = text("""
         SELECT id, title, doc_number, issuing_authority, text_content
         FROM policy_document
@@ -46,6 +63,28 @@ def _policy_candidates() -> list[dict]:
 
 
 def _conference_candidates(current_id: int) -> list[dict]:
+    from ..agent.knowledge import KnowledgeStore
+    from ..agent.governance import DataLevel, Principal, data_level_var, principal_var
+    p = principal_var.get()
+    if p.authenticated and (p.tenant_id != "default" or p.public_only):
+        return []
+    with Session(engine) as db:
+        snapshot = KnowledgeStore(db, "tenant:default:meeting").snapshot(
+            principal=p if p.authenticated else Principal(
+                "service:meeting", "default", clearance=DataLevel.internal, public_only=False))
+        if snapshot["releaseId"]:
+            visible_ids = _active_conference_ids()
+            candidates = [{
+                "id": e["metadata_"]["conferenceId"],
+                "title": " / ".join(c.get("title", "") for c in e["metadata_"].get("cards", []))[:256],
+                "text": "\n".join(c["text"] for c in e["chunks"])[:4000],
+                "knowledgeVersion": snapshot["version"],
+            } for e in snapshot["entries"]
+                if e["metadata_"].get("conferenceId") != current_id
+                and e["metadata_"].get("conferenceId") in visible_ids][:300]
+            if candidates:
+                data_level_var.set(max(data_level_var.get(), DataLevel.internal))
+            return candidates
     sql = text("""
         SELECT c.id, c.name, c.organizer, c.keywords, r.content
         FROM conference c
@@ -59,15 +98,29 @@ def _conference_candidates(current_id: int) -> list[dict]:
     """)
     try:
         with engine.connect() as connection:
-            return [{
+            candidates = [{
                 "id": row.id,
                 "title": row.name,
                 "organizer": row.organizer,
                 "keywords": row.keywords,
                 "text": (row.content or "")[:4000],
             } for row in connection.execute(sql, {"current_id": current_id})]
+            if candidates:
+                data_level_var.set(max(data_level_var.get(), DataLevel.internal))
+            return candidates
     except Exception:  # noqa: BLE001
         return []
+
+
+def _active_conference_ids() -> set[int]:
+    # Java remains authoritative for archival and lifecycle changes.
+    try:
+        with engine.connect() as connection:
+            return set(connection.scalars(text(
+                "SELECT id FROM conference WHERE status = 'completed' AND archived = FALSE"
+            )))
+    except Exception:
+        return set()
 
 
 def _rank(query: str, candidates: list[dict], related_type: str) -> list[dict]:

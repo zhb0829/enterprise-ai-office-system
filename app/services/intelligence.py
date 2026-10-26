@@ -316,7 +316,7 @@ def summarize_articles(article_ids: list[int], cluster_id: int | None = None) ->
             result = llm.chat_json([
                 {"role": "system", "content": "你是企业情报分析员。仅根据输入材料输出 JSON：{summary:string, risks:string[]}，不得补造事实。"},
                 {"role": "user", "content": context},
-            ])
+            ], purpose="intelligence.analysis")
             summary = str(result.get("summary") or summary)
             risk_flags.extend(str(x) for x in result.get("risks", []) if x)
             model = settings.llm_model_generation

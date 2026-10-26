@@ -44,12 +44,15 @@ def _chunk(text: str) -> list[str]:
 
 
 def reindex_cases() -> dict:
-    """从 Java 拉取全部历史案例，重建向量索引（幂等）。"""
+    """Publish an incremental immutable case manifest from the authoritative Java API."""
     payload = java_client._get("/internal/opinion/cases/all")
     cases = (payload or {}).get("cases") or []
     db = SessionLocal()
     try:
-        db.query(OpinionCaseChunk).delete()
+        from ..agent.knowledge import KnowledgeStore
+        from ..agent.platform_models import KnowledgeEntry
+        store = KnowledgeStore(db, "tenant:default:opinion")
+        documents = []
         for case in cases:
             source_text = "\n".join(filter(None, [
                 f"案例标题：{case.get('title', '')}",
@@ -59,25 +62,26 @@ def reindex_cases() -> dict:
                 f"处置：{case.get('content', '')}",
                 f"效果：{case.get('effect', '')}",
             ]))
-            chunks = _chunk(source_text)
-            for index, chunk in enumerate(chunks):
-                db.add(OpinionCaseChunk(
-                    case_id=int(case.get("id") or 0),
-                    case_title=str(case.get("title") or ""),
-                    event_type=str(case.get("eventType") or ""),
-                    risk_level=str(case.get("riskLevel") or ""),
-                    chunk_index=index,
-                    text=chunk,
-                ))
+            documents.append({
+                "key": f"case:{int(case['id'])}", "text": source_text,
+                "classification": "internal", "tenant_id": "default",
+                "metadata": {"caseId": int(case["id"]), "title": case.get("title", ""),
+                             "eventType": case.get("eventType", ""), "riskLevel": case.get("riskLevel", "")},
+            })
+        active = store.active()
+        old_keys = {r.key for r in db.query(KnowledgeEntry).filter_by(release_id=active.id)} if active else set()
+        release = store.stage(documents, deleted_keys=old_keys - {d["key"] for d in documents})
+        if any(release.changes[k] for k in ("added", "updated", "deleted")) or not active:
+            store.publish(release.id)
+            selected = release
+        else:
+            store.discard(release)
+            selected = active
+        chunks = sum(len(e.chunks) for e in db.query(KnowledgeEntry).filter_by(
+            release_id=selected.id))
         db.commit()
-        rows = db.query(OpinionCaseChunk).order_by(OpinionCaseChunk.id).all()
-        texts = [row.text for row in rows]
-        vectors = embed_texts(texts) if texts else []
-        for row, vector in zip(rows, vectors):
-            row.embedding = vector
-            row.meta = {"embedding_backend": "hash-fallback" if _is_hash(vector) else "api"}
-        db.commit()
-        return {"cases": len(cases), "chunks": len(rows)}
+        return {"cases": len(cases), "chunks": chunks, "knowledgeVersion": selected.version,
+                "changes": release.changes}
     except Exception as exc:  # noqa: BLE001
         logger.error("案例 RAG 重建失败: %s", exc)
         raise
@@ -101,6 +105,32 @@ def _cosine(left: list[float], right: list[float]) -> float:
 def _retrieve(query: str, limit: int = TOP_K) -> list[dict]:
     db = SessionLocal()
     try:
+        from ..agent.knowledge import KnowledgeStore
+        from ..agent.governance import DataLevel, Principal, data_level_var, principal_var
+        p = principal_var.get()
+        if p.authenticated and (p.tenant_id != "default" or p.public_only):
+            return []
+        snapshot = KnowledgeStore(db, "tenant:default:opinion").snapshot(
+            principal=p if p.authenticated else Principal(
+                "service:opinion", "default", clearance=DataLevel.internal, public_only=False))
+        if snapshot["releaseId"]:
+            from ..agent.retrieval import bm25_scores
+            from ..services.materials import embedding_is_compatible
+            rows = [(entry, chunk) for entry in snapshot["entries"] for chunk in entry["chunks"]]
+            query_vec = embed_texts([query])[0] if rows else []
+            scores = bm25_scores(query, [chunk["text"] for _, chunk in rows])
+            hits = []
+            for (entry, chunk), lexical in zip(rows, scores):
+                dense = _cosine(query_vec, chunk.get("embedding", [])) if embedding_is_compatible(chunk.get("meta"), query_vec) else 0
+                if lexical <= 0 and dense < 0.35:
+                    continue
+                hits.append({"case_id": entry["metadata_"]["caseId"],
+                             "case_title": entry["metadata_"]["title"], "text": chunk["text"][:400],
+                             "score": lexical + dense, "knowledgeVersion": snapshot["version"]})
+            hits.sort(key=lambda item: item["score"], reverse=True)
+            if hits[:limit]:
+                data_level_var.set(max(data_level_var.get(), DataLevel.internal))
+            return hits[:limit]
         rows = db.query(OpinionCaseChunk).order_by(OpinionCaseChunk.id).all()
         if not rows:
             return []
@@ -121,6 +151,8 @@ def _retrieve(query: str, limit: int = TOP_K) -> list[dict]:
                 "score": round(float(score), 4),
             })
         ranked.sort(key=lambda item: item["score"], reverse=True)
+        if ranked[:limit]:
+            data_level_var.set(max(data_level_var.get(), DataLevel.internal))
         return ranked[:limit]
     finally:
         db.close()
@@ -155,18 +187,24 @@ def generate_suggestion(context: dict) -> dict:
                 {"role": "user", "content": f"舆情背景：{json.dumps(context, ensure_ascii=False, default=str)[:6000]}\n\n历史案例：\n{excerpts}"},
             ]
             start = time.time()
-            raw = llm.chat_json(messages, model=settings.llm_model_generation)
+            raw = llm.chat_json(messages, purpose="opinion.rag")
             _ = time.time() - start
-            content = str(raw.get("content") or "")
-            if content:
-                model = settings.llm_model_generation
+            candidate_content = str(raw.get("content") or "")
+            if candidate_content:
                 known_hits = {h["case_id"]: h for h in hits}
-                citations = [{
+                verified = [{
                     "caseId": case_id,
                     "title": c.get("title") or known_hits[case_id]["case_title"],
                     "excerpt": c.get("excerpt") or known_hits[case_id]["text"],
-                } for c in raw.get("citations", [])
-                    if (case_id := c.get("caseId")) in known_hits] or citations
+                } for c in raw.get("citations", []) if isinstance(c, dict)
+                    if (case_id := c.get("caseId")) in known_hits
+                    and isinstance(c.get("excerpt"), str) and c["excerpt"].strip()
+                    and c["excerpt"] in known_hits[case_id]["text"]]
+                if verified:
+                    content, citations = candidate_content, verified
+                    model = settings.llm_model_generation
+                else:
+                    logger.warning("应对建议引用未通过核验，使用检索证据")
         except (LLMError, ValueError, AttributeError) as exc:
             logger.warning("应对建议 LLM 生成失败，使用检索结果: %s", exc)
     return {

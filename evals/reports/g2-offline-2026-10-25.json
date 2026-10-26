@@ -1,0 +1,719 @@
+{
+  "dataset_version": "synthetic-p0-v1",
+  "dataset_source": "synthetic",
+  "dataset_digest": "43ff474c12d2104418b5495eb5aa47a61a681d9f6ea87a0ddb9d720c7db50f7b",
+  "dataset_validation": {
+    "passed": true,
+    "checked_by": "n/a (engineering regression corpus)",
+    "errors": []
+  },
+  "synthetic": true,
+  "mode": "offline",
+  "generated_at": "2026-10-25T14:44:09.820401",
+  "scope": "Engineering regression; not real policy accuracy or production acceptance",
+  "cases": [
+    {
+      "id": "p01",
+      "domain": "policy",
+      "passed": true,
+      "latency_ms": 7.170699995185714,
+      "recall_at_k": 1.0,
+      "mrr": 0.5,
+      "ndcg_at_k": 0.6309297535714575,
+      "answer_accuracy": 1.0,
+      "answer_completeness": 1.0,
+      "citation_precision": 1.0,
+      "citation_traceability": 1.0,
+      "degraded": true,
+      "refused": false,
+      "expected_refusal": false,
+      "retrieved": [
+        [
+          "rd-current",
+          "第三条"
+        ],
+        [
+          "rd-current",
+          "第二条"
+        ],
+        [
+          "rd-current",
+          "第一条"
+        ]
+      ]
+    },
+    {
+      "id": "p02",
+      "domain": "policy",
+      "passed": true,
+      "latency_ms": 3.796899996814318,
+      "recall_at_k": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_k": 1.0,
+      "answer_accuracy": 1.0,
+      "answer_completeness": 1.0,
+      "citation_precision": 1.0,
+      "citation_traceability": 1.0,
+      "degraded": true,
+      "refused": false,
+      "expected_refusal": false,
+      "retrieved": [
+        [
+          "rd-current",
+          "第三条"
+        ],
+        [
+          "rd-current",
+          "第二条"
+        ],
+        [
+          "rd-current",
+          "第一条"
+        ]
+      ]
+    },
+    {
+      "id": "p03",
+      "domain": "policy",
+      "passed": true,
+      "latency_ms": 5.866999999852851,
+      "recall_at_k": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_k": 1.0,
+      "answer_accuracy": 1.0,
+      "answer_completeness": 1.0,
+      "citation_precision": 1.0,
+      "citation_traceability": 1.0,
+      "degraded": true,
+      "refused": false,
+      "expected_refusal": false,
+      "retrieved": [
+        [
+          "rd-current",
+          "第一条"
+        ],
+        [
+          "rd-current",
+          "第二条"
+        ],
+        [
+          "rd-current",
+          "第三条"
+        ],
+        [
+          "data",
+          "第三条"
+        ],
+        [
+          "safety",
+          "第三条"
+        ],
+        [
+          "safety",
+          "第一条"
+        ]
+      ]
+    },
+    {
+      "id": "p04",
+      "domain": "policy",
+      "passed": true,
+      "latency_ms": 4.12549999600742,
+      "recall_at_k": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_k": 1.0,
+      "answer_accuracy": 1.0,
+      "answer_completeness": 1.0,
+      "citation_precision": 1.0,
+      "citation_traceability": 1.0,
+      "degraded": true,
+      "refused": false,
+      "expected_refusal": false,
+      "retrieved": [
+        [
+          "rd-current",
+          "第二条"
+        ],
+        [
+          "rd-current",
+          "第三条"
+        ],
+        [
+          "rd-current",
+          "第一条"
+        ]
+      ]
+    },
+    {
+      "id": "p05",
+      "domain": "policy",
+      "passed": true,
+      "latency_ms": 3.834600000118371,
+      "recall_at_k": 1.0,
+      "mrr": 0.5,
+      "ndcg_at_k": 0.6309297535714575,
+      "answer_accuracy": 1.0,
+      "answer_completeness": 1.0,
+      "citation_precision": 1.0,
+      "citation_traceability": 1.0,
+      "degraded": true,
+      "refused": false,
+      "expected_refusal": false,
+      "retrieved": [
+        [
+          "rd-current",
+          "第三条"
+        ],
+        [
+          "rd-current",
+          "第二条"
+        ],
+        [
+          "rd-current",
+          "第一条"
+        ]
+      ]
+    },
+    {
+      "id": "p06",
+      "domain": "policy",
+      "passed": true,
+      "latency_ms": 3.4411999949952587,
+      "recall_at_k": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_k": 1.0,
+      "answer_accuracy": 1.0,
+      "answer_completeness": 1.0,
+      "citation_precision": 1.0,
+      "citation_traceability": 1.0,
+      "degraded": true,
+      "refused": false,
+      "expected_refusal": false,
+      "retrieved": [
+        [
+          "safety",
+          "第一条"
+        ],
+        [
+          "safety",
+          "第二条"
+        ],
+        [
+          "safety",
+          "第三条"
+        ]
+      ]
+    },
+    {
+      "id": "p07",
+      "domain": "policy",
+      "passed": true,
+      "latency_ms": 7.354699999268632,
+      "recall_at_k": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_k": 1.0,
+      "answer_accuracy": 1.0,
+      "answer_completeness": 1.0,
+      "citation_precision": 1.0,
+      "citation_traceability": 1.0,
+      "degraded": true,
+      "refused": false,
+      "expected_refusal": false,
+      "retrieved": [
+        [
+          "safety",
+          "第二条"
+        ],
+        [
+          "safety",
+          "第一条"
+        ],
+        [
+          "safety",
+          "第三条"
+        ]
+      ]
+    },
+    {
+      "id": "p08",
+      "domain": "policy",
+      "passed": true,
+      "latency_ms": 5.876600000192411,
+      "recall_at_k": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_k": 1.0,
+      "answer_accuracy": 1.0,
+      "answer_completeness": 1.0,
+      "citation_precision": 1.0,
+      "citation_traceability": 1.0,
+      "degraded": true,
+      "refused": false,
+      "expected_refusal": false,
+      "retrieved": [
+        [
+          "safety",
+          "第三条"
+        ],
+        [
+          "safety",
+          "第一条"
+        ],
+        [
+          "safety",
+          "第二条"
+        ]
+      ]
+    },
+    {
+      "id": "p09",
+      "domain": "policy",
+      "passed": true,
+      "latency_ms": 4.00880000233883,
+      "recall_at_k": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_k": 1.0,
+      "answer_accuracy": 1.0,
+      "answer_completeness": 1.0,
+      "citation_precision": 1.0,
+      "citation_traceability": 1.0,
+      "degraded": true,
+      "refused": false,
+      "expected_refusal": false,
+      "retrieved": [
+        [
+          "data",
+          "第一条"
+        ],
+        [
+          "data",
+          "第三条"
+        ],
+        [
+          "data",
+          "第二条"
+        ]
+      ]
+    },
+    {
+      "id": "p10",
+      "domain": "policy",
+      "passed": true,
+      "latency_ms": 3.6899999977322295,
+      "recall_at_k": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_k": 1.0,
+      "answer_accuracy": 1.0,
+      "answer_completeness": 1.0,
+      "citation_precision": 1.0,
+      "citation_traceability": 1.0,
+      "degraded": true,
+      "refused": false,
+      "expected_refusal": false,
+      "retrieved": [
+        [
+          "data",
+          "第二条"
+        ],
+        [
+          "data",
+          "第三条"
+        ]
+      ]
+    },
+    {
+      "id": "p11",
+      "domain": "policy",
+      "passed": true,
+      "latency_ms": 3.84219999978086,
+      "recall_at_k": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_k": 1.0,
+      "answer_accuracy": 1.0,
+      "answer_completeness": 1.0,
+      "citation_precision": 1.0,
+      "citation_traceability": 1.0,
+      "degraded": true,
+      "refused": false,
+      "expected_refusal": false,
+      "retrieved": [
+        [
+          "data",
+          "第三条"
+        ],
+        [
+          "data",
+          "第一条"
+        ],
+        [
+          "data",
+          "第二条"
+        ]
+      ]
+    },
+    {
+      "id": "p12",
+      "domain": "policy",
+      "passed": true,
+      "latency_ms": 3.244500003347639,
+      "recall_at_k": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_k": 1.0,
+      "answer_accuracy": 1.0,
+      "answer_completeness": 1.0,
+      "citation_precision": 1.0,
+      "citation_traceability": 1.0,
+      "degraded": true,
+      "refused": false,
+      "expected_refusal": false,
+      "retrieved": [
+        [
+          "rd-other-region",
+          "第二条"
+        ]
+      ]
+    },
+    {
+      "id": "p13",
+      "domain": "policy",
+      "passed": true,
+      "latency_ms": 2.31540000095265,
+      "recall_at_k": null,
+      "mrr": null,
+      "ndcg_at_k": null,
+      "answer_accuracy": null,
+      "answer_completeness": null,
+      "citation_precision": null,
+      "citation_traceability": null,
+      "degraded": true,
+      "refused": true,
+      "expected_refusal": true,
+      "retrieved": []
+    },
+    {
+      "id": "p14",
+      "domain": "policy",
+      "passed": true,
+      "latency_ms": 2.2881999975652434,
+      "recall_at_k": null,
+      "mrr": null,
+      "ndcg_at_k": null,
+      "answer_accuracy": null,
+      "answer_completeness": null,
+      "citation_precision": null,
+      "citation_traceability": null,
+      "degraded": true,
+      "refused": true,
+      "expected_refusal": true,
+      "retrieved": []
+    },
+    {
+      "id": "p15",
+      "domain": "policy",
+      "passed": true,
+      "latency_ms": 2.711400004045572,
+      "recall_at_k": null,
+      "mrr": null,
+      "ndcg_at_k": null,
+      "answer_accuracy": null,
+      "answer_completeness": null,
+      "citation_precision": null,
+      "citation_traceability": null,
+      "degraded": true,
+      "refused": true,
+      "expected_refusal": true,
+      "retrieved": []
+    },
+    {
+      "id": "p16",
+      "domain": "policy",
+      "passed": true,
+      "latency_ms": 2.890899995691143,
+      "recall_at_k": null,
+      "mrr": null,
+      "ndcg_at_k": null,
+      "answer_accuracy": null,
+      "answer_completeness": null,
+      "citation_precision": null,
+      "citation_traceability": null,
+      "degraded": true,
+      "refused": true,
+      "expected_refusal": true,
+      "retrieved": []
+    },
+    {
+      "id": "p17",
+      "domain": "policy",
+      "passed": true,
+      "latency_ms": 3.847300002234988,
+      "recall_at_k": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_k": 1.0,
+      "answer_accuracy": 1.0,
+      "answer_completeness": 1.0,
+      "citation_precision": 1.0,
+      "citation_traceability": 1.0,
+      "degraded": true,
+      "refused": false,
+      "expected_refusal": false,
+      "retrieved": [
+        [
+          "rd-old",
+          "第二条"
+        ],
+        [
+          "expired",
+          "第一条"
+        ]
+      ]
+    },
+    {
+      "id": "p18",
+      "domain": "policy",
+      "passed": true,
+      "latency_ms": 4.512700004852377,
+      "recall_at_k": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_k": 1.0,
+      "answer_accuracy": 1.0,
+      "answer_completeness": 1.0,
+      "citation_precision": 1.0,
+      "citation_traceability": 1.0,
+      "degraded": true,
+      "refused": false,
+      "expected_refusal": false,
+      "retrieved": [
+        [
+          "rd-future",
+          "第二条"
+        ],
+        [
+          "published-future",
+          "第一条"
+        ]
+      ]
+    },
+    {
+      "id": "p19",
+      "domain": "policy",
+      "passed": true,
+      "latency_ms": 2.9251000014482997,
+      "recall_at_k": null,
+      "mrr": null,
+      "ndcg_at_k": null,
+      "answer_accuracy": null,
+      "answer_completeness": null,
+      "citation_precision": null,
+      "citation_traceability": null,
+      "degraded": true,
+      "refused": true,
+      "expected_refusal": true,
+      "retrieved": []
+    },
+    {
+      "id": "p20",
+      "domain": "policy",
+      "passed": true,
+      "latency_ms": 4.129999993892852,
+      "recall_at_k": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_k": 1.0,
+      "answer_accuracy": 1.0,
+      "answer_completeness": 1.0,
+      "citation_precision": 1.0,
+      "citation_traceability": 1.0,
+      "degraded": true,
+      "refused": false,
+      "expected_refusal": false,
+      "retrieved": [
+        [
+          "data",
+          "第一条"
+        ],
+        [
+          "data",
+          "第三条"
+        ],
+        [
+          "data",
+          "第二条"
+        ]
+      ]
+    },
+    {
+      "id": "a01",
+      "domain": "announcement",
+      "passed": true,
+      "latency_ms": 0.39509999623987824,
+      "evidence_coverage": 1
+    },
+    {
+      "id": "a02",
+      "domain": "announcement",
+      "passed": true,
+      "latency_ms": 0.079699995694682,
+      "evidence_coverage": 1
+    },
+    {
+      "id": "a03",
+      "domain": "announcement",
+      "passed": true,
+      "latency_ms": 0.04839999746764079,
+      "evidence_coverage": 0
+    },
+    {
+      "id": "a04",
+      "domain": "announcement",
+      "passed": true,
+      "latency_ms": 0.041200000850949436,
+      "evidence_coverage": 0
+    },
+    {
+      "id": "a05",
+      "domain": "announcement",
+      "passed": true,
+      "latency_ms": 0.03970000398112461,
+      "evidence_coverage": 0
+    },
+    {
+      "id": "a06",
+      "domain": "announcement",
+      "passed": true,
+      "latency_ms": 0.5917000016779639,
+      "evidence_coverage": 1
+    },
+    {
+      "id": "a07",
+      "domain": "announcement",
+      "passed": true,
+      "latency_ms": 0.06420000136131421,
+      "evidence_coverage": 1
+    },
+    {
+      "id": "a08",
+      "domain": "announcement",
+      "passed": true,
+      "latency_ms": 0.04189999890513718,
+      "evidence_coverage": 0
+    },
+    {
+      "id": "a09",
+      "domain": "announcement",
+      "passed": true,
+      "latency_ms": 0.04099999932805076,
+      "evidence_coverage": 0
+    },
+    {
+      "id": "a10",
+      "domain": "announcement",
+      "passed": true,
+      "latency_ms": 0.0425000034738332,
+      "evidence_coverage": 0
+    },
+    {
+      "id": "m01",
+      "domain": "meeting",
+      "passed": true,
+      "latency_ms": 0.6782999989809468
+    },
+    {
+      "id": "m02",
+      "domain": "meeting",
+      "passed": true,
+      "latency_ms": 0.023299995518755168
+    },
+    {
+      "id": "m03",
+      "domain": "meeting",
+      "passed": true,
+      "latency_ms": 0.012699994840659201
+    },
+    {
+      "id": "m04",
+      "domain": "meeting",
+      "passed": true,
+      "latency_ms": 0.0092999980552122
+    },
+    {
+      "id": "m05",
+      "domain": "meeting",
+      "passed": true,
+      "latency_ms": 0.009399998816661537
+    },
+    {
+      "id": "m06",
+      "domain": "meeting",
+      "passed": true,
+      "latency_ms": 0.007800001185387373
+    },
+    {
+      "id": "m07",
+      "domain": "meeting",
+      "passed": true,
+      "latency_ms": 0.008900002285372466
+    },
+    {
+      "id": "m08",
+      "domain": "meeting",
+      "passed": true,
+      "latency_ms": 0.007700000423938036
+    }
+  ],
+  "layers": {
+    "retrieval": {
+      "applicable": true,
+      "definition": "Recall@K / MRR / nDCG@K，沿用 evals/metrics.py",
+      "samples": {
+        "recall_at_k": 15,
+        "mrr": 15,
+        "ndcg_at_k": 15
+      },
+      "recall_at_k": 1.0,
+      "mrr": 0.9333333333333333,
+      "ndcg_at_k": 0.9507906338095277
+    },
+    "generation": {
+      "applicable": true,
+      "source": "lexical-fallback",
+      "application": "engineering-regression-only",
+      "note": "离线强制关闭付费模型，答案由检索兜底产出；本层只证明管道能把标注片段组织进答案，不代表真实生成质量",
+      "samples": {
+        "answer_accuracy": 15,
+        "answer_completeness": 15
+      },
+      "answer_accuracy": 1.0,
+      "answer_completeness": 1.0
+    },
+    "citation": {
+      "applicable": true,
+      "definition": "引用正确率=引用标记落在真实条款内的比例；可溯源率=条款带出处与正文的比例",
+      "source": "fallback-answer",
+      "application": "structural-regression-only",
+      "note": "离线答案由检索兜底产出，引用标记与出处由管道结构保证，本层恒真，只证明引用结构未被破坏",
+      "scope": "policy_qa",
+      "samples": {
+        "citation_precision": 15,
+        "citation_traceability": 15,
+        "refusal_rate": 20
+      },
+      "refusal_rate": 0.25,
+      "citation_precision": 1.0,
+      "citation_traceability": 1.0
+    },
+    "experience": {
+      "applicable": true,
+      "scope": "policy_qa",
+      "latency_p50_ms": 3.83,
+      "latency_p95_ms": 7.17,
+      "fallback_rate": 1.0,
+      "latency_samples": 20
+    }
+  },
+  "summary": {
+    "total": 38,
+    "passed": 38,
+    "pass_rate": 1,
+    "recall_at_k": 1.0,
+    "mrr": 0.9333333333333333,
+    "ndcg_at_k": 0.9507906338095277
+  }
+}

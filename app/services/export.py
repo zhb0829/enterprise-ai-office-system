@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from ..config import settings
 from ..models import Draft, ExportLog
+from ..agent.governance import governed_get
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +22,7 @@ class UnsupportedExportFormat(Exception):
 
 def export_draft(db: Session, draft_id: str, fmt: str) -> tuple[str, str]:
     """导出草稿，返回 (文件路径, 文件名)。"""
-    draft = db.get(Draft, draft_id)
+    draft = governed_get(db, Draft, draft_id)
     if not draft:
         raise FileNotFoundError(f"草稿不存在: {draft_id}")
 

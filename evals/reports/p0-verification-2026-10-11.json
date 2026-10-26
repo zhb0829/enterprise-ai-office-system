@@ -1,0 +1,56 @@
+{
+  "date": "2026-10-11",
+  "scope": "P0 engineering implementation and local offline verification",
+  "python_regression": {
+    "command": "python -m pytest -q",
+    "passed": 99,
+    "failed": 0,
+    "duration_seconds": 378.45
+  },
+  "golden_dataset": {
+    "total": 38,
+    "passed": 38,
+    "synthetic": true,
+    "report": "offline-2026-10-11.json"
+  },
+  "java_gateway": {
+    "test": "GatewayProxyControllerIntegrationTest",
+    "passed": 3,
+    "failed": 0,
+    "errors": 0
+  },
+  "frontends": {
+    "admin_build_passed": true,
+    "user_build_passed": true,
+    "changed_files_lint_passed": true,
+    "verification_source": "Copied source with pinned lock versions and integrity, registry host rebased only in temporary verification copies",
+    "browser": "Isolated headless Edge using temporary Playwright",
+    "mock_api": true,
+    "viewports": ["1440x1000", "390x844"],
+    "scenarios_passed": 4,
+    "javascript_errors": 0,
+    "page_horizontal_overflow": false,
+    "backend_e2e_verified": false
+  },
+  "migration": {
+    "head": "8f1_agent_p0",
+    "offline_postgresql_sql_verified": true,
+    "business_database_upgraded": false
+  },
+  "load": {
+    "report": "load-offline-final-2026-10-11.json",
+    "completed": true,
+    "all_scenarios_passed": false,
+    "concurrency_500_accepted": false,
+    "database": "isolated temporary SQLite",
+    "models": "mock LLM, hash Dense, lexical rerank",
+    "production_accepted": false,
+    "availability_99_9_verified": false
+  },
+  "additional_checks": {
+    "compileall_passed": true,
+    "git_diff_check_passed": true,
+    "remote_ci_executed": false,
+    "paid_model_calls_performed": false
+  }
+}

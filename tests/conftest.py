@@ -17,3 +17,16 @@ _INTERNAL_TOKEN_DEFAULTS = {
 
 for _name, _value in _INTERNAL_TOKEN_DEFAULTS.items():
     os.environ.setdefault(_name, _value)
+
+# G3 租户限流：单元测试直连服务、没有网关流量整形需求，默认关闭以免与既有用例互相干扰；
+# 限流与容量池行为由 tests/test_g3_limits.py 用显式配置覆盖验证。
+os.environ.setdefault("RATE_LIMIT_ENABLED", "false")
+
+
+def trusted_headers(permissions):
+    from app.config import settings
+    return {
+        "X-Internal-Token": settings.ai_internal_token,
+        "X-User-Id": "test-user", "X-Tenant-Id": "default",
+        "X-User-Permissions": permissions,
+    }

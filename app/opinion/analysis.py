@@ -8,12 +8,16 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import math
 import re
 import time
 
 from ..db import SessionLocal
 from ..config import settings
 from ..services.llm import LLMClient, LLMError, parse_json_text
+from ..agent.runtime import agent_run, traced
+from ..agent.governance import redact
+from ..agent.roles import AgentPipeline, EvidenceVerifier, FunctionActor, FunctionRetriever, TaskContext, WorkflowPlanner
 from .models_ai import OpinionAiModelCall
 
 logger = logging.getLogger(__name__)
@@ -39,6 +43,15 @@ EMOTION_MAP = {
 }
 
 PROMPT_VERSION = "opinion-analysis-v1"
+RISK_MODEL_VERSION = "opinion-risk-v1"
+EVENT_CUES = {
+    "safety": ("事故", "死亡", "中毒", "爆炸", "起火"),
+    "privacy": ("泄漏", "泄密", "隐私"),
+    "compliance": ("违法", "违规", "处罚", "监管", "诉讼", "造假"),
+    "quality": ("质量", "召回", "退货"),
+    "business": ("裁员", "破产", "亏损", "倒闭"),
+    "service": ("投诉", "客服", "售后"),
+}
 
 
 def _random_run_id() -> str:
@@ -47,6 +60,7 @@ def _random_run_id() -> str:
     return uuid.uuid4().hex[:16]
 
 
+@traced("opinion.classify", prompt_version="opinion-analysis-v1")
 def rule_classify(title: str, content: str, matched: list[str]) -> dict:
     text = (title + " " + content).lower()
     neg = [w for w in NEGATIVE_CUES if w.lower() in text]
@@ -125,6 +139,7 @@ def _should_deepseek(result: dict) -> bool:
     return len(result["emotion_tags"]) == 1 and result["emotion_tags"][0] in {"讨论", "福利"} and result["confidence"] < 0.55
 
 
+@traced("opinion.review", prompt_version="opinion-analysis-v1")
 def deepseek_review(result: dict, title: str, content: str, matched: list[str]) -> dict:
     llm = LLMClient()
     context = f"标题：{title}\n正文摘要：{content[:4000]}\n匹配关键词：{'、'.join(matched[:10])}"
@@ -138,9 +153,9 @@ def deepseek_review(result: dict, title: str, content: str, matched: list[str]) 
         {"role": "user", "content": context},
     ]
     start = time.time()
-    raw = llm.chat_json(messages, model=settings.llm_model_extraction)
+    raw = llm.chat_json(messages, model=settings.llm_model_extraction, purpose="opinion.analysis")
     latency = int((time.time() - start) * 1000)
-    parsed = _sanitize(raw, result, title, matched)
+    parsed = _sanitize(raw, result, title, matched, content)
     parsed["model"] = settings.llm_model_extraction
     parsed["prompt_version"] = PROMPT_VERSION
     _record_model_call("deepseek_review", settings.llm_model_extraction, "deepseek",
@@ -148,7 +163,7 @@ def deepseek_review(result: dict, title: str, content: str, matched: list[str]) 
     return parsed
 
 
-def _sanitize(raw: dict, fallback: dict, title: str, matched: list[str]) -> dict:
+def _sanitize(raw: dict, fallback: dict, title: str, matched: list[str], content: str = "") -> dict:
     sentiment = raw.get("sentiment", fallback["sentiment"])
     if sentiment not in ("positive", "neutral", "negative"):
         sentiment = fallback["sentiment"]
@@ -156,29 +171,55 @@ def _sanitize(raw: dict, fallback: dict, title: str, matched: list[str]) -> dict
         confidence = float(raw.get("confidence", fallback["confidence"]))
     except (TypeError, ValueError):
         confidence = fallback["confidence"]
+    if not math.isfinite(confidence):
+        confidence = fallback["confidence"]
     confidence = min(1.0, max(0.0, confidence))
     try:
         risk_score = int(raw.get("risk_score", fallback["risk_score"]))
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
         risk_score = fallback["risk_score"]
+    source = title + " " + content[:4000]
+    evidence = raw.get("evidence")
+    evidence = [e for e in evidence if isinstance(e, str) and e.strip() and e in source][:3] if isinstance(evidence, list) else []
+    if not evidence:
+        return {**fallback, "verification_note": "model evidence rejected"}
+    def bounded_list(name, size):
+        value = raw.get(name)
+        return [str(t)[:500] for t in value][:size] if isinstance(value, list) and value else fallback[name]
     return {
         "sentiment": sentiment,
         "confidence": round(confidence, 4),
-        "emotion_tags": [str(t) for t in raw.get("emotion_tags", []) or fallback["emotion_tags"]][:12],
+        "emotion_tags": bounded_list("emotion_tags", 12),
         "reason": str(raw.get("reason", fallback["reason"]))[:2000],
-        "evidence": [str(e) for e in raw.get("evidence", []) or fallback["evidence"]][:3],
-        "risk_factors": [str(e) for e in raw.get("risk_factors", []) or fallback["risk_factors"]][:10],
+        "evidence": evidence,
+        "risk_factors": bounded_list("risk_factors", 10),
         "risk_score": min(100, max(0, risk_score)),
         "topic": str(raw.get("topic", fallback["topic"]))[:256],
-        "keywords": [str(k) for k in raw.get("keywords", []) or fallback["keywords"]][:12],
+        "keywords": bounded_list("keywords", 12),
     }
 
 
+@agent_run("opinion_analysis")
 def analyze_article(task: dict) -> dict:
     """分析一篇文章。返回结构化结果，并记录 AI 运行/模型调用。"""
-    title = task.get("title") or ""
-    content = task.get("content") or ""
-    matched = task.get("matchedKeywords") or []
+    return AgentPipeline(
+        WorkflowPlanner(permission="opinion:read", required_fields=("articleId",)),
+        FunctionRetriever(lambda context: redact({
+            "title": task.get("title") or "", "content": task.get("content") or "",
+            "matched": task.get("matchedKeywords") or [],
+        })),
+        FunctionActor(lambda context, source: _analyze_source(task, source)),
+        EvidenceVerifier(lambda context, source, result: {
+            "passed": all(e in source["title"] + " " + source["content"] for e in result["evidenceIds"])
+                      and math.isfinite(result["confidence"]) and 0 <= result["riskScore"] <= 100,
+            "human_review_required": result["riskScore"] >= 40 or result["confidence"] < 0.6,
+            "risk_model_version": RISK_MODEL_VERSION,
+        }),
+    ).execute(TaskContext("opinion_analysis", task))
+
+
+def _analyze_source(task, source):
+    title, content, matched = source["title"], source["content"], source["matched"]
     run_id = _random_run_id()
 
     start = time.time()
@@ -191,6 +232,9 @@ def analyze_article(task: dict) -> dict:
             _record_model_call("deepseek_review_retry", settings.llm_model_extraction,
                                "deepseek", title + " " + content[:1000], str(exc), 0, False)
     latency = int((time.time() - start) * 1000)
+    text = title + " " + content
+    subjects = [word for word in matched if isinstance(word, str) and word.strip() and word in text]
+    event_type = next((kind for kind, cues in EVENT_CUES.items() if any(cue in text for cue in cues)), "other")
 
     _record_model_call("rule_classify", "rule-based", "rule",
                        title + " " + content[:1000], str(result.get("reason")), latency, True)
@@ -206,6 +250,10 @@ def analyze_article(task: dict) -> dict:
         "evidenceIds": result["evidence"],
         "riskFactors": result["risk_factors"],
         "riskScore": result["risk_score"],
+        "riskLevel": "危机" if result["risk_score"] >= 70 else "预警" if result["risk_score"] >= 40 else "关注",
+        "riskModelVersion": RISK_MODEL_VERSION,
+        "subjects": list(dict.fromkeys(subjects))[:20],
+        "eventType": event_type,
         "topic": result["topic"],
         "keywords": result["keywords"],
         "model": result["model"],
@@ -239,12 +287,4 @@ def _record_model_call(stage: str, model: str, provider: str, sent_text: str,
 
 def sanitize_sensitive(text: str) -> str:
     """发送 DeepSeek 前的敏感信息脱敏。"""
-    pattern_map = [
-        (r"1[3-9]\d{9}", "<手机号>"),
-        (r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}", "<邮箱>"),
-        (r"\d{17}[\dXx]", "<身份证>"),
-        (r"\d{16,19}", "<卡号>"),
-    ]
-    for pattern, repl in pattern_map:
-        text = re.sub(pattern, repl, text or "")
-    return text
+    return redact(text or "")

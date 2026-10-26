@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from ..db import get_db
-from ..models import ExportLog
+from ..models import Draft, ExportLog
 from ..schemas import ExportLogOut, ExportRequest, ExportResponse
 
 router = APIRouter()
@@ -55,7 +55,7 @@ def list_exports(
     db: Session = Depends(get_db),
 ):
     """导出历史，可按 draft_id 过滤。"""
-    q = db.query(ExportLog)
+    q = db.query(ExportLog).join(Draft)
     if draft_id:
         q = q.filter(ExportLog.draft_id == draft_id)
     rows = q.order_by(ExportLog.id.desc()).limit(max(1, min(limit, 200))).all()
@@ -66,7 +66,7 @@ def list_exports(
 def list_draft_exports(draft_id: str, db: Session = Depends(get_db)):
     """查询某个草稿的导出历史。"""
     rows = (
-        db.query(ExportLog)
+        db.query(ExportLog).join(Draft)
         .filter(ExportLog.draft_id == draft_id)
         .order_by(ExportLog.id.desc())
         .all()

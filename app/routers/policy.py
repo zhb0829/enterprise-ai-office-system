@@ -2,14 +2,16 @@
 from __future__ import annotations
 
 import re
+from datetime import date, datetime, timezone
 from pathlib import PurePosixPath, PureWindowsPath
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
+from ..agent.governance import audit, principal_var
 from ..config import settings
 from ..db import get_db
-from ..models import PolicyDocument
+from ..models import PolicyDocument, QALog
 from ..schemas import (
     Citation,
     ComplianceRequest,
@@ -20,6 +22,8 @@ from ..schemas import (
     PolicyAnswer,
     PolicyDocumentCreate,
     PolicyDocumentOut,
+    PolicyFeedback,
+    PolicyFeedbackRequest,
     PolicyQuery,
     PolicyUrlRequest,
 )
@@ -54,6 +58,47 @@ def policy_chat(request: PolicyQuery, db: Session = Depends(get_db)):
         raise HTTPException(503, detail={"message": str(exc)}) from exc
 
 
+@router.post("/feedback", response_model=PolicyFeedback)
+def policy_feedback(request: PolicyFeedbackRequest, db: Session = Depends(get_db)):
+    """线上反馈落库（点赞/点踩/是否解决），供 badcase 导出与回流测试集标注使用。
+
+    只能反馈本租户记录；非本人记录与无属主的服务间记录均需 `agent:audit`。
+    `rating=none` 表示撤销反馈。
+    """
+    principal = principal_var.get()
+    if not principal.authenticated:
+        raise HTTPException(403, detail={"message": "trusted user identity required"})
+    if request.qaLogId is not None:
+        row = db.query(QALog).filter(QALog.id == request.qaLogId).first()
+    else:
+        row = db.query(QALog).filter(QALog.run_id == request.runId).order_by(QALog.id.desc()).first()
+    if not row or (row.tenant_id or "default") != principal.tenant_id:
+        raise HTTPException(404, detail={"message": "问答记录不存在"})
+    # user_id 为空代表服务间/后台写入的记录，没有属主：只允许审计员反馈，
+    # 避免同租户任意只读用户改写问答流水、污染回流数据。
+    if row.user_id:
+        allowed = row.user_id == principal.user_id or "agent:audit" in principal.permissions
+    else:
+        allowed = "agent:audit" in principal.permissions
+    if not allowed:
+        raise HTTPException(403, detail={"message": "只能反馈自己的问答记录"})
+    recorded_at = datetime.now(timezone.utc)
+    row.feedback = "" if request.rating == "none" else request.rating
+    row.resolved = request.resolved
+    row.feedback_reason = request.reason
+    row.feedback_user_id = principal.user_id
+    row.feedback_at = recorded_at.replace(tzinfo=None)
+    audit(
+        db, "policy.feedback", f"qa_log:{row.id}",
+        details={"rating": request.rating, "resolved": request.resolved, "reasonLength": len(request.reason)},
+    )
+    db.commit()
+    return {
+        "qaLogId": row.id, "rating": row.feedback,
+        "resolved": row.resolved, "recordedAt": recorded_at,
+    }
+
+
 @router.post("/interpret", response_model=Interpretation)
 def policy_interpret(request: InterpretRequest, db: Session = Depends(get_db)):
     try:
@@ -77,13 +122,17 @@ def policy_search(
     level: str = "",
     authority: str = "",
     limit: int = 6,
+    region: str = "",
+    policy_name: str = "",
+    as_of: date | None = None,
     db: Session = Depends(get_db),
 ):
     try:
         return [
             citation_for_search(hit)
             for hit in search_policy_clauses(
-                db, q, industry=industry, level=level, authority=authority, limit=limit
+                db, q, industry=industry, level=level, authority=authority, limit=limit,
+                region=region, policy_name=policy_name, as_of=as_of,
             )
         ]
     except EmbeddingError as exc:
@@ -91,17 +140,8 @@ def policy_search(
 
 
 def citation_for_search(hit: dict) -> dict:
-    clause = hit["clause"]
-    document = hit["document"]
-    return {
-        "id": clause.id,
-        "docTitle": document.title,
-        "articleNo": clause.article_no,
-        "excerpt": clause.content[:1200],
-        "sourceUrl": document.source_url,
-        "page": clause.page or 0,
-        "status": document.status,
-    }
+    from ..services.policy import citation_for
+    return citation_for(hit)
 
 
 @router.post("/documents", response_model=PolicyDocumentOut, status_code=201)
@@ -117,10 +157,18 @@ def create_document(request: PolicyDocumentCreate, db: Session = Depends(get_db)
             status=request.status,
             industry_tags=request.industryTags,
             source_url=request.sourceUrl,
+            publish_date=request.publishDate,
+            effective_date=request.effectiveDate,
+            expiry_date=request.expiryDate,
+            region=request.region,
+            policy_version=request.policyVersion,
         )
     except EmbeddingError as exc:
         db.rollback()
         raise HTTPException(503, detail={"message": str(exc)}) from exc
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(422, detail={"message": str(exc)}) from exc
     return document_out(document)
 
 
@@ -224,15 +272,17 @@ def update_document_status(document_id: int, status: str, db: Session = Depends(
     if status not in {"现行有效", "已修订", "已废止", "有效"}:
         raise HTTPException(422, "不支持的文档时效状态")
     document.status = status
+    from ..services.policy import sync_policy_document
+    sync_policy_document(db, document)
     db.commit()
     db.refresh(document)
     return document_out(document)
 
 
 @router.post("/reindex", response_model=EmbeddingReindexResult)
-def reindex_policy(document_id: int | None = None, db: Session = Depends(get_db)):
+def reindex_policy(document_id: int | None = None, rechunk: bool = False, db: Session = Depends(get_db)):
     try:
-        return reindex_policy_embeddings(db, document_id)
+        return reindex_policy_embeddings(db, document_id, rechunk=rechunk)
     except EmbeddingError as exc:
         db.rollback()
         raise HTTPException(503, detail={"message": str(exc)}) from exc

@@ -6,6 +6,7 @@ import re
 from pathlib import Path
 
 from ..config import settings
+from ..agent.governance import DataLevel, assert_external_model_allowed, data_level_var, redact
 
 MAX_AUDIO_BYTES = 500 * 1024 * 1024
 MAX_FILE_BYTES = 100 * 1024 * 1024
@@ -32,6 +33,8 @@ def parse_material(material: dict) -> dict:
         return material
     kind = str(material.get("materialType") or "")
     try:
+        level = DataLevel[str(material.get("classification") or "public")]
+        data_level_var.set(max(data_level_var.get(), level))
         if kind == "link":
             result = parse_link(str(material.get("sourceUrl") or ""))
         else:
@@ -51,7 +54,7 @@ def parse_material(material: dict) -> dict:
         material["parseResult"] = result
     except Exception as exc:  # noqa: BLE001
         material["parseStatus"] = "failed"
-        material["parseResult"] = {"error": str(exc)[:1000], "text": "", "segments": []}
+        material["parseResult"] = {"error": redact(str(exc))[:1000], "text": "", "segments": []}
     return material
 
 
@@ -85,6 +88,7 @@ def parse_file(path: Path, mime: str, kind: str) -> dict:
 
 
 def parse_image(path: Path, mime: str) -> dict:
+    assert_external_model_allowed(binary=True)
     if not settings.meeting_vision_model:
         raise ValueError("未配置会议视觉模型，无法解析图片资料")
     vision_api_key = settings.meeting_vision_api_key or settings.llm_api_key
@@ -113,13 +117,14 @@ def parse_image(path: Path, mime: str) -> dict:
         )
         text = response.choices[0].message.content or ""
     except Exception as exc:  # noqa: BLE001
-        raise ValueError(f"视觉模型调用失败: {exc}") from exc
+        raise ValueError("视觉模型调用失败") from exc
     if not text.strip():
         raise ValueError("视觉模型未返回可用文本")
     return _paragraph_result(text, "图片区域")
 
 
 def parse_audio(path: Path) -> dict:
+    assert_external_model_allowed(binary=True)
     if not settings.meeting_asr_api_key:
         raise ValueError("未配置会议 ASR 服务，无法转写音频")
     from openai import OpenAI

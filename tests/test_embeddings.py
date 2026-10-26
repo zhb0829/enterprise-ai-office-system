@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
+from tests.conftest import trusted_headers
 
 from app import db as app_db
 from app import main as app_main
@@ -73,7 +74,7 @@ def test_policy_search_returns_503_when_remote_embedding_fails(monkeypatch):
         lambda *args, **kwargs: (_ for _ in ()).throw(materials.EmbeddingError("Embedding 服务不可用")),
     )
 
-    with TestClient(app_main.app) as client:
+    with TestClient(app_main.app, headers=trusted_headers("policy:read")) as client:
         response = client.get("/api/policy/search", params={"q": "研发费用"})
 
     assert response.status_code == 503

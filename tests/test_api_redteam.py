@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
+from tests.conftest import trusted_headers
 
 from backend.app import db as app_db
 from backend.app import main as app_main
@@ -36,7 +37,7 @@ def sqlite_session_factory(tmp_path, monkeypatch):
 
 @pytest.fixture()
 def client(sqlite_session_factory, monkeypatch):
-    with TestClient(app_main.app) as c:
+    with TestClient(app_main.app, headers=trusted_headers("draft:write,policy:read")) as c:
         yield c, sqlite_session_factory
 
 

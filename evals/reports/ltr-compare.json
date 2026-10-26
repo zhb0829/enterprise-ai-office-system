@@ -1,0 +1,182 @@
+{
+  "dataset": "graph",
+  "dataset_source": "synthetic",
+  "dataset_digest": "129a7bc8c5e65793",
+  "mode": "offline",
+  "generated_at": "2026-10-26T20:54:03.532343",
+  "synthetic": true,
+  "scope": "engineering-regression-only",
+  "application": "engineering-regression-only",
+  "candidateLimit": 20,
+  "topK": 6,
+  "fusionSources": [
+    "lexical",
+    "dense",
+    "graph"
+  ],
+  "folds": 5,
+  "shadowTopChangedMetric": "前 K 名集合的对称差 / 2（度量的是集合变化，不是名次顺序变化）",
+  "metricCaveat": "正例稀少（合成集 8 正例 / 92 候选）时 accuracy 会被\"全猜负例\"抬高，结论只看 AUC；这是工程回归口径，不是真实检索质量验收。",
+  "note": "候选池口径是单次检索 top-20（在线是整池），features 归一化在本批候选内完成；上线依据必须是真实回流标注集的样本外增益。",
+  "variants": {
+    "rrf": {
+      "summary": {
+        "recall_at_k": 1.0,
+        "mrr": 0.47916666666666663,
+        "ndcg_at_k": 0.6076691395183482,
+        "cases": 8,
+        "shadow_top_changed_avg": null
+      },
+      "cases": 8
+    },
+    "ltr_shadow": {
+      "summary": {
+        "recall_at_k": 1.0,
+        "mrr": 0.47916666666666663,
+        "ndcg_at_k": 0.6076691395183482,
+        "cases": 8,
+        "shadow_top_changed_avg": 0
+      }
+    },
+    "ltr_blend": {
+      "summary": {
+        "recall_at_k": 1.0,
+        "mrr": 0.4583333333333333,
+        "ndcg_at_k": 0.5903382790366966,
+        "cases": 8,
+        "shadow_top_changed_avg": null
+      }
+    }
+  },
+  "inSampleReference": {
+    "trained": true,
+    "inSample": true,
+    "model": {
+      "version": "ltr-911f8a6aff2b0b2b",
+      "features": [
+        "dense_similarity",
+        "graph_proximity",
+        "text_match"
+      ],
+      "weights": {
+        "dense_similarity": -0.074132,
+        "graph_proximity": 1.683327,
+        "text_match": 1.011341
+      },
+      "bias": -3.024188,
+      "metrics": {
+        "auc": 0.7991071428571429,
+        "accuracy": 0.913043,
+        "logloss": 0.263644,
+        "cv_auc": 0.7842261904761905,
+        "cv_samples": 92,
+        "folds": 5,
+        "skippedFolds": 0,
+        "foldUnit": "group",
+        "epochs": 400,
+        "learningRate": 0.5,
+        "l2": 0.001,
+        "inSample": true
+      },
+      "samples": 92,
+      "positives": 8,
+      "trainedAt": "2026-10-26T12:54:03.530604+00:00",
+      "datasetDigest": ""
+    },
+    "gate": {
+      "promoted": true,
+      "reason": "ok",
+      "cvAuc": 0.7842261904761905,
+      "foldUnit": "group",
+      "minAuc": 0.6,
+      "samples": 92,
+      "minSamples": 50,
+      "note": "门禁通过：可按 LTR_MODE=shadow 先跑影子，再小步提高 LTR_BLEND_ALPHA 切到 blend。"
+    },
+    "metrics": {
+      "recall_at_k": 1.0,
+      "mrr": 0.46875,
+      "ndcg_at_k": 0.5990037092775224
+    }
+  },
+  "gate": {
+    "promoted": true,
+    "reason": "ok",
+    "cvAuc": 0.7842261904761905,
+    "foldUnit": "group",
+    "minAuc": 0.6,
+    "samples": 92,
+    "minSamples": 50,
+    "note": "门禁通过：可按 LTR_MODE=shadow 先跑影子，再小步提高 LTR_BLEND_ALPHA 切到 blend。",
+    "folds": [
+      {
+        "fold": 0,
+        "heldOut": 2,
+        "trainSamples": 70,
+        "trained": true,
+        "reason": "",
+        "trainAuc": 0.8177083333333334
+      },
+      {
+        "fold": 1,
+        "heldOut": 2,
+        "trainSamples": 68,
+        "trained": true,
+        "reason": "",
+        "trainAuc": 0.7876344086021505
+      },
+      {
+        "fold": 2,
+        "heldOut": 2,
+        "trainSamples": 68,
+        "trained": true,
+        "reason": "",
+        "trainAuc": 0.7688172043010753
+      },
+      {
+        "fold": 3,
+        "heldOut": 1,
+        "trainSamples": 82,
+        "trained": true,
+        "reason": "",
+        "trainAuc": 0.8133333333333334
+      },
+      {
+        "fold": 4,
+        "heldOut": 1,
+        "trainSamples": 80,
+        "trained": true,
+        "reason": "",
+        "trainAuc": 0.8062622309197651
+      }
+    ],
+    "cvSource": "kfold-by-group-out-of-fold",
+    "scope": "模型区分度门禁：样本量 + 折外（k 折）AUC。它只回答\"这个模型有没有区分度\"，不代表检索有增益——是否上线由 decision 的样本外检索增益决定。"
+  },
+  "decision": {
+    "baseline": "rrf",
+    "treatment": "ltr_blend",
+    "reference": "ltr_shadow",
+    "recall_gain": 0.0,
+    "mrr_gain": -0.020833,
+    "ndcg_gain": -0.017331,
+    "shadow_top_changed_avg": 0,
+    "outOfSampleGain": false,
+    "gatePromoted": true,
+    "promoted": false,
+    "note": "未达上线条件：保持 RRF 保底（LTR_MODE=off）。增益未达标；"
+  },
+  "trainingStats": {
+    "totalSamples": 92,
+    "trainedFolds": 5,
+    "skippedFolds": 0,
+    "foldUnit": "case",
+    "pooledCaseAuc": 0.7842261904761905,
+    "pooledSamples": 92,
+    "learnedWeights": {
+      "dense_similarity": -0.074132,
+      "graph_proximity": 1.683327,
+      "text_match": 1.011341
+    }
+  }
+}

@@ -1,0 +1,48 @@
+name: Agent P0/G2 Regression
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+jobs:
+  offline-regression:
+    runs-on: ubuntu-latest
+    env:
+      APP_ENV: test
+      LLM_API_KEY: ""
+      EMBEDDING_API_KEY: ""
+      RERANK_URL: ""
+      RERANK_LOCAL_MODEL: ""
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt pytest
+      - run: python -m pytest -q --junitxml=evals/reports/pytest.xml
+      - run: python -m evals.run --mode offline --output evals/reports/ci.json
+        if: success() || failure()
+      # 四层指标劣化阻断发布：基线只允许人工刷新，不在 CI 里自动下调
+      - run: python -m evals.gate --report evals/reports/ci.json --baseline evals/baselines/offline.json --output evals/reports/gate.json
+        if: success() || failure()
+      # G1 上线门禁：图相对纯向量无增益则阻断（详见 evals/README 第 5 节）
+      - run: python -m evals.graph_gain --require-gain --output evals/reports/graph-gain.json
+        if: success() || failure()
+      # G5 故障注入：关闭图谱/精排/远端模型后服务仍须返回且标记降级（evals/README 第 9 节）
+      - run: python -m evals.fault_injection --output evals/reports/fault-injection.json
+        if: success() || failure()
+      # G3 多租户隔离压测：单租户打满不得挤占其他租户（evals/README 第 8 节）
+      - run: python -m evals.tenant_load_test --output evals/reports/tenant-isolation.json
+        if: success() || failure()
+      # G9 LTR 增益对比：合成集当前无增益（promoted=false）本身就是有效结论，
+      # 所以 CI 只留报告、不加 --require-gain；门禁用于回流标注集上的上线判定（evals/README 第 13 节）
+      - run: python -m evals.ltr_compare --output evals/reports/ltr-compare.json
+        if: success() || failure()
+      # G7 三角色治理：三层强制点由测试覆盖（pytest 已跑），这里补一份职责映射快照便于复核
+      - run: python -c "import json; from app.agent.access import responsibility_matrix; print(json.dumps(responsibility_matrix(), ensure_ascii=False))"
+        if: success() || failure()
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: agent-evals
+          path: evals/reports/

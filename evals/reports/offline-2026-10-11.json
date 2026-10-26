@@ -1,0 +1,504 @@
+{
+  "dataset_version": "synthetic-p0-v1",
+  "mode": "offline",
+  "generated_at": "2026-10-11T17:34:53.214929",
+  "synthetic": true,
+  "scope": "Engineering regression; not real policy accuracy or production acceptance",
+  "cases": [
+    {
+      "id": "p01",
+      "domain": "policy",
+      "passed": true,
+      "latency_ms": 12.932699988596141,
+      "recall_at_k": 1.0,
+      "mrr": 0.5,
+      "ndcg_at_k": 0.6309297535714575,
+      "retrieved": [
+        [
+          "rd-current",
+          "第三条"
+        ],
+        [
+          "rd-current",
+          "第二条"
+        ],
+        [
+          "rd-current",
+          "第一条"
+        ]
+      ]
+    },
+    {
+      "id": "p02",
+      "domain": "policy",
+      "passed": true,
+      "latency_ms": 4.655800003092736,
+      "recall_at_k": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_k": 1.0,
+      "retrieved": [
+        [
+          "rd-current",
+          "第三条"
+        ],
+        [
+          "rd-current",
+          "第二条"
+        ],
+        [
+          "rd-current",
+          "第一条"
+        ]
+      ]
+    },
+    {
+      "id": "p03",
+      "domain": "policy",
+      "passed": true,
+      "latency_ms": 6.007299991324544,
+      "recall_at_k": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_k": 1.0,
+      "retrieved": [
+        [
+          "rd-current",
+          "第一条"
+        ],
+        [
+          "rd-current",
+          "第二条"
+        ],
+        [
+          "rd-current",
+          "第三条"
+        ],
+        [
+          "data",
+          "第三条"
+        ],
+        [
+          "safety",
+          "第三条"
+        ],
+        [
+          "safety",
+          "第一条"
+        ]
+      ]
+    },
+    {
+      "id": "p04",
+      "domain": "policy",
+      "passed": true,
+      "latency_ms": 4.790899984072894,
+      "recall_at_k": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_k": 1.0,
+      "retrieved": [
+        [
+          "rd-current",
+          "第二条"
+        ],
+        [
+          "rd-current",
+          "第三条"
+        ],
+        [
+          "rd-current",
+          "第一条"
+        ]
+      ]
+    },
+    {
+      "id": "p05",
+      "domain": "policy",
+      "passed": true,
+      "latency_ms": 4.881699976976961,
+      "recall_at_k": 1.0,
+      "mrr": 0.5,
+      "ndcg_at_k": 0.6309297535714575,
+      "retrieved": [
+        [
+          "rd-current",
+          "第三条"
+        ],
+        [
+          "rd-current",
+          "第二条"
+        ],
+        [
+          "rd-current",
+          "第一条"
+        ]
+      ]
+    },
+    {
+      "id": "p06",
+      "domain": "policy",
+      "passed": true,
+      "latency_ms": 4.094999982044101,
+      "recall_at_k": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_k": 1.0,
+      "retrieved": [
+        [
+          "safety",
+          "第一条"
+        ],
+        [
+          "safety",
+          "第二条"
+        ],
+        [
+          "safety",
+          "第三条"
+        ]
+      ]
+    },
+    {
+      "id": "p07",
+      "domain": "policy",
+      "passed": true,
+      "latency_ms": 4.58559999242425,
+      "recall_at_k": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_k": 1.0,
+      "retrieved": [
+        [
+          "safety",
+          "第二条"
+        ],
+        [
+          "safety",
+          "第一条"
+        ],
+        [
+          "safety",
+          "第三条"
+        ]
+      ]
+    },
+    {
+      "id": "p08",
+      "domain": "policy",
+      "passed": true,
+      "latency_ms": 4.655400000046939,
+      "recall_at_k": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_k": 1.0,
+      "retrieved": [
+        [
+          "safety",
+          "第三条"
+        ],
+        [
+          "safety",
+          "第一条"
+        ],
+        [
+          "safety",
+          "第二条"
+        ]
+      ]
+    },
+    {
+      "id": "p09",
+      "domain": "policy",
+      "passed": true,
+      "latency_ms": 4.836899985093623,
+      "recall_at_k": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_k": 1.0,
+      "retrieved": [
+        [
+          "data",
+          "第一条"
+        ],
+        [
+          "data",
+          "第三条"
+        ],
+        [
+          "data",
+          "第二条"
+        ]
+      ]
+    },
+    {
+      "id": "p10",
+      "domain": "policy",
+      "passed": true,
+      "latency_ms": 4.1455000173300505,
+      "recall_at_k": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_k": 1.0,
+      "retrieved": [
+        [
+          "data",
+          "第二条"
+        ],
+        [
+          "data",
+          "第三条"
+        ]
+      ]
+    },
+    {
+      "id": "p11",
+      "domain": "policy",
+      "passed": true,
+      "latency_ms": 4.501199990045279,
+      "recall_at_k": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_k": 1.0,
+      "retrieved": [
+        [
+          "data",
+          "第三条"
+        ],
+        [
+          "data",
+          "第一条"
+        ],
+        [
+          "data",
+          "第二条"
+        ]
+      ]
+    },
+    {
+      "id": "p12",
+      "domain": "policy",
+      "passed": true,
+      "latency_ms": 4.492799984291196,
+      "recall_at_k": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_k": 1.0,
+      "retrieved": [
+        [
+          "rd-other-region",
+          "第二条"
+        ]
+      ]
+    },
+    {
+      "id": "p13",
+      "domain": "policy",
+      "passed": true,
+      "latency_ms": 3.3251999993808568,
+      "recall_at_k": null,
+      "mrr": null,
+      "ndcg_at_k": null,
+      "retrieved": []
+    },
+    {
+      "id": "p14",
+      "domain": "policy",
+      "passed": true,
+      "latency_ms": 2.928700007032603,
+      "recall_at_k": null,
+      "mrr": null,
+      "ndcg_at_k": null,
+      "retrieved": []
+    },
+    {
+      "id": "p15",
+      "domain": "policy",
+      "passed": true,
+      "latency_ms": 3.1550999847240746,
+      "recall_at_k": null,
+      "mrr": null,
+      "ndcg_at_k": null,
+      "retrieved": []
+    },
+    {
+      "id": "p16",
+      "domain": "policy",
+      "passed": true,
+      "latency_ms": 3.895499976351857,
+      "recall_at_k": null,
+      "mrr": null,
+      "ndcg_at_k": null,
+      "retrieved": []
+    },
+    {
+      "id": "p17",
+      "domain": "policy",
+      "passed": true,
+      "latency_ms": 3.868300002068281,
+      "recall_at_k": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_k": 1.0,
+      "retrieved": [
+        [
+          "rd-old",
+          "第二条"
+        ],
+        [
+          "expired",
+          "第一条"
+        ]
+      ]
+    },
+    {
+      "id": "p18",
+      "domain": "policy",
+      "passed": true,
+      "latency_ms": 5.0406999653205276,
+      "recall_at_k": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_k": 1.0,
+      "retrieved": [
+        [
+          "rd-future",
+          "第二条"
+        ],
+        [
+          "published-future",
+          "第一条"
+        ]
+      ]
+    },
+    {
+      "id": "p19",
+      "domain": "policy",
+      "passed": true,
+      "latency_ms": 5.925900011789054,
+      "recall_at_k": null,
+      "mrr": null,
+      "ndcg_at_k": null,
+      "retrieved": []
+    },
+    {
+      "id": "p20",
+      "domain": "policy",
+      "passed": true,
+      "latency_ms": 4.974599985871464,
+      "recall_at_k": 1.0,
+      "mrr": 1.0,
+      "ndcg_at_k": 1.0,
+      "retrieved": [
+        [
+          "data",
+          "第一条"
+        ],
+        [
+          "data",
+          "第三条"
+        ],
+        [
+          "data",
+          "第二条"
+        ]
+      ]
+    },
+    {
+      "id": "a01",
+      "domain": "announcement",
+      "passed": true,
+      "evidence_coverage": 1
+    },
+    {
+      "id": "a02",
+      "domain": "announcement",
+      "passed": true,
+      "evidence_coverage": 1
+    },
+    {
+      "id": "a03",
+      "domain": "announcement",
+      "passed": true,
+      "evidence_coverage": 0
+    },
+    {
+      "id": "a04",
+      "domain": "announcement",
+      "passed": true,
+      "evidence_coverage": 0
+    },
+    {
+      "id": "a05",
+      "domain": "announcement",
+      "passed": true,
+      "evidence_coverage": 0
+    },
+    {
+      "id": "a06",
+      "domain": "announcement",
+      "passed": true,
+      "evidence_coverage": 1
+    },
+    {
+      "id": "a07",
+      "domain": "announcement",
+      "passed": true,
+      "evidence_coverage": 1
+    },
+    {
+      "id": "a08",
+      "domain": "announcement",
+      "passed": true,
+      "evidence_coverage": 0
+    },
+    {
+      "id": "a09",
+      "domain": "announcement",
+      "passed": true,
+      "evidence_coverage": 0
+    },
+    {
+      "id": "a10",
+      "domain": "announcement",
+      "passed": true,
+      "evidence_coverage": 0
+    },
+    {
+      "id": "m01",
+      "domain": "meeting",
+      "passed": true
+    },
+    {
+      "id": "m02",
+      "domain": "meeting",
+      "passed": true
+    },
+    {
+      "id": "m03",
+      "domain": "meeting",
+      "passed": true
+    },
+    {
+      "id": "m04",
+      "domain": "meeting",
+      "passed": true
+    },
+    {
+      "id": "m05",
+      "domain": "meeting",
+      "passed": true
+    },
+    {
+      "id": "m06",
+      "domain": "meeting",
+      "passed": true
+    },
+    {
+      "id": "m07",
+      "domain": "meeting",
+      "passed": true
+    },
+    {
+      "id": "m08",
+      "domain": "meeting",
+      "passed": true
+    }
+  ],
+  "summary": {
+    "total": 38,
+    "passed": 38,
+    "pass_rate": 1,
+    "recall_at_k": 1.0,
+    "mrr": 0.9333333333333333,
+    "ndcg_at_k": 0.9507906338095277
+  }
+}

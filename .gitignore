@@ -7,8 +7,13 @@ venv/
 .pytest_cache/
 .pytest-local/
 .pytest-tmp/
+.pytest-baseline/
 .mypy_cache/
 *.log
+
+# 评测中间产物：含业务文本，需人工审查后再决定是否入库
+evals/datasets/reflow/pending-*.json
+evals/reports/badcases-*.jsonl
 
 # Env & secrets
 .env

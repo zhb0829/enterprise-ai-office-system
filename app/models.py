@@ -27,6 +27,9 @@ class Draft(Base):
     __tablename__ = "draft"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    tenant_id: Mapped[str] = mapped_column(String(64), default="default", index=True)
+    department_id: Mapped[str] = mapped_column(String(64), default="")
+    classification: Mapped[str] = mapped_column(String(16), default="internal")
     title: Mapped[str] = mapped_column(String(256), default="")
     template_id: Mapped[int | None] = mapped_column(ForeignKey("template.id"), nullable=True)
     template_name: Mapped[str] = mapped_column(String(128), default="")  # 冗余，防模板被删
@@ -90,6 +93,10 @@ class ReferenceMaterial(Base):
     __tablename__ = "reference_material"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    tenant_id: Mapped[str] = mapped_column(String(64), default="default", index=True)
+    department_id: Mapped[str] = mapped_column(String(64), default="")
+    owner_id: Mapped[str] = mapped_column(String(64), default="")
+    classification: Mapped[str] = mapped_column(String(16), default="internal")
     filename: Mapped[str] = mapped_column(String(256))
     content_type: Mapped[str] = mapped_column(String(128), default="")
     text_content: Mapped[str] = mapped_column(Text, default="")
@@ -139,6 +146,9 @@ class PolicyDocument(Base):
     level: Mapped[str] = mapped_column(String(64), default="其他", index=True)
     publish_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     effective_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    expiry_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    region: Mapped[str] = mapped_column(String(128), default="", index=True)
+    policy_version: Mapped[str] = mapped_column(String(64), default="")
     status: Mapped[str] = mapped_column(String(32), default="现行有效", index=True)
     industry_tags: Mapped[list] = mapped_column(JSON, default=list)
     source_url: Mapped[str] = mapped_column(String(1024), default="")
@@ -171,16 +181,29 @@ class PolicyClause(Base):
 
 
 class QALog(Base):
+    """政策问答流水。
+
+    反馈字段用于 G2 线上回流闭环：点赞/点踩、是否解决与原因。
+    `resolved` 未反馈时为 NULL，表示"未知"，不写 False 冒充"未解决"。
+    """
+
     __tablename__ = "qa_log"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     session_id: Mapped[str] = mapped_column(String(64), default="", index=True)
+    tenant_id: Mapped[str] = mapped_column(String(64), default="default", index=True)
+    user_id: Mapped[str] = mapped_column(String(64), default="", index=True)
+    run_id: Mapped[str] = mapped_column(String(64), default="", index=True)  # 关联 AgentRun，便于定位 trace
     question: Mapped[str] = mapped_column(Text)
     answer: Mapped[str] = mapped_column(Text, default="")
     citations: Mapped[list] = mapped_column(JSON, default=list)
     model: Mapped[str] = mapped_column(String(128), default="")
     latency_ms: Mapped[int] = mapped_column(Integer, default=0)
-    feedback: Mapped[str] = mapped_column(String(32), default="")
+    feedback: Mapped[str] = mapped_column(String(32), default="", index=True)  # like / dislike / 空
+    resolved: Mapped[bool | None] = mapped_column(Boolean, nullable=True)  # 是否解决；未知为 NULL
+    feedback_reason: Mapped[str] = mapped_column(Text, default="")
+    feedback_user_id: Mapped[str] = mapped_column(String(64), default="")
+    feedback_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
 

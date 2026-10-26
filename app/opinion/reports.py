@@ -42,7 +42,7 @@ def generate_report(data: dict, period: str, monitor_id: int,
                 {"role": "user", "content": context},
             ]
             start = time.time()
-            raw = llm.chat_json(messages, model=settings.llm_model_generation)
+            raw = llm.chat_json(messages, purpose="opinion.report")
             _ = time.time() - start
             summary = str(raw.get("summary") or summary)
             content_html = str(raw.get("contentHtml") or content_html)
@@ -124,9 +124,10 @@ def _context_json(data: dict, period: str, period_start: str, period_end: str) -
 
 def export_pdf(report_id: int, title: str, content_html: str) -> dict:
     """生成 PDF（pandoc + xelatex）；缺失时降级为 HTML 文件，均返回下载地址。"""
-    safe = re.sub(r"[\\/:*?\"<>|]", "_", title or "report")[:60] or "report"
-    filename = f"{safe}_{report_id}.pdf"
-    html_path = _save_html(report_id, safe, title, content_html)
+    if report_id <= 0:
+        raise ValueError("invalid report id")
+    filename = f"opinion-report_{report_id}.pdf"
+    html_path = _save_html(report_id, title, content_html)
     pdf_path = settings.upload_path / filename
     pandoc = shutil.which("pandoc")
     if pandoc:
@@ -144,7 +145,7 @@ def export_pdf(report_id: int, title: str, content_html: str) -> dict:
             }
         except Exception as exc:  # noqa: BLE001
             logger.warning("报告 PDF 生成失败，降级 HTML: %s", exc)
-    html_filename = f"{safe}_{report_id}.html"
+    html_filename = f"opinion-report_{report_id}.html"
     _write_html(settings.upload_path / html_filename, title, content_html)
     return {
         "downloadUrl": f"/api/files/upload/{urllib.parse.quote(html_filename)}",
@@ -154,8 +155,8 @@ def export_pdf(report_id: int, title: str, content_html: str) -> dict:
     }
 
 
-def _save_html(report_id: int, safe: str, title: str, content_html: str):
-    path = settings.upload_path / f"{safe}_{report_id}.md"
+def _save_html(report_id: int, title: str, content_html: str):
+    path = settings.upload_path / f"opinion-report_{report_id}.md"
     path.write_text(content_html, encoding="utf-8")
     return path
 

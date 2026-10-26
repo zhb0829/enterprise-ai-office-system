@@ -1,0 +1,251 @@
+{
+  "generated_at": "2026-10-25T09:20:18.198407+00:00",
+  "kind": "g5-runtime-flag-fault-injection",
+  "synthetic": true,
+  "database": "isolated-temporary-sqlite",
+  "server_workers": 1,
+  "platform": "Windows-11-10.0.26200-SP0",
+  "scope": "Python AI service only; excludes Java gateway/JWT/production PostgreSQL and real model quota",
+  "model_backend": "local fake LLM/Embedding/Rerank (rerank can inject HTTP 500)",
+  "flags": {
+    "kg": {
+      "name": "kg",
+      "title": "图谱召回（G1）",
+      "enabled": true,
+      "configDefault": true,
+      "source": "configuration",
+      "configKey": "KG_ENABLED",
+      "fallback": "关闭后不走进图路，检索退化为 BM25 + Dense 两路 RRF + 精排"
+    },
+    "semantic_rerank": {
+      "name": "semantic_rerank",
+      "title": "语义精排（CrossEncoder / 远端 Rerank）",
+      "enabled": true,
+      "configDefault": true,
+      "source": "configuration",
+      "configKey": "RERANK_URL / RERANK_LOCAL_MODEL",
+      "fallback": "关闭后跳过语义精排，退化为确定性词法重排并标记 degraded"
+    },
+    "remote_llm": {
+      "name": "remote_llm",
+      "title": "外部对话 / 抽取模型",
+      "enabled": true,
+      "configDefault": true,
+      "source": "configuration",
+      "configKey": "LLM_API_KEY",
+      "fallback": "关闭后不调用外部模型，各链路走既有规则化兜底并标记 degraded"
+    },
+    "remote_embedding": {
+      "name": "remote_embedding",
+      "title": "外部向量模型",
+      "enabled": true,
+      "configDefault": true,
+      "source": "configuration",
+      "configKey": "EMBEDDING_API_KEY / EMBEDDING_MODEL",
+      "fallback": "关闭后检索跳过 Dense 路（不混用哈希向量顶替），保留 BM25 与图路并标记 degraded"
+    },
+    "factcheck": {
+      "name": "factcheck",
+      "title": "模型事实核查（交叉验证）",
+      "enabled": true,
+      "configDefault": true,
+      "source": "configuration",
+      "configKey": "默认开启",
+      "fallback": "关闭后核查退化为规则化实现，结论不得解释为核查通过"
+    }
+  },
+  "process_restarted": false,
+  "scenarios": {
+    "baseline": {
+      "status": 200,
+      "degraded": false,
+      "reasons": [],
+      "clauses": 6
+    },
+    "remote_llm_off": {
+      "status": 200,
+      "degraded": true,
+      "reasons": [
+        "运行时开关已关闭外部生成模型，答案由检索结果兜底"
+      ],
+      "model": "offline-policy-retrieval"
+    },
+    "remote_llm_restored": {
+      "status": 200,
+      "degraded": false,
+      "reasons": []
+    },
+    "remote_embedding_off": {
+      "status": 200,
+      "degraded": true,
+      "denseBackend": "disabled-by-flag",
+      "denseDisabled": true,
+      "runtimeFlags": [
+        "remote_embedding"
+      ],
+      "reasons": [
+        "向量检索路已停用（运行时开关关闭），本次仅用关键词与图谱信号排序"
+      ]
+    },
+    "semantic_rerank_off": {
+      "status": 200,
+      "degraded": true,
+      "reranker": {
+        "backend": "deterministic-lexical",
+        "degraded": true,
+        "reason": "runtime-flag-semantic-rerank-off"
+      },
+      "reasons": [
+        "语义精排已被运行时开关关闭，改用确定性词法重排"
+      ]
+    },
+    "kg_off": {
+      "status": 200,
+      "degraded": true,
+      "fusionSources": [
+        "lexical",
+        "dense"
+      ],
+      "graph": {
+        "enabled": false,
+        "sources": [
+          "lexical",
+          "dense"
+        ]
+      },
+      "reasons": [
+        "图谱召回已被运行时开关关闭"
+      ]
+    },
+    "factcheck_off": {
+      "status": 200,
+      "items": 2,
+      "degraded_items": 2,
+      "reason_sample": "runtime-flag-factcheck-off"
+    },
+    "factcheck_restored": {
+      "status": 200,
+      "items": 2,
+      "degraded_items": 0
+    },
+    "process_identity": {
+      "before": {
+        "processToken": "28cdf92edf414852ab5632e0d5ec4f8b",
+        "pid": 7500,
+        "startedAt": 1792920012.677959,
+        "uptimeSeconds": 2.72
+      },
+      "after": {
+        "processToken": "28cdf92edf414852ab5632e0d5ec4f8b",
+        "pid": 7500,
+        "startedAt": 1792920012.677959,
+        "uptimeSeconds": 4.937
+      }
+    },
+    "rerank_remote_500": {
+      "status": 200,
+      "degraded": false,
+      "reranker": {
+        "backend": "deterministic-lexical",
+        "degraded": true,
+        "error": "HTTPStatusError"
+      }
+    }
+  },
+  "checks": [
+    {
+      "name": "baseline_ok",
+      "passed": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "name": "baseline_not_degraded",
+      "passed": true,
+      "detail": "degraded=False reasons=[]"
+    },
+    {
+      "name": "remote_llm_off_returns_200",
+      "passed": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "name": "remote_llm_off_marked",
+      "passed": true,
+      "detail": "reasons=['运行时开关已关闭外部生成模型，答案由检索结果兜底']"
+    },
+    {
+      "name": "remote_llm_off_still_answers",
+      "passed": true,
+      "detail": "answer_len=291 clauses=6"
+    },
+    {
+      "name": "remote_llm_restore_is_live",
+      "passed": true,
+      "detail": "HTTP 200 degraded=False"
+    },
+    {
+      "name": "remote_embedding_off_returns_200",
+      "passed": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "name": "remote_embedding_off_skips_dense",
+      "passed": true,
+      "detail": "denseBackend=disabled-by-flag flags=['remote_embedding']"
+    },
+    {
+      "name": "semantic_rerank_off_returns_200",
+      "passed": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "name": "semantic_rerank_off_degrades",
+      "passed": true,
+      "detail": "reranker={'backend': 'deterministic-lexical', 'degraded': True, 'reason': 'runtime-flag-semantic-rerank-off'}"
+    },
+    {
+      "name": "kg_off_returns_200",
+      "passed": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "name": "kg_off_skips_graph",
+      "passed": true,
+      "detail": "sources=['lexical', 'dense'] reasons=['图谱召回已被运行时开关关闭']"
+    },
+    {
+      "name": "factcheck_off_returns_200",
+      "passed": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "name": "factcheck_off_marks_every_claim",
+      "passed": true,
+      "detail": "items=2 degraded=2"
+    },
+    {
+      "name": "factcheck_restore_is_live",
+      "passed": true,
+      "detail": "HTTP 200 degraded=0"
+    },
+    {
+      "name": "no_restart_during_injection",
+      "passed": true,
+      "detail": "pid=7500 uptime=4.937s token_stable=True"
+    },
+    {
+      "name": "rerank_remote_500_returns_200",
+      "passed": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "name": "rerank_remote_500_degrades",
+      "passed": true,
+      "detail": "reranker={'backend': 'deterministic-lexical', 'degraded': True, 'error': 'HTTPStatusError'}"
+    }
+  ],
+  "failures": [],
+  "passed": true,
+  "completed": true,
+  "production_accepted": false
+}

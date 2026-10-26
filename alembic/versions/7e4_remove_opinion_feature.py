@@ -3,7 +3,6 @@
 The Java P1 opinion module owns all ``opinion_*`` business tables. This
 revision must never drop those tables, otherwise an Alembic upgrade can
 destroy Java-owned data.
-"""
 
 Revision ID: 7e4_remove_opinion_feature
 Revises: 4c1_intelligence_aggregation

@@ -1,0 +1,67 @@
+{
+  "generated_at": "2026-10-25T14:39:59.589714",
+  "dataset_version": "synthetic-p0-v1",
+  "dataset_source": "synthetic",
+  "dataset_digest": "43ff474c12d2104418b5495eb5aa47a61a681d9f6ea87a0ddb9d720c7db50f7b",
+  "synthetic": true,
+  "mode": "offline",
+  "summary": {
+    "total": 38,
+    "passed": 38,
+    "pass_rate": 1,
+    "recall_at_k": 1.0,
+    "mrr": 0.9333333333333333,
+    "ndcg_at_k": 0.9507906338095277
+  },
+  "layers": {
+    "retrieval": {
+      "applicable": true,
+      "definition": "Recall@K / MRR / nDCG@K，沿用 evals/metrics.py",
+      "samples": {
+        "recall_at_k": 15,
+        "mrr": 15,
+        "ndcg_at_k": 15
+      },
+      "recall_at_k": 1.0,
+      "mrr": 0.9333333333333333,
+      "ndcg_at_k": 0.9507906338095277
+    },
+    "generation": {
+      "applicable": true,
+      "source": "lexical-fallback",
+      "application": "engineering-regression-only",
+      "note": "离线强制关闭付费模型，答案由检索兜底产出；本层只证明管道能把标注片段组织进答案，不代表真实生成质量",
+      "samples": {
+        "answer_accuracy": 15,
+        "answer_completeness": 15
+      },
+      "answer_accuracy": 1.0,
+      "answer_completeness": 1.0
+    },
+    "citation": {
+      "applicable": true,
+      "definition": "引用正确率=引用标记落在真实条款内的比例；可溯源率=条款带出处与正文的比例",
+      "source": "fallback-answer",
+      "application": "structural-regression-only",
+      "note": "离线答案由检索兜底产出，引用标记与出处由管道结构保证，本层恒真，只证明引用结构未被破坏",
+      "scope": "policy_qa",
+      "samples": {
+        "citation_precision": 15,
+        "citation_traceability": 15,
+        "refusal_rate": 20
+      },
+      "refusal_rate": 0.25,
+      "citation_precision": 1.0,
+      "citation_traceability": 1.0
+    },
+    "experience": {
+      "applicable": true,
+      "scope": "policy_qa",
+      "latency_p50_ms": 3.92,
+      "latency_p95_ms": 6.18,
+      "fallback_rate": 1.0,
+      "latency_samples": 20
+    }
+  },
+  "note": "由 evals.gate --update-baseline 人工刷新；CI 只允许持平或提升。"
+}

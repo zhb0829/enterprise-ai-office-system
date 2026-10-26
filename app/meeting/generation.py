@@ -23,7 +23,7 @@ def extract_insights(materials: list[dict]) -> list[dict]:
             data = llm.chat_json([
                 {"role": "system", "content": "你是公开行业会议研究员，只能依据给定资料提炼。"},
                 {"role": "user", "content": prompt},
-            ], model=settings.llm_model_extraction, temperature=0.1)
+            ], model=settings.llm_model_extraction, temperature=0.1, purpose="extraction")
             return validate_insights(data.get("insights") or [], evidence)
         except (LLMError, ValueError, AttributeError):
             pass
@@ -47,7 +47,7 @@ def generate_report(conference: dict, insights: list[dict], media: list[dict]) -
             content = llm.chat([
                 {"role": "system", "content": "输出结构化 Markdown 会议纪要。每条要点必须保留输入中的引用标记。"},
                 {"role": "user", "content": prompt},
-            ], model=settings.meeting_report_model, temperature=0.2)
+            ], model=settings.meeting_report_model, temperature=0.2, purpose="meeting.report")
             if content.strip():
                 return ensure_report_citations(content, insights), settings.meeting_report_model
         except LLMError:

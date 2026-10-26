@@ -1,0 +1,16 @@
+{
+  "version": "synthetic-p0-v1",
+  "asOf": "2026-10-11",
+  "notice": "Synthetic policies for engineering evaluation only; not legal sources.",
+  "documents": [
+    {"key":"rd-current","title":"测试研发补助办法","docNumber":"TEST-RD","issuingAuthority":"测试科技局","region":"测试市","industryTags":["科技"],"effectiveDate":"2026-01-01T00:00:00","policyVersion":"2026","content":"第一条 本办法适用于测试市科技企业。\n第二条 企业申请研发补助须提交研发费用台账和年度审计报告。\n第三条 研发补助申请应在每年6月30日前提交。"},
+    {"key":"rd-old","title":"测试研发补助办法","docNumber":"TEST-RD","issuingAuthority":"测试科技局","region":"测试市","industryTags":["科技"],"effectiveDate":"2025-01-01T00:00:00","expiryDate":"2026-01-01T00:00:00","policyVersion":"2025","content":"第二条 企业申请研发补助仅需提交费用汇总表。"},
+    {"key":"rd-future","title":"测试研发补助办法","docNumber":"TEST-RD","issuingAuthority":"测试科技局","region":"测试市","industryTags":["科技"],"effectiveDate":"2027-01-01T00:00:00","policyVersion":"2027","content":"第二条 企业申请研发补助须提交电子税务证明。"},
+    {"key":"rd-other-region","title":"测试研发补助办法","docNumber":"TEST-RD-OTHER","issuingAuthority":"另一科技局","region":"另一市","industryTags":["科技"],"effectiveDate":"2026-01-01T00:00:00","content":"第二条 另一市企业申请研发补助仅需提交登记证。"},
+    {"key":"safety","title":"测试生产安全办法","docNumber":"TEST-SAFE","issuingAuthority":"测试应急局","region":"全国","industryTags":["制造"],"effectiveDate":"2026-01-01T00:00:00","content":"第一条 制造企业应当每季度组织一次安全培训。\n第二条 制造企业应保存安全培训记录不少于3年。\n第三条 企业发生安全事件应在24小时内提交事件报告。"},
+    {"key":"expired","title":"测试出口奖励办法","docNumber":"TEST-EXPORT","issuingAuthority":"测试商务局","region":"全国","industryTags":["外贸"],"effectiveDate":"2025-01-01T00:00:00","expiryDate":"2026-10-11T00:00:00","content":"第一条 测试市出口企业可以申请年度出口奖励。"},
+    {"key":"revoked","title":"测试旧人才补贴","docNumber":"TEST-TALENT","issuingAuthority":"测试人社局","region":"全国","industryTags":["科技"],"status":"已废止","effectiveDate":"2025-01-01T00:00:00","content":"第一条 企业可申请人才补贴每人10000元。"},
+    {"key":"data","title":"测试数据保护规范","docNumber":"TEST-DATA","issuingAuthority":"测试数据局","region":"全国","industryTags":["科技"],"effectiveDate":"2026-01-01T00:00:00","content":"第一条 数据处理企业应建立访问权限审批制度。\n第二条 个人信息应按最小必要原则收集，未经授权不得向第三方提供。\n第三条 数据处理企业应每年开展一次权限审计。"},
+    {"key":"published-future","title":"测试未来发布通知","docNumber":"TEST-PUBLISH","issuingAuthority":"测试科技局","region":"全国","industryTags":["科技"],"publishDate":"2027-01-01T00:00:00","content":"第一条 测试科技企业可申请未来发布的试点补助。"}
+  ]
+}

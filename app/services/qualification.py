@@ -153,7 +153,8 @@ def _llm_draft_sections(
             [
                 {"role": "system", "content": system},
                 {"role": "user", "content": user},
-            ]
+            ],
+            purpose="qualification.draft",
         )
     except Exception as exc:  # noqa: BLE001
         logger.warning("资质初稿 LLM 生成失败，回退规则模板：%s", exc)

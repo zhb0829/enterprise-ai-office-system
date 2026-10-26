@@ -1,0 +1,13 @@
+{
+  "version":"synthetic-p0-v1",
+  "cases":[
+    {"id":"m01","speaker":"王负责人","text":"下一步将推进企业办公系统试点，计划在2027年完成首批验收。","cardType":"行动项","actor":"王负责人","expectedTime":"2027年"},
+    {"id":"m02","speaker":"李负责人","text":"计划在2026年12月开展安全培训并落实资料归档工作。","cardType":"行动项","actor":"李负责人","expectedTime":"2026年12月"},
+    {"id":"m03","speaker":"","text":"会议决定通过企业数据访问权限审批制度并正式实施。","cardType":"决策事项"},
+    {"id":"m04","speaker":"","text":"测试公司今年营业收入同比增长30%，业务规模进一步扩大。","cardType":"关键数据"},
+    {"id":"m05","speaker":"张专家","text":"企业办公智能化需要保持事实证据和人工审核的完整链路。","cardType":"专家观点","actor":"张专家"},
+    {"id":"m06","speaker":"","text":"当前公开资料不足以确认各项申报条件是否满足。","cardType":"核心观点"},
+    {"id":"m07","speaker":"赵负责人","text":"下一阶段将开展知识库更新工作并落实各部门审核责任。","cardType":"行动项","actor":"赵负责人","expectedTime":"下一阶段"},
+    {"id":"m08","speaker":"周负责人","text":"年底前将推进办公系统试点并完成接口验收和材料归档。","cardType":"行动项","actor":"周负责人","expectedTime":"年底前"}
+  ]
+}

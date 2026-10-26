@@ -1,12 +1,16 @@
 from types import SimpleNamespace
 
 import pytest
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session
+from app.db import Base
+from app.models import ReferenceMaterial
 
-from backend.app.routers.materials import _safe_upload_name
-from backend.app.services.export import UnsupportedExportFormat, _md_to_pdf, export_draft
-from backend.app.services.generation import load_materials_text, mock_generate_content
-from backend.app.services.materials import parse_material
-from backend.app.services.revise import revise_content
+from app.routers.materials import _safe_upload_name
+from app.services.export import UnsupportedExportFormat, _md_to_pdf, export_draft
+from app.services.generation import load_materials_text, mock_generate_content
+from app.services.materials import parse_material
+from app.services.revise import revise_content
 
 
 def test_safe_upload_name_strips_path_segments():
@@ -19,12 +23,13 @@ def test_parse_txt_accepts_gb18030():
 
 
 def test_load_materials_text_accepts_string_ids():
-    class Db:
-        def get(self, model, material_id):
-            assert material_id == 7
-            return SimpleNamespace(filename="a.md", text_content="素材正文", status="已入库")
-
-    assert "素材正文" in load_materials_text(Db(), ["7"])
+    engine = create_engine("sqlite://")
+    Base.metadata.create_all(engine)
+    with Session(engine) as db:
+        db.add(ReferenceMaterial(id=7, filename="a.md", text_content="素材正文", status="已入库"))
+        db.commit()
+        assert "素材正文" in load_materials_text(db, ["7"])
+    engine.dispose()
 
 
 def test_mock_generation_includes_materials_summary():
@@ -42,8 +47,10 @@ def test_revise_content_passes_materials_to_llm():
     class Llm:
         is_mock = False
 
-        def chat(self, messages, model, temperature):
+        def chat(self, messages, model=None, temperature=None, **kwargs):
             assert "参考素材正文" in messages[1]["content"]
+            # G4/G6：修订链路必须标注用途，成本才能按功能归集
+            assert kwargs["purpose"] == "draft.revise"
             return "ok"
 
     base = SimpleNamespace(content="# 原稿")
@@ -64,7 +71,7 @@ def test_export_filename_includes_draft_id(tmp_path, monkeypatch):
         def commit(self):
             self.committed = True
 
-    monkeypatch.setattr("backend.app.services.export.settings", SimpleNamespace(export_path=tmp_path))
+    monkeypatch.setattr("app.services.export.settings", SimpleNamespace(export_path=tmp_path))
     path, filename = export_draft(Db(), "draft_abc_v1", "md")
 
     assert filename == "同名标题_draft_abc_v1.md"
@@ -74,7 +81,7 @@ def test_export_filename_includes_draft_id(tmp_path, monkeypatch):
 
 def test_pdf_export_generates_pdf(tmp_path, monkeypatch):
     monkeypatch.setattr(
-        "backend.app.services.export.settings",
+        "app.services.export.settings",
         SimpleNamespace(export_path=tmp_path, pdf_chinese_font="C:/Windows/Fonts/msyh.ttc"),
     )
     out = tmp_path / "out.pdf"
@@ -85,11 +92,11 @@ def test_pdf_export_generates_pdf(tmp_path, monkeypatch):
 
 def test_pdf_export_without_chinese_font_raises(tmp_path, monkeypatch):
     monkeypatch.setattr(
-        "backend.app.services.export.settings",
+        "app.services.export.settings",
         SimpleNamespace(export_path=tmp_path, pdf_chinese_font="不存在的字体.ttf"),
     )
     monkeypatch.setattr(
-        "backend.app.services.export._CJK_FONT_CANDIDATES", (),
+        "app.services.export._CJK_FONT_CANDIDATES", (),
     )
     with pytest.raises(UnsupportedExportFormat, match="中文字体"):
         _md_to_pdf("# 内容", tmp_path / "out.pdf")

@@ -76,6 +76,13 @@ def test_dedupe_keeps_first_occurrence():
 
 
 def test_analyze_article_returns_structured_payload(monkeypatch):
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+    from app import db as app_db
+    from app.agent.models import AgentRun
+    engine = create_engine("sqlite://")
+    app_db.Base.metadata.create_all(engine)
+    monkeypatch.setattr(app_db, "SessionLocal", sessionmaker(bind=engine))
     monkeypatch.setattr("app.opinion.analysis._record_model_call", lambda *a, **k: None)
     payload = analyze_article({
         "taskId": 1,
@@ -88,6 +95,9 @@ def test_analyze_article_returns_structured_payload(monkeypatch):
     })
     assert payload["sentiment"] == "negative"
     assert "taskId" in payload and "aiRunId" in payload and "evidenceIds" in payload
+    with app_db.SessionLocal() as db:
+        assert db.get(AgentRun, payload["runId"]).intent == "opinion_analysis"
+    engine.dispose()
 
 
 def test_parse_source_url_normalization():

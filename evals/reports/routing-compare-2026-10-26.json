@@ -1,0 +1,744 @@
+{
+  "generated_at": "2026-10-26T10:57:36.537201+00:00",
+  "kind": "g4-model-tier-routing-compare",
+  "synthetic": true,
+  "database": "isolated-temporary-sqlite",
+  "server_workers": 1,
+  "platform": "Windows-11-10.0.26200-SP0",
+  "scope": "Python AI service only; excludes Java gateway/JWT/production PostgreSQL and real model providers",
+  "model_backend": "local fake models: local-light-chat 30ms / local-flagship-chat 400ms, identical content and usage",
+  "settings": {
+    "lightModel": "local-light-chat",
+    "flagshipModel": "local-flagship-chat",
+    "lightMaxScore": 0,
+    "reasoningMinScore": 3,
+    "priceTable": {
+      "local-flagship-chat": {
+        "input": 2,
+        "output": 8
+      },
+      "local-light-chat": {
+        "input": 0.5,
+        "output": 1
+      }
+    }
+  },
+  "quality_caveat": "假模型内容一致，因此本项证明的是『路由未破坏链路 + 延迟/账目口径正确』，不构成轻量模型的真实质量结论；真实质量需 live 模式在预生产环境复测。",
+  "phases": {
+    "baseline_routing_off": {
+      "summary": {
+        "requests": 7,
+        "models": [
+          "local-flagship-chat"
+        ],
+        "tiers": [
+          "standard"
+        ],
+        "latency_p50_ms": 441.544,
+        "latency_p95_ms": 2082.996,
+        "latency_mean_ms": 675.181,
+        "answer_nonempty_rate": 1.0,
+        "citation_valid_rate": 1.0,
+        "degraded_rate": 0.0,
+        "cost_known_sum": 0.000588,
+        "cost_calls_known": 7,
+        "currency": "CNY"
+      },
+      "records": [
+        {
+          "status": 200,
+          "latency_ms": 2082.996,
+          "model": "local-flagship-chat",
+          "routing": {
+            "purpose": "policy.answer",
+            "tier": "standard",
+            "model": "local-flagship-chat",
+            "routed": false,
+            "changed": false,
+            "score": -1,
+            "complexity": "simple",
+            "source": "routing-disabled",
+            "reason": "模型分层路由未启用（LLM_ROUTING_ENABLED=false 或运行时开关 model_routing 已关闭）",
+            "signals": [
+              "short-lookup(-1,哪些)"
+            ]
+          },
+          "clause_ids": [
+            1,
+            2,
+            3
+          ],
+          "answer_length": 37,
+          "citation_valid": true,
+          "degraded": false,
+          "runId": "ebfdaa6d40de4cb68ebe27ab5509242e",
+          "question": "研发补助申请需要哪些材料？",
+          "class": "simple"
+        },
+        {
+          "status": 200,
+          "latency_ms": 455.557,
+          "model": "local-flagship-chat",
+          "routing": {
+            "purpose": "policy.answer",
+            "tier": "standard",
+            "model": "local-flagship-chat",
+            "routed": false,
+            "changed": false,
+            "score": 0,
+            "complexity": "simple",
+            "source": "routing-disabled",
+            "reason": "模型分层路由未启用（LLM_ROUTING_ENABLED=false 或运行时开关 model_routing 已关闭）",
+            "signals": [
+              "no-complexity-signal(0,9)"
+            ]
+          },
+          "clause_ids": [
+            1,
+            2,
+            3,
+            9
+          ],
+          "answer_length": 37,
+          "citation_valid": true,
+          "degraded": false,
+          "runId": "d69262346e064530a6076cf0fd352523",
+          "question": "研发补助多久提交？",
+          "class": "simple"
+        },
+        {
+          "status": 200,
+          "latency_ms": 434.622,
+          "model": "local-flagship-chat",
+          "routing": {
+            "purpose": "policy.answer",
+            "tier": "standard",
+            "model": "local-flagship-chat",
+            "routed": false,
+            "changed": false,
+            "score": 0,
+            "complexity": "simple",
+            "source": "routing-disabled",
+            "reason": "模型分层路由未启用（LLM_ROUTING_ENABLED=false 或运行时开关 model_routing 已关闭）",
+            "signals": [
+              "no-complexity-signal(0,11)"
+            ]
+          },
+          "clause_ids": [
+            7,
+            8,
+            9
+          ],
+          "answer_length": 37,
+          "citation_valid": true,
+          "degraded": false,
+          "runId": "f8fa933c006c4b1fb5eaaf75b1a67be1",
+          "question": "安全培训多久组织一次？",
+          "class": "simple"
+        },
+        {
+          "status": 200,
+          "latency_ms": 433.185,
+          "model": "local-flagship-chat",
+          "routing": {
+            "purpose": "policy.answer",
+            "tier": "standard",
+            "model": "local-flagship-chat",
+            "routed": false,
+            "changed": false,
+            "score": -1,
+            "complexity": "simple",
+            "source": "routing-disabled",
+            "reason": "模型分层路由未启用（LLM_ROUTING_ENABLED=false 或运行时开关 model_routing 已关闭）",
+            "signals": [
+              "short-lookup(-1,多少)"
+            ]
+          },
+          "clause_ids": [
+            7,
+            8,
+            9
+          ],
+          "answer_length": 37,
+          "citation_valid": true,
+          "degraded": false,
+          "runId": "c22d463967e944f59e1db023bacd4be5",
+          "question": "安全事件报告时限是多少？",
+          "class": "simple"
+        },
+        {
+          "status": 200,
+          "latency_ms": 435.947,
+          "model": "local-flagship-chat",
+          "routing": {
+            "purpose": "policy.answer",
+            "tier": "standard",
+            "model": "local-flagship-chat",
+            "routed": false,
+            "changed": false,
+            "score": 0,
+            "complexity": "simple",
+            "source": "routing-disabled",
+            "reason": "模型分层路由未启用（LLM_ROUTING_ENABLED=false 或运行时开关 model_routing 已关闭）",
+            "signals": [
+              "no-complexity-signal(0,15)"
+            ]
+          },
+          "clause_ids": [
+            13,
+            14
+          ],
+          "answer_length": 37,
+          "citation_valid": true,
+          "degraded": false,
+          "runId": "3127f4fd77834da4825c2d013bf34382",
+          "question": "个人信息是否可以向第三方提供？",
+          "class": "simple"
+        },
+        {
+          "status": 200,
+          "latency_ms": 442.415,
+          "model": "local-flagship-chat",
+          "routing": {
+            "purpose": "policy.answer",
+            "tier": "standard",
+            "model": "local-flagship-chat",
+            "routed": false,
+            "changed": false,
+            "score": 4,
+            "complexity": "complex",
+            "source": "routing-disabled",
+            "reason": "模型分层路由未启用（LLM_ROUTING_ENABLED=false 或运行时开关 model_routing 已关闭）",
+            "signals": [
+              "length>=40(+1,51)",
+              "reasoning-markers(+2,为什么,冲突,优先级,如果)",
+              "citations>=6(+1,6)"
+            ]
+          },
+          "clause_ids": [
+            1,
+            2,
+            3,
+            7,
+            12,
+            14
+          ],
+          "answer_length": 37,
+          "citation_valid": true,
+          "degraded": false,
+          "runId": "e760dabe9a924cc482a57a1c9a32d9a5",
+          "question": "企业同时申报研发补助与研发投入补助，如果两个政策对申报材料的要求存在冲突，应当如何确定优先级，为什么？",
+          "class": "complex"
+        },
+        {
+          "status": 200,
+          "latency_ms": 441.544,
+          "model": "local-flagship-chat",
+          "routing": {
+            "purpose": "policy.answer",
+            "tier": "standard",
+            "model": "local-flagship-chat",
+            "routed": false,
+            "changed": false,
+            "score": 4,
+            "complexity": "complex",
+            "source": "routing-disabled",
+            "reason": "模型分层路由未启用（LLM_ROUTING_ENABLED=false 或运行时开关 model_routing 已关闭）",
+            "signals": [
+              "length>=40(+1,43)",
+              "reasoning-markers(+2,对比,差异,为什么)",
+              "citations>=6(+1,6)"
+            ]
+          },
+          "clause_ids": [
+            1,
+            2,
+            3,
+            6,
+            7,
+            12
+          ],
+          "answer_length": 37,
+          "citation_valid": true,
+          "degraded": false,
+          "runId": "d38cefe018374976a3f0a067aa63aa84",
+          "question": "对比测试市研发补助与另一市研发补助在申请材料上的差异，并说明是否可以重复享受，为什么？",
+          "class": "complex"
+        }
+      ]
+    },
+    "routing_on": {
+      "summary": {
+        "requests": 7,
+        "models": [
+          "local-flagship-chat",
+          "local-light-chat"
+        ],
+        "tiers": [
+          "light",
+          "reasoning"
+        ],
+        "latency_p50_ms": 83.72,
+        "latency_p95_ms": 460.087,
+        "latency_mean_ms": 182.852,
+        "answer_nonempty_rate": 1.0,
+        "citation_valid_rate": 1.0,
+        "degraded_rate": 0.0,
+        "cost_known_sum": 0.000233,
+        "cost_calls_known": 7,
+        "currency": "CNY"
+      },
+      "records": [
+        {
+          "status": 200,
+          "latency_ms": 83.72,
+          "model": "local-light-chat",
+          "routing": {
+            "purpose": "policy.answer",
+            "tier": "light",
+            "model": "local-light-chat",
+            "routed": true,
+            "changed": true,
+            "score": -1,
+            "complexity": "simple",
+            "source": "complexity-simple",
+            "reason": "判定为简单问题，走轻量层",
+            "signals": [
+              "short-lookup(-1,哪些)"
+            ]
+          },
+          "clause_ids": [
+            1,
+            2,
+            3
+          ],
+          "answer_length": 37,
+          "citation_valid": true,
+          "degraded": false,
+          "runId": "bab6052efb4b4ea18dc40628c626274c",
+          "question": "研发补助申请需要哪些材料？",
+          "class": "simple"
+        },
+        {
+          "status": 200,
+          "latency_ms": 64.984,
+          "model": "local-light-chat",
+          "routing": {
+            "purpose": "policy.answer",
+            "tier": "light",
+            "model": "local-light-chat",
+            "routed": true,
+            "changed": true,
+            "score": 0,
+            "complexity": "simple",
+            "source": "complexity-simple",
+            "reason": "判定为简单问题，走轻量层",
+            "signals": [
+              "no-complexity-signal(0,9)"
+            ]
+          },
+          "clause_ids": [
+            1,
+            2,
+            3,
+            9
+          ],
+          "answer_length": 37,
+          "citation_valid": true,
+          "degraded": false,
+          "runId": "e32904c03a694368b073b24a95b43949",
+          "question": "研发补助多久提交？",
+          "class": "simple"
+        },
+        {
+          "status": 200,
+          "latency_ms": 66.595,
+          "model": "local-light-chat",
+          "routing": {
+            "purpose": "policy.answer",
+            "tier": "light",
+            "model": "local-light-chat",
+            "routed": true,
+            "changed": true,
+            "score": 0,
+            "complexity": "simple",
+            "source": "complexity-simple",
+            "reason": "判定为简单问题，走轻量层",
+            "signals": [
+              "no-complexity-signal(0,11)"
+            ]
+          },
+          "clause_ids": [
+            7,
+            8,
+            9
+          ],
+          "answer_length": 37,
+          "citation_valid": true,
+          "degraded": false,
+          "runId": "d4c34a07d35c4c1ba66731734b05e2e4",
+          "question": "安全培训多久组织一次？",
+          "class": "simple"
+        },
+        {
+          "status": 200,
+          "latency_ms": 87.146,
+          "model": "local-light-chat",
+          "routing": {
+            "purpose": "policy.answer",
+            "tier": "light",
+            "model": "local-light-chat",
+            "routed": true,
+            "changed": true,
+            "score": -1,
+            "complexity": "simple",
+            "source": "complexity-simple",
+            "reason": "判定为简单问题，走轻量层",
+            "signals": [
+              "short-lookup(-1,多少)"
+            ]
+          },
+          "clause_ids": [
+            7,
+            8,
+            9
+          ],
+          "answer_length": 37,
+          "citation_valid": true,
+          "degraded": false,
+          "runId": "ea601e7345a64d03a22636a278c544b0",
+          "question": "安全事件报告时限是多少？",
+          "class": "simple"
+        },
+        {
+          "status": 200,
+          "latency_ms": 64.618,
+          "model": "local-light-chat",
+          "routing": {
+            "purpose": "policy.answer",
+            "tier": "light",
+            "model": "local-light-chat",
+            "routed": true,
+            "changed": true,
+            "score": 0,
+            "complexity": "simple",
+            "source": "complexity-simple",
+            "reason": "判定为简单问题，走轻量层",
+            "signals": [
+              "no-complexity-signal(0,15)"
+            ]
+          },
+          "clause_ids": [
+            13,
+            14
+          ],
+          "answer_length": 37,
+          "citation_valid": true,
+          "degraded": false,
+          "runId": "f71a67354e9b4c4a97cb0934aeacb5c4",
+          "question": "个人信息是否可以向第三方提供？",
+          "class": "simple"
+        },
+        {
+          "status": 200,
+          "latency_ms": 460.087,
+          "model": "local-flagship-chat",
+          "routing": {
+            "purpose": "policy.answer",
+            "tier": "reasoning",
+            "model": "local-flagship-chat",
+            "routed": true,
+            "changed": false,
+            "score": 4,
+            "complexity": "complex",
+            "source": "complexity-complex",
+            "reason": "判定为复杂问题，走旗舰层",
+            "signals": [
+              "length>=40(+1,51)",
+              "reasoning-markers(+2,为什么,冲突,优先级,如果)",
+              "citations>=6(+1,6)"
+            ]
+          },
+          "clause_ids": [
+            1,
+            2,
+            3,
+            7,
+            12,
+            14
+          ],
+          "answer_length": 37,
+          "citation_valid": true,
+          "degraded": false,
+          "runId": "a33ddb7778e64291a5228ae98e4727eb",
+          "question": "企业同时申报研发补助与研发投入补助，如果两个政策对申报材料的要求存在冲突，应当如何确定优先级，为什么？",
+          "class": "complex"
+        },
+        {
+          "status": 200,
+          "latency_ms": 452.815,
+          "model": "local-flagship-chat",
+          "routing": {
+            "purpose": "policy.answer",
+            "tier": "reasoning",
+            "model": "local-flagship-chat",
+            "routed": true,
+            "changed": false,
+            "score": 4,
+            "complexity": "complex",
+            "source": "complexity-complex",
+            "reason": "判定为复杂问题，走旗舰层",
+            "signals": [
+              "length>=40(+1,43)",
+              "reasoning-markers(+2,对比,差异,为什么)",
+              "citations>=6(+1,6)"
+            ]
+          },
+          "clause_ids": [
+            1,
+            2,
+            3,
+            6,
+            7,
+            12
+          ],
+          "answer_length": 37,
+          "citation_valid": true,
+          "degraded": false,
+          "runId": "1f1be43647454dbf8d04e68d209b792d",
+          "question": "对比测试市研发补助与另一市研发补助在申请材料上的差异，并说明是否可以重复享受，为什么？",
+          "class": "complex"
+        }
+      ]
+    },
+    "runtime_flags": {
+      "kg": {
+        "name": "kg",
+        "title": "图谱召回（G1）",
+        "enabled": false,
+        "configDefault": false,
+        "source": "configuration",
+        "configKey": "KG_ENABLED",
+        "fallback": "关闭后不走进图路，检索退化为 BM25 + Dense 两路 RRF + 精排"
+      },
+      "semantic_rerank": {
+        "name": "semantic_rerank",
+        "title": "语义精排（CrossEncoder / 远端 Rerank）",
+        "enabled": false,
+        "configDefault": false,
+        "source": "configuration",
+        "configKey": "RERANK_URL / RERANK_LOCAL_MODEL",
+        "fallback": "关闭后跳过语义精排，退化为确定性词法重排并标记 degraded"
+      },
+      "remote_llm": {
+        "name": "remote_llm",
+        "title": "外部对话 / 抽取模型",
+        "enabled": true,
+        "configDefault": true,
+        "source": "configuration",
+        "configKey": "LLM_API_KEY",
+        "fallback": "关闭后不调用外部模型，各链路走既有规则化兜底并标记 degraded"
+      },
+      "remote_embedding": {
+        "name": "remote_embedding",
+        "title": "外部向量模型",
+        "enabled": false,
+        "configDefault": false,
+        "source": "configuration",
+        "configKey": "EMBEDDING_API_KEY / EMBEDDING_MODEL",
+        "fallback": "关闭后检索跳过 Dense 路（不混用哈希向量顶替），保留 BM25 与图路并标记 degraded"
+      },
+      "factcheck": {
+        "name": "factcheck",
+        "title": "模型事实核查（交叉验证）",
+        "enabled": true,
+        "configDefault": true,
+        "source": "configuration",
+        "configKey": "默认开启",
+        "fallback": "关闭后核查退化为规则化实现，结论不得解释为核查通过"
+      },
+      "model_routing": {
+        "name": "model_routing",
+        "title": "模型分层路由（G4）",
+        "enabled": true,
+        "configDefault": false,
+        "source": "runtime-override",
+        "configKey": "LLM_ROUTING_ENABLED",
+        "fallback": "关闭后生成类调用一律走标准层（LLM_MODEL_TIER_STANDARD / LLM_MODEL_GENERATION），路由决策仍记审计但 tier 恒为 standard"
+      }
+    },
+    "model_routing_status": {
+      "enabled": true,
+      "configDefault": false,
+      "source": "runtime-override",
+      "tiers": {
+        "light": {
+          "model": "local-light-chat",
+          "configured": true
+        },
+        "standard": {
+          "model": "local-flagship-chat",
+          "configured": true
+        },
+        "reasoning": {
+          "model": "local-flagship-chat",
+          "configured": true
+        }
+      },
+      "thresholds": {
+        "lightMaxScore": 0,
+        "reasoningMinScore": 3
+      },
+      "routablePurposes": [
+        "policy.answer",
+        "policy.interpret",
+        "draft.generate",
+        "draft.revise"
+      ],
+      "designatedPurposes": {
+        "extraction": "LLM_MODEL_EXTRACTION",
+        "factcheck": "LLM_MODEL_FACTCHECK",
+        "kg.extract": "KG_MODEL 或 LLM_MODEL_EXTRACTION",
+        "kg.community": "KG_MODEL 或 LLM_MODEL_EXTRACTION",
+        "embedding": "EMBEDDING_MODEL",
+        "rerank.policy": "RERANK_MODEL / RERANK_LOCAL_MODEL",
+        "meeting.report": "MEETING_REPORT_MODEL",
+        "meeting.card": "MEETING_CARD_MODEL",
+        "meeting.vision": "MEETING_VISION_MODEL"
+      },
+      "note": "未配置轻量层 / 旗舰层模型时，开启路由开关也是 no-op（回落标准层），决策里会写明 source=tier-model-unset。"
+    }
+  },
+  "embedded_run_summary": {
+    "flags": {
+      "kg": {
+        "name": "kg",
+        "title": "图谱召回（G1）",
+        "enabled": false,
+        "configDefault": false,
+        "source": "configuration",
+        "configKey": "KG_ENABLED",
+        "fallback": "关闭后不走进图路，检索退化为 BM25 + Dense 两路 RRF + 精排"
+      },
+      "semantic_rerank": {
+        "name": "semantic_rerank",
+        "title": "语义精排（CrossEncoder / 远端 Rerank）",
+        "enabled": false,
+        "configDefault": false,
+        "source": "configuration",
+        "configKey": "RERANK_URL / RERANK_LOCAL_MODEL",
+        "fallback": "关闭后跳过语义精排，退化为确定性词法重排并标记 degraded"
+      },
+      "remote_llm": {
+        "name": "remote_llm",
+        "title": "外部对话 / 抽取模型",
+        "enabled": true,
+        "configDefault": true,
+        "source": "configuration",
+        "configKey": "LLM_API_KEY",
+        "fallback": "关闭后不调用外部模型，各链路走既有规则化兜底并标记 degraded"
+      },
+      "remote_embedding": {
+        "name": "remote_embedding",
+        "title": "外部向量模型",
+        "enabled": false,
+        "configDefault": false,
+        "source": "configuration",
+        "configKey": "EMBEDDING_API_KEY / EMBEDDING_MODEL",
+        "fallback": "关闭后检索跳过 Dense 路（不混用哈希向量顶替），保留 BM25 与图路并标记 degraded"
+      },
+      "factcheck": {
+        "name": "factcheck",
+        "title": "模型事实核查（交叉验证）",
+        "enabled": true,
+        "configDefault": true,
+        "source": "configuration",
+        "configKey": "默认开启",
+        "fallback": "关闭后核查退化为规则化实现，结论不得解释为核查通过"
+      },
+      "model_routing": {
+        "name": "model_routing",
+        "title": "模型分层路由（G4）",
+        "enabled": true,
+        "configDefault": false,
+        "source": "runtime-override",
+        "configKey": "LLM_ROUTING_ENABLED",
+        "fallback": "关闭后生成类调用一律走标准层（LLM_MODEL_TIER_STANDARD / LLM_MODEL_GENERATION），路由决策仍记审计但 tier 恒为 standard"
+      }
+    },
+    "model_calls": {
+      "local-light-chat": 5,
+      "local-flagship-chat": 9
+    }
+  },
+  "checks": [
+    {
+      "name": "baseline_routing_disabled",
+      "passed": true,
+      "detail": "sources=['routing-disabled'] models=['local-flagship-chat']",
+      "informative": true
+    },
+    {
+      "name": "simple_questions_use_light_tier",
+      "passed": true,
+      "detail": "simple models=['local-light-chat'] tiers=['light']",
+      "informative": true
+    },
+    {
+      "name": "complex_questions_use_flagship",
+      "passed": true,
+      "detail": "complex models=['local-flagship-chat'] tiers=['reasoning']",
+      "informative": true
+    },
+    {
+      "name": "decisions_are_auditable",
+      "passed": true,
+      "detail": "每条决策都带 tier/score/signals/reason",
+      "informative": true
+    },
+    {
+      "name": "decisions_persisted_in_agent_run",
+      "passed": true,
+      "detail": "落库 7 条运行审计，含决策的 7 条",
+      "informative": true
+    },
+    {
+      "name": "retrieval_unchanged",
+      "passed": true,
+      "detail": "不一致的用例=[]",
+      "informative": true
+    },
+    {
+      "name": "retrieval_has_hits",
+      "passed": true,
+      "detail": "零命中用例=[]",
+      "informative": true
+    },
+    {
+      "name": "quality_not_regressed",
+      "passed": true,
+      "detail": "off={'answer_nonempty_rate': 1.0, 'citation_valid_rate': 1.0, 'degraded_rate': 0.0} on={'answer_nonempty_rate': 1.0, 'citation_valid_rate': 1.0, 'degraded_rate': 0.0}",
+      "informative": false
+    },
+    {
+      "name": "latency_improved",
+      "passed": true,
+      "detail": "P50 off=441.544ms on=83.72ms 阈值<353.235ms",
+      "informative": true
+    },
+    {
+      "name": "cost_reduced",
+      "passed": true,
+      "detail": "off=0.000588元 on=0.000233元",
+      "informative": true
+    }
+  ],
+  "informativeChecks": [
+    "quality_not_regressed"
+  ],
+  "informativeNote": "informativeChecks 里的判定在合成假模型下无区分度（内容相同必然相等），只用于确认链路未被破坏；质量结论需 live 模式。",
+  "failures": [],
+  "passed": true,
+  "completed": true,
+  "production_accepted": false
+}

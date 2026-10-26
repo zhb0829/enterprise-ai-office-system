@@ -8,8 +8,11 @@ import uuid
 from sqlalchemy.orm import Session
 
 from ..config import settings
+from ..agent.review import persist_evidence
 from ..models import Draft, DraftElement, FactCheck
+from ..observability import user_id_var
 from ..schemas import VersionNode
+from . import model_router
 from .llm import LLMClient, LLMError
 
 logger = logging.getLogger(__name__)
@@ -43,7 +46,10 @@ def revise_content(base: Draft, instruction: str, llm: LLMClient, materials: str
             "content": f"原稿：\n{base.content}\n\n参考素材：\n{materials or '（无）'}\n\n修改指令：{instruction}",
         },
     ]
-    return llm.chat(messages, model=settings.llm_model_generation, temperature=0.3)
+    return llm.chat(
+        messages, temperature=0.3, purpose="draft.revise", routing_text=instruction,
+        context_chars=len(base.content or "") + len(materials or ""),
+    )
 
 
 def diff_summary(base: Draft, new_content: str, instruction: str, llm: LLMClient) -> list[str]:
@@ -56,8 +62,8 @@ def diff_summary(base: Draft, new_content: str, instruction: str, llm: LLMClient
                 {"role": "system", "content": DIFF_SYSTEM_PROMPT},
                 {"role": "user", "content": f"原稿：\n{base.content}\n\n修订稿：\n{new_content}"},
             ],
-            model=settings.llm_model_generation,
             temperature=0.1,
+            purpose="draft.revise",
         )
         if isinstance(data, list):
             return [str(x) for x in data if x]
@@ -99,10 +105,13 @@ def persist_revision(
         parent_id=base.id,
         root_id=base.root_id or base.id,
         status="草稿",
-        model=settings.llm_model_generation,
-        created_by=base.created_by,
+        model=(model_router.last_decision("draft.revise") or {}).get("model") or settings.llm_model_generation,
+        created_by=user_id_var.get(),
         input_payload=base.input_payload,
         revision_instruction=instruction,
+        tenant_id=base.tenant_id,
+        department_id=base.department_id,
+        classification=base.classification,
     )
     db.add(draft)
     for e in base.elements:
@@ -125,6 +134,8 @@ def persist_revision(
                 suggestion=item.get("suggestion", ""),
             )
         )
+    db.flush()
+    persist_evidence(db, draft, fact_check_report or [])
     db.commit()
     db.refresh(draft)
     return draft

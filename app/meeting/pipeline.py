@@ -8,11 +8,11 @@ from typing import TypedDict
 from langgraph.graph import END, StateGraph
 
 from ..db import SessionLocal
-from ..services.materials import embed_texts
+from ..agent.runtime import agent_run, step as agent_step
+from ..agent.roles import AgentPipeline, EvidenceVerifier, FunctionActor, FunctionRetriever, TaskContext, WorkflowPlanner
 from .collector import collect_rss
 from .generation import extract_insights, generate_cards, generate_report
 from .java_client import java_client
-from .models_ai import MeetingKnowledgeIndex
 from .parsers import parse_material
 from .recommendation import recommend
 
@@ -78,10 +78,30 @@ def initial_state(task_id: int, payload: dict) -> MeetingState:
     }
 
 
+@agent_run("meeting", plan=("collect", "parse", "extract", "generate", "recommend"))
 def run_job(task_id: int, payload: dict) -> dict:
     state = initial_state(task_id, payload)
     try:
-        result = build_graph().invoke(state)
+        def retrieve(context):
+            _collect(state)
+            _parse(state)
+            return state["materials"]
+
+        def act(context, evidence):
+            _extract(state)
+            _generate(state)
+            _recommend(state)
+            return state
+
+        result = AgentPipeline(
+            WorkflowPlanner(permission="meeting:read"),
+            FunctionRetriever(retrieve), FunctionActor(act),
+            EvidenceVerifier(lambda context, evidence, result: {
+                "passed": bool(result.get("report", "").strip()) and bool(result.get("insights")),
+                "source_material_ids": [m.get("id") for m in evidence if m.get("parseStatus") == "parsed"],
+                "human_review_required": True,
+            }),
+        ).execute(TaskContext("meeting", payload))
         response = {
             "model": result.get("model", "rule-based"),
             "report": {
@@ -148,7 +168,9 @@ def _run_step(state: MeetingState, step_key: str, action) -> MeetingState:
         step.update(status="running", error="", attempt=attempt + 1)
         java_client.progress(state["task_id"], state["steps"], state["materials"])
         try:
-            action()
+            with agent_step(f"meeting.{step_key}", inputs={"task_id": state["task_id"], "attempt": attempt + 1}) as audit:
+                action()
+                audit["output"] = {"materials": len(state.get("materials") or []), "insights": state.get("insights") or []}
             step.update(
                 status="completed",
                 elapsedMs=round((time.perf_counter() - started) * 1000),
@@ -174,22 +196,23 @@ def _material_updates(materials: list[dict]) -> list[dict]:
 
 
 def _index_cards(conference_id: int, cards: list[dict]) -> None:
-    if not conference_id or not cards:
+    if not conference_id:
         return
     db = SessionLocal()
     try:
-        db.query(MeetingKnowledgeIndex).filter(MeetingKnowledgeIndex.conference_id == conference_id).delete()
-        texts = [f"{item.get('title', '')}\n{item.get('content', '')}" for item in cards]
-        vectors = embed_texts(texts)
-        for item, vector in zip(cards, vectors):
-            db.add(MeetingKnowledgeIndex(
-                conference_id=conference_id,
-                card_type=str(item.get("cardType") or ""),
-                title=str(item.get("title") or ""),
-                content=str(item.get("content") or ""),
-                embedding=vector,
-                source_ref=item.get("sourceRef") or [],
-            ))
+        from ..agent.knowledge import KnowledgeStore
+        store = KnowledgeStore(db, "tenant:default:meeting")
+        key = f"conference:{conference_id}"
+        documents = [{
+            "key": key, "classification": "internal", "tenant_id": "default",
+            "text": "\n\n".join(f"{c.get('title', '')}\n{c.get('content', '')}" for c in cards),
+            "metadata": {"conferenceId": conference_id, "cards": cards},
+        }] if cards else []
+        release = store.stage(documents, deleted_keys=[] if cards else [key])
+        if any(release.changes[k] for k in ("added", "updated", "deleted")):
+            store.publish(release.id)
+        else:
+            store.discard(release)
         db.commit()
     except Exception:  # noqa: BLE001
         db.rollback()

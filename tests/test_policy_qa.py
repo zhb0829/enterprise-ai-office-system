@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
+from tests.conftest import trusted_headers
 
 from app import db as app_db
 from app import main as app_main
@@ -50,7 +51,7 @@ def test_policy_chat_refuses_without_evidence(monkeypatch):
     monkeypatch.setattr(app_main, "SessionLocal", session_factory)
     monkeypatch.setattr(app_main, "load_seed_templates", lambda db: 0)
 
-    with TestClient(app_main.app) as client:
+    with TestClient(app_main.app, headers=trusted_headers("policy:read")) as client:
         response = client.post("/api/policy/chat", json={"question": "不存在的法规条款是什么？"})
 
     assert response.status_code == 200
@@ -105,7 +106,7 @@ def test_policy_chat_returns_citations_and_compliance_disclaimer(monkeypatch):
             source_url="https://example.com/policy",
         )
 
-    with TestClient(app_main.app) as client:
+    with TestClient(app_main.app, headers=trusted_headers("policy:read")) as client:
         response = client.post(
             "/api/policy/chat",
             json={"question": "高新技术企业研发费用比例要求？", "industry": "科技"},
@@ -181,7 +182,7 @@ def test_policy_url_import_returns_clear_message_for_source_403(monkeypatch, sql
         ),
     )
 
-    with TestClient(app_main.app) as client:
+    with TestClient(app_main.app, headers=trusted_headers("knowledge:publish")) as client:
         response = client.post(
             "/api/policy/documents/from-url",
             json={"url": "https://www.gov.cn/example", "industryTags": []},

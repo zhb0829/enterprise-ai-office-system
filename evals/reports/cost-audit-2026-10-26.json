@@ -1,0 +1,796 @@
+{
+  "generated_at": "2026-10-26T10:57:46.619941+00:00",
+  "kind": "g6-cost-accounting-audit",
+  "synthetic": true,
+  "database": "isolated-temporary-sqlite",
+  "server_workers": 1,
+  "platform": "Windows-11-10.0.26200-SP0",
+  "scope": "Python AI service only; excludes Java gateway/JWT/production PostgreSQL",
+  "model_backend": "local fake model local-flagship-chat (usage 10in/8out)",
+  "pricing": {
+    "currency": "CNY",
+    "unit": "per_million_tokens",
+    "table": {
+      "local-flagship-chat": {
+        "input": 2.0,
+        "output": 8.0
+      }
+    },
+    "intentionallyUnpriced": "local-light-chat",
+    "flagshipCostPerCall": 8.4e-05
+  },
+  "pricing_caveat": "价格表是配置口径而非供应商账单；本项只证明账目算法与数据链路正确，真实账单核对需要供应商结算数据；空价格表（完全未知）由单元测试覆盖。",
+  "summary": {
+    "flagshipCalls": 2,
+    "lightCalls": 4,
+    "expectedFlagshipCost": 0.000168,
+    "reportedTotalCost": 0.000168,
+    "runsPersisted": 6
+  },
+  "scenarios": {
+    "traffic": [
+      {
+        "tenant": "tenant-a",
+        "simple": {
+          "status": 200,
+          "model": "local-light-chat",
+          "tier": "light"
+        },
+        "complex": {
+          "status": 200,
+          "model": "local-flagship-chat",
+          "tier": "reasoning"
+        },
+        "interpret": {
+          "status": 200,
+          "model": "local-light-chat",
+          "tier": "light"
+        }
+      },
+      {
+        "tenant": "tenant-b",
+        "simple": {
+          "status": 200,
+          "model": "local-light-chat",
+          "tier": "light"
+        },
+        "complex": {
+          "status": 200,
+          "model": "local-flagship-chat",
+          "tier": "reasoning"
+        },
+        "interpret": {
+          "status": 200,
+          "model": "local-light-chat",
+          "tier": "light"
+        }
+      }
+    ],
+    "cost_report": {
+      "window": {
+        "since": "2026-10-19T10:57:46.547596",
+        "until": "2026-10-26T10:57:46.547596",
+        "days": 7,
+        "tenant": "all-tenants",
+        "intent": "",
+        "scope": "all-tenants"
+      },
+      "scannedRuns": 6,
+      "truncated": false,
+      "truncateNote": "",
+      "currency": "CNY",
+      "unit": "per_million_tokens",
+      "groupBy": [
+        "model",
+        "purpose",
+        "tenant"
+      ],
+      "costKnownOnly": true,
+      "costComplete": false,
+      "tokensComplete": true,
+      "total": {
+        "inputTokens": 60,
+        "outputTokens": 48,
+        "calls": 6,
+        "runs": 6,
+        "cost": 0.000168,
+        "costComplete": false,
+        "tokensComplete": true,
+        "unpricedModels": [
+          "local-light-chat"
+        ],
+        "unpricedReasons": [
+          "model-not-priced"
+        ]
+      },
+      "unpricedModels": [
+        "local-light-chat"
+      ],
+      "unpricedReasons": [
+        "model-not-priced"
+      ],
+      "unattributedRuns": 0,
+      "zeroUsageRuns": 0,
+      "groups": [
+        {
+          "model": "local-flagship-chat",
+          "purpose": "policy.answer",
+          "intent": null,
+          "tenant": "tenant-a",
+          "inputTokens": 10,
+          "outputTokens": 8,
+          "calls": 1,
+          "runs": 1,
+          "cost": 8.4e-05,
+          "costComplete": true,
+          "tokensComplete": true,
+          "unpricedModels": [],
+          "unpricedReasons": []
+        },
+        {
+          "model": "local-flagship-chat",
+          "purpose": "policy.answer",
+          "intent": null,
+          "tenant": "tenant-b",
+          "inputTokens": 10,
+          "outputTokens": 8,
+          "calls": 1,
+          "runs": 1,
+          "cost": 8.4e-05,
+          "costComplete": true,
+          "tokensComplete": true,
+          "unpricedModels": [],
+          "unpricedReasons": []
+        },
+        {
+          "model": "local-light-chat",
+          "purpose": "policy.answer",
+          "intent": null,
+          "tenant": "tenant-a",
+          "inputTokens": 10,
+          "outputTokens": 8,
+          "calls": 1,
+          "runs": 1,
+          "cost": null,
+          "costComplete": false,
+          "tokensComplete": true,
+          "unpricedModels": [
+            "local-light-chat"
+          ],
+          "unpricedReasons": [
+            "model-not-priced"
+          ]
+        },
+        {
+          "model": "local-light-chat",
+          "purpose": "policy.answer",
+          "intent": null,
+          "tenant": "tenant-b",
+          "inputTokens": 10,
+          "outputTokens": 8,
+          "calls": 1,
+          "runs": 1,
+          "cost": null,
+          "costComplete": false,
+          "tokensComplete": true,
+          "unpricedModels": [
+            "local-light-chat"
+          ],
+          "unpricedReasons": [
+            "model-not-priced"
+          ]
+        },
+        {
+          "model": "local-light-chat",
+          "purpose": "policy.interpret",
+          "intent": null,
+          "tenant": "tenant-a",
+          "inputTokens": 10,
+          "outputTokens": 8,
+          "calls": 1,
+          "runs": 1,
+          "cost": null,
+          "costComplete": false,
+          "tokensComplete": true,
+          "unpricedModels": [
+            "local-light-chat"
+          ],
+          "unpricedReasons": [
+            "model-not-priced"
+          ]
+        },
+        {
+          "model": "local-light-chat",
+          "purpose": "policy.interpret",
+          "intent": null,
+          "tenant": "tenant-b",
+          "inputTokens": 10,
+          "outputTokens": 8,
+          "calls": 1,
+          "runs": 1,
+          "cost": null,
+          "costComplete": false,
+          "tokensComplete": true,
+          "unpricedModels": [
+            "local-light-chat"
+          ],
+          "unpricedReasons": [
+            "model-not-priced"
+          ]
+        }
+      ],
+      "pricing": {
+        "currency": "CNY",
+        "unit": "per_million_tokens",
+        "pricedModels": [
+          "local-flagship-chat"
+        ],
+        "rejectedEntries": [],
+        "error": ""
+      },
+      "note": "cost 只累加已定价模型的用量（元/百万token，仅 CNY）；costComplete=false 表示存在未知成本（模型未定价或供应商未返回 usage），不得把 cost 当作完整账单，也不要把未知部分按 0 处理。零用量运行（离线/规则化链路）不计入缺口，单独记在 zeroUsageRuns。"
+    },
+    "by_model": {
+      "window": {
+        "since": "2026-10-19T10:57:46.559844",
+        "until": "2026-10-26T10:57:46.559844",
+        "days": 7,
+        "tenant": "all-tenants",
+        "intent": "",
+        "scope": "all-tenants"
+      },
+      "scannedRuns": 6,
+      "truncated": false,
+      "truncateNote": "",
+      "currency": "CNY",
+      "unit": "per_million_tokens",
+      "groupBy": [
+        "model"
+      ],
+      "costKnownOnly": true,
+      "costComplete": false,
+      "tokensComplete": true,
+      "total": {
+        "inputTokens": 60,
+        "outputTokens": 48,
+        "calls": 6,
+        "runs": 6,
+        "cost": 0.000168,
+        "costComplete": false,
+        "tokensComplete": true,
+        "unpricedModels": [
+          "local-light-chat"
+        ],
+        "unpricedReasons": [
+          "model-not-priced"
+        ]
+      },
+      "unpricedModels": [
+        "local-light-chat"
+      ],
+      "unpricedReasons": [
+        "model-not-priced"
+      ],
+      "unattributedRuns": 0,
+      "zeroUsageRuns": 0,
+      "groups": [
+        {
+          "model": "local-flagship-chat",
+          "purpose": null,
+          "intent": null,
+          "tenant": null,
+          "inputTokens": 20,
+          "outputTokens": 16,
+          "calls": 2,
+          "runs": 2,
+          "cost": 0.000168,
+          "costComplete": true,
+          "tokensComplete": true,
+          "unpricedModels": [],
+          "unpricedReasons": []
+        },
+        {
+          "model": "local-light-chat",
+          "purpose": null,
+          "intent": null,
+          "tenant": null,
+          "inputTokens": 40,
+          "outputTokens": 32,
+          "calls": 4,
+          "runs": 4,
+          "cost": null,
+          "costComplete": false,
+          "tokensComplete": true,
+          "unpricedModels": [
+            "local-light-chat"
+          ],
+          "unpricedReasons": [
+            "model-not-priced"
+          ]
+        }
+      ],
+      "pricing": {
+        "currency": "CNY",
+        "unit": "per_million_tokens",
+        "pricedModels": [
+          "local-flagship-chat"
+        ],
+        "rejectedEntries": [],
+        "error": ""
+      },
+      "note": "cost 只累加已定价模型的用量（元/百万token，仅 CNY）；costComplete=false 表示存在未知成本（模型未定价或供应商未返回 usage），不得把 cost 当作完整账单，也不要把未知部分按 0 处理。零用量运行（离线/规则化链路）不计入缺口，单独记在 zeroUsageRuns。"
+    },
+    "by_intent": {
+      "window": {
+        "since": "2026-10-19T10:57:46.571210",
+        "until": "2026-10-26T10:57:46.571210",
+        "days": 7,
+        "tenant": "all-tenants",
+        "intent": "",
+        "scope": "all-tenants"
+      },
+      "scannedRuns": 6,
+      "truncated": false,
+      "truncateNote": "",
+      "currency": "CNY",
+      "unit": "per_million_tokens",
+      "groupBy": [
+        "intent"
+      ],
+      "costKnownOnly": true,
+      "costComplete": false,
+      "tokensComplete": true,
+      "total": {
+        "inputTokens": 60,
+        "outputTokens": 48,
+        "calls": 6,
+        "runs": 6,
+        "cost": 0.000168,
+        "costComplete": false,
+        "tokensComplete": true,
+        "unpricedModels": [
+          "local-light-chat"
+        ],
+        "unpricedReasons": [
+          "model-not-priced"
+        ]
+      },
+      "unpricedModels": [
+        "local-light-chat"
+      ],
+      "unpricedReasons": [
+        "model-not-priced"
+      ],
+      "unattributedRuns": 0,
+      "zeroUsageRuns": 0,
+      "groups": [
+        {
+          "model": null,
+          "purpose": null,
+          "intent": "policy_qa",
+          "tenant": null,
+          "inputTokens": 40,
+          "outputTokens": 32,
+          "calls": 4,
+          "runs": 4,
+          "cost": 0.000168,
+          "costComplete": false,
+          "tokensComplete": true,
+          "unpricedModels": [],
+          "unpricedReasons": [
+            "model-not-priced"
+          ]
+        },
+        {
+          "model": null,
+          "purpose": null,
+          "intent": "policy_interpretation",
+          "tenant": null,
+          "inputTokens": 20,
+          "outputTokens": 16,
+          "calls": 2,
+          "runs": 2,
+          "cost": null,
+          "costComplete": false,
+          "tokensComplete": true,
+          "unpricedModels": [],
+          "unpricedReasons": [
+            "model-not-priced"
+          ]
+        }
+      ],
+      "pricing": {
+        "currency": "CNY",
+        "unit": "per_million_tokens",
+        "pricedModels": [
+          "local-flagship-chat"
+        ],
+        "rejectedEntries": [],
+        "error": ""
+      },
+      "note": "cost 只累加已定价模型的用量（元/百万token，仅 CNY）；costComplete=false 表示存在未知成本（模型未定价或供应商未返回 usage），不得把 cost 当作完整账单，也不要把未知部分按 0 处理。零用量运行（离线/规则化链路）不计入缺口，单独记在 zeroUsageRuns。"
+    },
+    "by_purpose": {
+      "window": {
+        "since": "2026-10-19T10:57:46.583306",
+        "until": "2026-10-26T10:57:46.583306",
+        "days": 7,
+        "tenant": "all-tenants",
+        "intent": "",
+        "scope": "all-tenants"
+      },
+      "scannedRuns": 6,
+      "truncated": false,
+      "truncateNote": "",
+      "currency": "CNY",
+      "unit": "per_million_tokens",
+      "groupBy": [
+        "purpose"
+      ],
+      "costKnownOnly": true,
+      "costComplete": false,
+      "tokensComplete": true,
+      "total": {
+        "inputTokens": 60,
+        "outputTokens": 48,
+        "calls": 6,
+        "runs": 6,
+        "cost": 0.000168,
+        "costComplete": false,
+        "tokensComplete": true,
+        "unpricedModels": [
+          "local-light-chat"
+        ],
+        "unpricedReasons": [
+          "model-not-priced"
+        ]
+      },
+      "unpricedModels": [
+        "local-light-chat"
+      ],
+      "unpricedReasons": [
+        "model-not-priced"
+      ],
+      "unattributedRuns": 0,
+      "zeroUsageRuns": 0,
+      "groups": [
+        {
+          "model": null,
+          "purpose": "policy.answer",
+          "intent": null,
+          "tenant": null,
+          "inputTokens": 40,
+          "outputTokens": 32,
+          "calls": 4,
+          "runs": 4,
+          "cost": 0.000168,
+          "costComplete": false,
+          "tokensComplete": true,
+          "unpricedModels": [],
+          "unpricedReasons": [
+            "model-not-priced"
+          ]
+        },
+        {
+          "model": null,
+          "purpose": "policy.interpret",
+          "intent": null,
+          "tenant": null,
+          "inputTokens": 20,
+          "outputTokens": 16,
+          "calls": 2,
+          "runs": 2,
+          "cost": null,
+          "costComplete": false,
+          "tokensComplete": true,
+          "unpricedModels": [],
+          "unpricedReasons": [
+            "model-not-priced"
+          ]
+        }
+      ],
+      "pricing": {
+        "currency": "CNY",
+        "unit": "per_million_tokens",
+        "pricedModels": [
+          "local-flagship-chat"
+        ],
+        "rejectedEntries": [],
+        "error": ""
+      },
+      "note": "cost 只累加已定价模型的用量（元/百万token，仅 CNY）；costComplete=false 表示存在未知成本（模型未定价或供应商未返回 usage），不得把 cost 当作完整账单，也不要把未知部分按 0 处理。零用量运行（离线/规则化链路）不计入缺口，单独记在 zeroUsageRuns。"
+    },
+    "by_tenant": {
+      "window": {
+        "since": "2026-10-19T10:57:46.593894",
+        "until": "2026-10-26T10:57:46.593894",
+        "days": 7,
+        "tenant": "all-tenants",
+        "intent": "",
+        "scope": "all-tenants"
+      },
+      "scannedRuns": 6,
+      "truncated": false,
+      "truncateNote": "",
+      "currency": "CNY",
+      "unit": "per_million_tokens",
+      "groupBy": [
+        "tenant"
+      ],
+      "costKnownOnly": true,
+      "costComplete": false,
+      "tokensComplete": true,
+      "total": {
+        "inputTokens": 60,
+        "outputTokens": 48,
+        "calls": 6,
+        "runs": 6,
+        "cost": 0.000168,
+        "costComplete": false,
+        "tokensComplete": true,
+        "unpricedModels": [
+          "local-light-chat"
+        ],
+        "unpricedReasons": [
+          "model-not-priced"
+        ]
+      },
+      "unpricedModels": [
+        "local-light-chat"
+      ],
+      "unpricedReasons": [
+        "model-not-priced"
+      ],
+      "unattributedRuns": 0,
+      "zeroUsageRuns": 0,
+      "groups": [
+        {
+          "model": null,
+          "purpose": null,
+          "intent": null,
+          "tenant": "tenant-a",
+          "inputTokens": 30,
+          "outputTokens": 24,
+          "calls": 3,
+          "runs": 3,
+          "cost": 8.4e-05,
+          "costComplete": false,
+          "tokensComplete": true,
+          "unpricedModels": [],
+          "unpricedReasons": [
+            "model-not-priced"
+          ]
+        },
+        {
+          "model": null,
+          "purpose": null,
+          "intent": null,
+          "tenant": "tenant-b",
+          "inputTokens": 30,
+          "outputTokens": 24,
+          "calls": 3,
+          "runs": 3,
+          "cost": 8.4e-05,
+          "costComplete": false,
+          "tokensComplete": true,
+          "unpricedModels": [],
+          "unpricedReasons": [
+            "model-not-priced"
+          ]
+        }
+      ],
+      "pricing": {
+        "currency": "CNY",
+        "unit": "per_million_tokens",
+        "pricedModels": [
+          "local-flagship-chat"
+        ],
+        "rejectedEntries": [],
+        "error": ""
+      },
+      "note": "cost 只累加已定价模型的用量（元/百万token，仅 CNY）；costComplete=false 表示存在未知成本（模型未定价或供应商未返回 usage），不得把 cost 当作完整账单，也不要把未知部分按 0 处理。零用量运行（离线/规则化链路）不计入缺口，单独记在 zeroUsageRuns。"
+    },
+    "intent_filtered": {
+      "window": {
+        "since": "2026-10-19T10:57:46.605284",
+        "until": "2026-10-26T10:57:46.605284",
+        "days": 7,
+        "tenant": "all-tenants",
+        "intent": "policy_interpretation",
+        "scope": "all-tenants"
+      },
+      "scannedRuns": 2,
+      "truncated": false,
+      "truncateNote": "",
+      "currency": "CNY",
+      "unit": "per_million_tokens",
+      "groupBy": [
+        "model"
+      ],
+      "costKnownOnly": true,
+      "costComplete": false,
+      "tokensComplete": true,
+      "total": {
+        "inputTokens": 20,
+        "outputTokens": 16,
+        "calls": 2,
+        "runs": 2,
+        "cost": null,
+        "costComplete": false,
+        "tokensComplete": true,
+        "unpricedModels": [
+          "local-light-chat"
+        ],
+        "unpricedReasons": [
+          "model-not-priced"
+        ]
+      },
+      "unpricedModels": [
+        "local-light-chat"
+      ],
+      "unpricedReasons": [
+        "model-not-priced"
+      ],
+      "unattributedRuns": 0,
+      "zeroUsageRuns": 0,
+      "groups": [
+        {
+          "model": "local-light-chat",
+          "purpose": null,
+          "intent": null,
+          "tenant": null,
+          "inputTokens": 20,
+          "outputTokens": 16,
+          "calls": 2,
+          "runs": 2,
+          "cost": null,
+          "costComplete": false,
+          "tokensComplete": true,
+          "unpricedModels": [
+            "local-light-chat"
+          ],
+          "unpricedReasons": [
+            "model-not-priced"
+          ]
+        }
+      ],
+      "pricing": {
+        "currency": "CNY",
+        "unit": "per_million_tokens",
+        "pricedModels": [
+          "local-flagship-chat"
+        ],
+        "rejectedEntries": [],
+        "error": ""
+      },
+      "note": "cost 只累加已定价模型的用量（元/百万token，仅 CNY）；costComplete=false 表示存在未知成本（模型未定价或供应商未返回 usage），不得把 cost 当作完整账单，也不要把未知部分按 0 处理。零用量运行（离线/规则化链路）不计入缺口，单独记在 zeroUsageRuns。"
+    },
+    "agent_run_usage": [
+      {
+        "runId": "841f4d8717624026ad1605ce87b47b82",
+        "tenantId": "tenant-a",
+        "intent": "policy_qa",
+        "models": [
+          "local-light-chat"
+        ],
+        "cost": null,
+        "costComplete": false
+      },
+      {
+        "runId": "2c3e2324ef9d46df8e72ffd5ce43c9b7",
+        "tenantId": "tenant-a",
+        "intent": "policy_qa",
+        "models": [
+          "local-flagship-chat"
+        ],
+        "cost": 8.4e-05,
+        "costComplete": true
+      },
+      {
+        "runId": "9735ed4e663043d78cf9986b9f8b7860",
+        "tenantId": "tenant-a",
+        "intent": "policy_interpretation",
+        "models": [
+          "local-light-chat"
+        ],
+        "cost": null,
+        "costComplete": false
+      },
+      {
+        "runId": "ef4474a8c9414f18a5bab8c5b0d524e5",
+        "tenantId": "tenant-b",
+        "intent": "policy_qa",
+        "models": [
+          "local-light-chat"
+        ],
+        "cost": null,
+        "costComplete": false
+      },
+      {
+        "runId": "0fea74d74c014882aeb0074c301d5206",
+        "tenantId": "tenant-b",
+        "intent": "policy_qa",
+        "models": [
+          "local-flagship-chat"
+        ],
+        "cost": 8.4e-05,
+        "costComplete": true
+      },
+      {
+        "runId": "97495a5b50ea474087b5ea49f60820de",
+        "tenantId": "tenant-b",
+        "intent": "policy_interpretation",
+        "models": [
+          "local-light-chat"
+        ],
+        "cost": null,
+        "costComplete": false
+      }
+    ],
+    "permission_probe": {
+      "audit_denied_status": 403,
+      "all_tenants_status": 200
+    }
+  },
+  "checks": [
+    {
+      "name": "cost_query_requires_audit",
+      "passed": true,
+      "detail": "policy:read=403 agent:admin=200"
+    },
+    {
+      "name": "cost_grouped_by_tenant",
+      "passed": true,
+      "detail": "tenants=['tenant-a', 'tenant-b']"
+    },
+    {
+      "name": "cost_grouped_by_intent",
+      "passed": true,
+      "detail": "intents=['policy_interpretation', 'policy_qa']"
+    },
+    {
+      "name": "cost_grouped_by_purpose",
+      "passed": true,
+      "detail": "purposes=['policy.answer', 'policy.interpret']"
+    },
+    {
+      "name": "cost_grouped_by_model",
+      "passed": true,
+      "detail": "models=['local-flagship-chat', 'local-light-chat']"
+    },
+    {
+      "name": "intent_filter_narrows_scope",
+      "passed": true,
+      "detail": "runs=2 models=['local-light-chat']"
+    },
+    {
+      "name": "tokens_match_provider_usage",
+      "passed": true,
+      "detail": "calls=2 input=20 output=16"
+    },
+    {
+      "name": "priced_cost_matches_tokens",
+      "passed": true,
+      "detail": "实际=0.000168 期望=0.000168（2 次 × 8.4e-05 元）"
+    },
+    {
+      "name": "unpriced_model_is_null_not_zero",
+      "passed": true,
+      "detail": "calls=4 cost=None complete=False"
+    },
+    {
+      "name": "partial_total_exposes_gap",
+      "passed": true,
+      "detail": "total=0.000168 costComplete=False unpriced=['local-light-chat']"
+    },
+    {
+      "name": "usage_persisted_with_model_and_purpose",
+      "passed": true,
+      "detail": "落库运行 6 条，含模型×用途明细 6 条"
+    }
+  ],
+  "failures": [],
+  "passed": true,
+  "completed": true,
+  "production_accepted": false
+}

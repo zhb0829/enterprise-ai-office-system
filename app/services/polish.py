@@ -5,7 +5,6 @@
 import logging
 from datetime import datetime, timezone
 
-from ..config import settings
 from .llm import LLMClient, LLMError
 
 logger = logging.getLogger(__name__)
@@ -32,8 +31,9 @@ def polish_text(text: str, llm: LLMClient) -> tuple[str, list[dict]]:
                 {"role": "system", "content": POLISH_SYSTEM_PROMPT},
                 {"role": "user", "content": text},
             ],
-            model=settings.llm_model_generation,
             temperature=0.2,
+            purpose="draft.polish",
+            context_chars=len(text or ""),
         )
         polished = data.get("polished", "")
         changes = data.get("changes") or []

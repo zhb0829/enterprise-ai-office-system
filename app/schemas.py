@@ -1,8 +1,8 @@
 """API 请求/响应 Pydantic 模型。"""
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 def _to_utc(value: datetime | None) -> datetime | None:
@@ -58,6 +58,7 @@ class Person(BaseModel):
 
 
 class GenerateRequest(BaseModel):
+    sessionId: str = Field(default="", max_length=128)
     title: str = ""
     eventDesc: str
     keyFacts: list[KeyFact] = Field(default_factory=list)
@@ -74,6 +75,10 @@ class FactCheckItem(BaseModel):
     status: str  # 一致/不一致/无法核实
     basis: str = ""
     suggestion: str = ""
+    evidence: list[dict[str, Any]] = Field(default_factory=list)
+    # G5：模型核查被运行时开关关闭时置 true，结论不得解释为"已核查通过"
+    degraded: bool = False
+    degradeReason: str = ""
 
 
 class GenerateResponse(TimestampedModel):
@@ -86,10 +91,12 @@ class GenerateResponse(TimestampedModel):
     model: str = ""
     riskFlags: list[str] = Field(default_factory=list)
     variants: list[dict[str, Any]] = Field(default_factory=list)  # [{style, content}] 多文风对比
+    runId: str = ""
 
 
 # ===== 多轮修改 =====
 class ReviseRequest(BaseModel):
+    sessionId: str = Field(default="", max_length=128)
     draftId: str
     instruction: str
 
@@ -162,6 +169,8 @@ class DraftDetail(TimestampedModel):
     created_at: datetime
     elements: list[ElementOut] = Field(default_factory=list)
     fact_checks: list[FactCheckItem] = Field(default_factory=list)
+    evidence: list[dict[str, Any]] = Field(default_factory=list)
+    reviews: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class VersionNode(TimestampedModel):
@@ -227,6 +236,8 @@ class MaterialChunkOut(TimestampedModel):
 
 # ===== 行业政策法规智能问答 =====
 class Citation(BaseModel):
+    knowledgeVersion: int | None = None
+    knowledgeReleaseId: str | None = None
     id: int | None = None
     docTitle: str
     articleNo: str = ""
@@ -234,6 +245,12 @@ class Citation(BaseModel):
     sourceUrl: str = ""
     page: int = 0
     status: str = "现行有效"
+    documentId: int | None = None
+    chapterPath: str = ""
+    effectiveDate: datetime | None = None
+    expiryDate: datetime | None = None
+    region: str = ""
+    policyVersion: str = ""
 
 
 class PolicyDocumentOut(TimestampedModel):
@@ -244,6 +261,9 @@ class PolicyDocumentOut(TimestampedModel):
     level: str
     publish_date: datetime | None = None
     effective_date: datetime | None = None
+    expiry_date: datetime | None = None
+    region: str = ""
+    policy_version: str = ""
     status: str
     industry_tags: list[str] = Field(default_factory=list)
     source_url: str
@@ -260,6 +280,9 @@ class PolicyQuery(BaseModel):
     authority: str = ""
     sessionId: str = ""
     limit: int = Field(default=6, ge=1, le=20)
+    region: str = ""
+    policyName: str = ""
+    asOf: date | None = None
 
 
 class PolicyAnswer(BaseModel):
@@ -272,6 +295,36 @@ class PolicyAnswer(BaseModel):
     riskFlags: list[str] = Field(default_factory=list)
     intent: str = "检索"
     queryTerms: list[str] = Field(default_factory=list)
+    retrieval: list[dict[str, Any]] = Field(default_factory=list)
+    runId: str = ""
+    # G2 体验层口径：答案是否为兜底产出（无检索结果、模型不可用或输出不可验证而降级）
+    degraded: bool = False
+    degradationReasons: list[str] = Field(default_factory=list)
+    # G4 分层路由决策：tier / model / score / signals / 为什么（路由未启用时为 null）
+    routing: dict[str, Any] | None = None
+
+
+class PolicyFeedbackRequest(BaseModel):
+    """线上反馈：点赞/点踩 + 是否解决，按 qaLogId 或 runId 关联一次问答。"""
+
+    qaLogId: int | None = None
+    runId: str = Field(default="", max_length=64)
+    rating: Literal["like", "dislike", "none"] = "none"  # none 表示撤销之前的反馈
+    resolved: bool | None = None
+    reason: str = Field(default="", max_length=2000)
+
+    @model_validator(mode="after")
+    def _require_target(self):
+        if self.qaLogId is None and not self.runId:
+            raise ValueError("qaLogId 与 runId 至少提供一个")
+        return self
+
+
+class PolicyFeedback(BaseModel):
+    qaLogId: int
+    rating: str
+    resolved: bool | None = None
+    recordedAt: datetime
 
 
 class InterpretRequest(BaseModel):
@@ -294,6 +347,8 @@ class Interpretation(BaseModel):
     generatedAt: datetime
     model: str = ""
     riskFlags: list[str] = Field(default_factory=list)
+    runId: str = ""
+    routing: dict[str, Any] | None = None
 
 
 class ComplianceRequest(BaseModel):
@@ -317,6 +372,8 @@ class ComplianceResponse(BaseModel):
     generatedAt: datetime
     model: str = ""
     riskFlags: list[str] = Field(default_factory=list)
+    runId: str = ""
+    routing: dict[str, Any] | None = None
 
 
 class PolicyUrlRequest(BaseModel):
@@ -335,6 +392,16 @@ class PolicyDocumentCreate(BaseModel):
     status: str = "现行有效"
     industryTags: list[str] = Field(default_factory=list)
     sourceUrl: str = ""
+    publishDate: datetime | None = None
+    effectiveDate: datetime | None = None
+    expiryDate: datetime | None = None
+    region: str = ""
+    policyVersion: str = ""
+
+
+class ReviewRequest(BaseModel):
+    decision: Literal["approve", "reject"]
+    comment: str = Field(min_length=1, max_length=4000)
 
 
 class EmbeddingReindexResult(BaseModel):

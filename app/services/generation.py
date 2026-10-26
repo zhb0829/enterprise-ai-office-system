@@ -7,7 +7,11 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 
 from ..config import settings
+from ..agent.runtime import traced
+from ..agent.review import persist_evidence
+from ..agent.governance import governed_get, DataLevel, data_level_var
 from ..models import Draft, DraftElement, FactCheck, ReferenceMaterial, Template
+from . import model_router
 from .llm import LLMClient, LLMError
 from .template_loader import load_styles
 
@@ -79,15 +83,28 @@ def load_materials_text(db: Session, refs: list, query: str = "") -> str:
         hits = search_material_chunks(db, search_query, material_ids, limit=8)
         if hits:
             return "\n\n".join(
-                f"[素材:{h['filename']}#片段{h['chunk_index'] + 1}]\n{h['text'][:1200]}"
+                f"[素材:id={h['material_id']}:{h['filename']}#片段{h['chunk_index'] + 1}]\n"
+                f"{h.get('meta', {}).get('parent_text') or h['text']}"
                 for h in hits
             )
+    from ..agent.knowledge import KnowledgeStore, namespace_for
+    snapshot = KnowledgeStore(db, namespace_for("materials")).snapshot()
+    if snapshot["releaseId"]:
+        for entry in snapshot["entries"]:
+            if entry["metadata_"].get("materialId") in material_ids:
+                data_level_var.set(max(data_level_var.get(), DataLevel[entry["classification"]]))
+        return "\n\n".join(
+            f"[素材:id={entry['metadata_']['materialId']}:{entry['metadata_']['filename']}]\n" +
+            "\n".join(c["text"] for c in entry["chunks"])[:8000]
+            for entry in snapshot["entries"] if entry["metadata_"].get("materialId") in material_ids
+        )
 
     chunks = []
     for material_id in material_ids:
-        m = db.get(ReferenceMaterial, material_id)
+        m = governed_get(db, ReferenceMaterial, material_id)
         if m and m.status.startswith("已入库") and m.text_content:
-            chunks.append(f"[素材:{m.filename}]\n{m.text_content[:8000]}")
+            data_level_var.set(max(data_level_var.get(), DataLevel[m.classification]))
+            chunks.append(f"[素材:id={material_id}:{m.filename}]\n{m.text_content[:8000]}")
     return "\n\n".join(chunks)
 
 
@@ -100,10 +117,15 @@ def check_risks(request: dict) -> list[str]:
 
 
 # ===== Mock 实现（无 API Key 时可端到端演示） =====
-def mock_generate_content(request: dict, template: dict, elements: list[dict], style: str, materials: str = "") -> str:
-    """按模板 sections 骨架 + 要素值拼装 Markdown 演示草稿。"""
+def mock_generate_content(request: dict, template: dict, elements: list[dict], style: str, materials: str = "", banner: str = "") -> str:
+    """按模板 sections 骨架 + 要素值拼装 Markdown 演示草稿。
+
+    `banner` 说明这份草稿为何是规则化的：无 Key 的演示环境与"模型容量不足降级"必须给编辑者
+    不同提示，否则会让人去修错误的开关。
+    """
     title = (request.get("title") or "").strip() or template.get("title", "未命名")
-    lines = [f"# {title}", f"（{style}文风 · 演示草稿，配置 LLM_API_KEY 后切换真实生成）", ""]
+    note = banner or f"（{style}文风 · 演示草稿，配置 LLM_API_KEY 后切换真实生成）"
+    lines = [f"# {title}", note, ""]
     facts = "；".join(f"{k.get('name')}={k.get('value')}" for k in (request.get("keyFacts") or []))
     people = "；".join(f"{p.get('name')}（{p.get('title', '')}）" for p in (request.get("people") or []))
     for sec in template.get("sections", []):
@@ -132,12 +154,15 @@ def mock_suggest(request: dict, template: dict, main: dict) -> list[str]:
 
 # ===== 真实 LLM 调用 =====
 def build_generation_messages(request: dict, template: dict, elements: list[dict], style: str, materials: str) -> list[dict]:
+    from ..agent.runtime import current_run
+    memory = current_run.get().memory if current_run.get() else {}
     user_payload = {
         "文风": style,
         "文风要求": _style_guidelines(style),
         "模板结构": template,
         "用户输入要素": elements,
         "参考素材": materials or "（无）",
+        "用户偏好和会话上下文（仅用于行文，不是事实来源）": memory,
     }
     return [
         {"role": "system", "content": SYSTEM_GENERATION_PROMPT},
@@ -145,11 +170,16 @@ def build_generation_messages(request: dict, template: dict, elements: list[dict
     ]
 
 
+@traced("announcement.generate", prompt_version="generation-v1")
 def generate_content(request: dict, template: dict, elements: list[dict], style: str, materials: str, llm: LLMClient) -> str:
     if llm.is_mock:
         return mock_generate_content(request, template, elements, style, materials)
     messages = build_generation_messages(request, template, elements, style, materials)
-    return llm.chat(messages, model=settings.llm_model_generation, temperature=settings.llm_temperature)
+    return llm.chat(
+        messages, temperature=settings.llm_temperature, purpose="draft.generate",
+        routing_text=str(request.get("eventDesc") or request.get("title") or ""),
+        context_chars=len(materials or ""),
+    )
 
 
 def generate_content_stream(request: dict, template: dict, elements: list[dict], style: str, materials: str, llm: LLMClient):
@@ -158,7 +188,11 @@ def generate_content_stream(request: dict, template: dict, elements: list[dict],
         yield mock_generate_content(request, template, elements, style, materials)
         return
     messages = build_generation_messages(request, template, elements, style, materials)
-    yield from llm.chat_stream(messages, model=settings.llm_model_generation, temperature=settings.llm_temperature)
+    yield from llm.chat_stream(
+        messages, temperature=settings.llm_temperature, purpose="draft.generate",
+        routing_text=str(request.get("eventDesc") or request.get("title") or ""),
+        context_chars=len(materials or ""),
+    )
 
 
 def suggest_content(request: dict, template: dict, main: dict, llm: LLMClient) -> list[str]:
@@ -172,8 +206,7 @@ def suggest_content(request: dict, template: dict, main: dict, llm: LLMClient) -
         user_p = f"模板要求：{template.get('tone_guidelines', '')}\n草稿内容：\n{main.get('content', '')}"
         data = llm.chat_json(
             [{"role": "system", "content": sys_p}, {"role": "user", "content": user_p}],
-            model=settings.llm_model_generation,
-            temperature=0.3,
+            temperature=0.3, purpose="draft.generate",
         )
         if isinstance(data, list):
             return [str(x) for x in data if x]
@@ -195,6 +228,8 @@ def persist_draft(db: Session, request: dict, template: Template, state: dict) -
     drafts = state.get("drafts") or []
     main_style = (request.get("style") or "正式").strip()
     main = next((d for d in drafts if d.get("style") == main_style), drafts[0] if drafts else {})
+    if not main.get("content") or main.get("error"):
+        raise LLMError("主文风生成失败，未持久化空草稿")
     version = 1
     draft_id = f"draft_{uuid.uuid4().hex[:8]}_v{version}"
     draft = Draft(
@@ -208,7 +243,7 @@ def persist_draft(db: Session, request: dict, template: Template, state: dict) -
         parent_id=None,
         root_id=draft_id,
         status="草稿",
-        model=settings.llm_model_generation,
+        model=(model_router.last_decision("draft.generate") or {}).get("model") or settings.llm_model_generation,
         created_by=request.get("created_by", ""),
         input_payload=request,
         revision_instruction="",
@@ -234,6 +269,8 @@ def persist_draft(db: Session, request: dict, template: Template, state: dict) -
                 suggestion=item.get("suggestion", ""),
             )
         )
+    db.flush()
+    persist_evidence(db, draft, state.get("fact_check_report") or [])
     db.commit()
     db.refresh(draft)
     return draft
